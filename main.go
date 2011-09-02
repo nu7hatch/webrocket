@@ -34,12 +34,22 @@ type Channel struct {
 
 	//backend  chan *Event
 	ownerHub *Hub
+	subscriptions []*websocket.Conn
+	pos      int
 }
 
 func newChannel(hub *Hub, name string) *Channel {
 	ch := &Channel{Name: name, ownerHub: hub}
 	//ch.backend = make(chan *Event)
+	ch.subscriptions = make([]*websocket.Conn, 1024)
 	return ch
+}
+
+func (ch *Channel) Subscribe(ws *websocket.Conn) os.Error {
+	// TODO: check if subscribed
+	ch.subscriptions[ch.pos] = ws
+	ch.pos += 1
+	return nil
 }
 
 type Hub struct {
@@ -82,6 +92,8 @@ func (h *Hub) subscribe(ws *websocket.Conn, event *DataEvent) os.Error {
 		ch = newChannel(h, event.Channel)
 		h.channels[event.Channel] = ch
 	}
+
+	ch.Subscribe(ws)
 	
 	err := websocket.JSON.Send(ws, ChanneledEvent{"subscribed", ch.Name})
 	if err != nil {
@@ -104,11 +116,30 @@ func (h *Hub) unsubscribe(ws *websocket.Conn, event *DataEvent) os.Error {
 	
 	err := websocket.JSON.Send(ws, ChanneledEvent{"unsubscribed", ch.Name})
 	if err != nil {
-		log.Printf("Unsubscribe error: %s\n", err)
+		log.Printf("Unsubscribe error: %s\n", err.String())
 		return err
 	}
 	
 	log.Printf("Unsubscribed %s\n", ch.Name)
+	return nil
+}
+
+func (h *Hub) push(ws *websocket.Conn, event *DataEvent) os.Error {
+	ch, ok := h.channels[event.Channel]
+	if !ok {
+		err := os.NewError("invalid channel")
+		log.Printf("Push error [%s]: %s\n", ch.Name, err.String())
+		websocket.JSON.Send(ws, ErrorEvent{"INVALID_CHANNEL"})
+		return err
+	}
+	for _, s := range ch.subscriptions {
+		if s != ws && s != nil {
+			err := websocket.JSON.Send(s, event)
+			if err != nil {
+				log.Printf("Push error [%s]: %s\n", ch.Name, err.String())
+			}
+		}
+	}
 	return nil
 }
 
@@ -123,15 +154,17 @@ func (h *Hub) serve(ws *websocket.Conn) {
 				switch event.Event {
 				case "__subscribe__":
 					h.subscribe(ws, &event)
+					continue
 				case "__unsubscribe__":
 					h.unsubscribe(ws, &event)
+					continue
 				default:
-					websocket.JSON.Send(ws, ErrorEvent{"INVALID_COMMAND"})
+					h.push(ws, &event)
 				}
 			} else {
 				log.Printf("Receive error: %s!\n", err.String())
 			}
-	    }
+		}
 	}
 }
 
