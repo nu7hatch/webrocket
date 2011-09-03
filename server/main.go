@@ -17,13 +17,14 @@ var (
 
 func init() {
 	var v bool
-
 	flag.StringVar(&host, "host", "localhost", "serve on given host")
 	flag.UintVar(&port, "port", 9772, "listen on given port number")
 	flag.BoolVar(&v, "version", false, "display version number")
 	flag.Parse()
 
-	if v { action = "version" }
+	if v {
+		action = "version"
+	}
 }
 
 func printVersion() {
@@ -32,9 +33,9 @@ func printVersion() {
 
 func start() {
 	addr := host + ":" + strconv.Uitoa(port)
-    s := webrocket.NewServer(addr)
-    s.Handle("/echo", webrocket.JSONHandler())
-    s.ListenAndServe()
+	s := webrocket.NewServer(addr)
+	s.Handle("/echo", webrocket.JSONHandler())
+	s.ListenAndServe()
 }
 
 func main() {
