@@ -1,7 +1,14 @@
 include ${GOROOT}/src/Make.inc
 
-TARG = rocket
+TARG = webrocket
 GOFILES = \
-	main.go
+	webrocket.go
 
-include ${GOROOT}/src/Make.cmd
+include ${GOROOT}/src/Make.pkg
+
+serv:
+	@cd server && make
+serv_install:
+	@cd server && make install
+serv_clean:
+	@cd server && make clean
