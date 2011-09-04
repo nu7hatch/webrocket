@@ -1,0 +1,11 @@
+{
+	"host": "localhost",
+	"port": 9772,
+	"hubs": [
+		{
+			"path": "/echo",
+			"codec": "JSON",
+			"secret": "secret"
+		}
+	]
+}

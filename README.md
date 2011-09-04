@@ -24,11 +24,7 @@ newest version of compiler. Go is active actively developed, so the
 best idea is to use head version and update it regullary. 
 
 Once you install the Go compiler, building rocket is very easy.
-First, install dependencies:
-
-    $ goinstall goconf.googlecode.com/hg
- 
-Next, clone the repo:
+First, clone the repo:
 
     $ git clone git://github.com/nu7hatch/webrocket.git
 	$ cd webrocket

@@ -6,86 +6,77 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	goconf "goconf.googlecode.com/hg"
+	"json"
+	"os"
 )
 
 const version = "0.0.1"
 
-type HubConfig struct {
-	path        string
-	secret      string
-	handlerName string
+type ServerConfig struct {
+	Host string
+	Port int
+	Hubs []*HubConfig
 }
 
-func (hc *HubConfig) handler() webrocket.Handler {
-	switch hc.handlerName {
+func (sc *ServerConfig) Addr() string {
+	return sc.Host + ":" + strconv.Itoa(sc.Port)
+}
+
+type HubConfig struct {
+	Path   string
+	Secret string
+	Codec  string
+}
+
+func (hc *HubConfig) Handler() webrocket.Handler {
+	switch hc.Codec {
 	case "JSON":
 		h := webrocket.NewJSONHandler()
-		h.Secret = hc.secret
+		h.Secret = hc.Secret
 		return h
 	}
-	log.Fatalf("Invalid handler type: %s\n", hc.handlerName)
+	log.Fatalf("Invalid handler type: %s\n", hc.Codec)
 	return nil
 }
 
-type ServerConfig struct {
-	host string
-	port int
-	hubs map[string]*HubConfig
-}
-
-func (sc *ServerConfig) addr() string {
-	return sc.host + ":" + strconv.Itoa(sc.port)
-}
-
 var (
-	config ServerConfig = ServerConfig{hubs: make(map[string]*HubConfig)}
+	config ServerConfig
 	action string
 	)
 
 func init() {
-	var host string
-	var port int
-
-	flag.StringVar(&host, "host", "localhost", "serve on given host")
-	flag.IntVar(&port, "port", 9772, "listen on given port number")
+	var flags ServerConfig
+	flag.Usage = printUsage
+	flag.StringVar(&flags.Host, "host", "localhost", "serve on given host")
+	flag.IntVar(&flags.Port, "port", 9772, "listen on given port number")
 	flag.Bool("version", false, "display version number")
 	flag.Parse()
+	configure(flags)
+}
 
-	flag.Usage = printUsage
-
+func configure(flags ServerConfig) {
 	if (flag.NArg() == 1) {
 		fname := flag.Arg(0)
-		c, err := goconf.ReadConfigFile(fname)
+		f, err := os.Open(fname)
 		if err != nil {
-			log.Fatalf("Config error: %s\n", err.String())
+			log.Fatalf("Config reading error: %s\n", err.String())
 		}
-		for _, s := range c.GetSections() {
-			switch s {
-			case "default":
-				break
-			case "server":
-				config.host, _ = c.GetString("server", "host")
-				config.port, _ = c.GetInt("server", "port")
-			default:
-				hc := HubConfig{path: s}
-				hc.secret, _ = c.GetString(s, "passphrase")
-				hc.handlerName, _ = c.GetString(s, "handler")
-				config.hubs[s] = &hc
-			}
+		dec := json.NewDecoder(f)
+		err = dec.Decode(&config)
+		if err != nil {
+			log.Fatalf("Config parsing error: %s\n", err.String())
 		}
 		log.Printf("Configured using %s\n", fname)
 		action = "serve"
 	}
-
 	flag.Visit(func (flag *flag.Flag) {
 		switch flag.Name {
 		case "version":
 			action = "version"
 		case "port":
-			config.port = port
+			config.Port = flags.Port
 		case "host":
-			config.host = host
+			config.Host = flags.Host
 		}
 	})
 }
@@ -101,9 +92,9 @@ func printVersion() {
 }
 
 func startServer() {
-	s := webrocket.NewServer(config.addr())
-	for _, hub := range config.hubs {
-		s.Handle(hub.path, hub.handler())
+	s := webrocket.NewServer(config.Addr())
+	for _, hub := range config.Hubs {
+		s.Handle(hub.Path, hub.Handler())
 	}
 	s.ListenAndServe()
 }
