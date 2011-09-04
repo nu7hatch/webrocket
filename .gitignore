@@ -4,3 +4,5 @@ _test
 *.out
 _testmain.go
 rocket
+\#*
+.\#*
