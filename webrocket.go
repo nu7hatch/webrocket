@@ -49,7 +49,7 @@ type channelMap map[string]*channel
 type readerMap map[*websocket.Conn]int
 
 // handlerMap is a map of resource handlers.
-type handlerMap map[string]*Handler
+type handlerMap map[string]Handler
 
 var (
 	invalidChannelErr     = ErrorEvent{"INVALID_CHANNEL"}
@@ -75,7 +75,7 @@ A Trivial example server:
 
     func main() {
          s := rocket.NewServer("ws://localhost:8080")
-         s.Handle("/echo", rocket.JSONHandler())
+         s.Handle("/echo", rocket.NewJSONHandler())
          s.ListenAndServe()
     }
 */
@@ -90,11 +90,11 @@ func NewServer(addr string) *Server {
 Registers payload handler under specified path. Handler have to implement
 communication protocol callbacks.
 */
-func (s *Server) Handle(path string, handler *Handler) {
-	if !handler.registered {
-		handler.register(path)
-		s.Handler.(*http.ServeMux).Handle(path, handler.handler)
-		s.handlers[path] = handler
+func (s *Server) Handle(path string, h Handler) {
+	proxy, ok := h.Register(path)
+	if ok == nil {
+		s.Handler.(*http.ServeMux).Handle(path, proxy)
+		s.handlers[path] = h
 	}
 }
 
@@ -130,7 +130,7 @@ It's hub is used to broadcast messages.
 */
 type channel struct {
 	name      string
-	owner     *Handler
+	owner     *handler
 	readers   readerMap
 	subscribe chan subscription
 	broadcast chan broadcaster
@@ -148,13 +148,14 @@ type subscription struct {
 	active bool
 }
 
-func newChannel(h *Handler, name string) *channel {
+func newChannel(h *handler, name string) *channel {
 	ch := &channel{name: name, owner: h, readers: make(readerMap)}
 	ch.subscribe, ch.broadcast = make(chan subscription), make(chan broadcaster)
 	go ch.hub()
 	return ch
 }
 
+// Channel's hub manages subscriptions and broacdasts messages to all readers.
 func (ch *channel) hub() {
 	for {
 		select {
@@ -171,13 +172,27 @@ func (ch *channel) hub() {
 /*
 Handler handlers all incoming requestes using defined protocol. Handler also
 manages all registered channels.
+
+Trivial custom handler:
+
+    type MyHandler struct {
+        channels map[string]
+    }
+
+    func (*h MyHandler) Register(id interface{}) {
+        // initialize your handler here...
+    }
 */
-type Handler struct {
+type Handler interface {
+	Register(id interface {}) (websocket.Handler, os.Error)
+}
+
+// Default handler, with various message codecs support.
+type handler struct {
 	Codec      websocket.Codec
 	handler    websocket.Handler
 	path       string
 	registered bool
-	connected  bool
 	channels   channelMap
 }
 
@@ -189,18 +204,27 @@ Creates new handler based on specified websocket's codec. Here's an trivial exam
      server.Handle("/echo", handler)
      server.ListenAndServe()
 */
-func NewHandler(codec websocket.Codec) *Handler {
-	return &Handler{Codec: codec}
+func NewHandler(codec websocket.Codec) *handler {
+	return &handler{Codec: codec}
 }
 
-func (h *Handler) register(path string) {
-	h.path = path
+/*
+Register initializes new handle under specified id (in this case an id is query path),
+and returns valid websocket.Handler clojure to handle incoming messages.
+*/
+func (h *handler) Register(id interface {}) (websocket.Handler, os.Error) {
+	if h.registered {
+		return nil, os.NewError("Handler already registered")
+	}
+	h.path = id.(string)
 	h.handler = func(ws *websocket.Conn) { h.eventLoop(ws) }
 	h.channels = make(channelMap)
 	h.registered = true
+	log.Printf("Registered handler: %s\n", h.path)
+	return h.handler, nil
 }
 
-func (h *Handler) eventLoop(ws *websocket.Conn) {
+func (h *handler) eventLoop(ws *websocket.Conn) {
 	err := h.onOpen(ws)
 	if err == nil {
 		for {
@@ -226,7 +250,7 @@ func (h *Handler) eventLoop(ws *websocket.Conn) {
 	h.onClose(ws)
 }
 
-func (h *Handler) receive(ws *websocket.Conn, e interface{}) os.Error {
+func (h *handler) receive(ws *websocket.Conn, e interface{}) os.Error {
 	err := h.Codec.Receive(ws, e)
 	if err != nil && err != os.EOF {
 		log.Printf("Receive error: %s\n", err.String())
@@ -235,7 +259,7 @@ func (h *Handler) receive(ws *websocket.Conn, e interface{}) os.Error {
 	return err
 }
 
-func (h *Handler) send(ws *websocket.Conn, e interface{}) os.Error {
+func (h *handler) send(ws *websocket.Conn, e interface{}) os.Error {
 	err := h.Codec.Send(ws, e)
 	if err != nil {
 		log.Printf("Send error: %s\n", err.String())
@@ -243,7 +267,7 @@ func (h *Handler) send(ws *websocket.Conn, e interface{}) os.Error {
 	return err
 }
 
-func (h *Handler) onOpen(ws *websocket.Conn) os.Error {
+func (h *handler) onOpen(ws *websocket.Conn) os.Error {
 	err := h.send(ws, NamedEvent{"connected"})
 	if err != nil {
 		return err
@@ -252,13 +276,13 @@ func (h *Handler) onOpen(ws *websocket.Conn) os.Error {
 	return nil
 }
 
-func (h *Handler) onClose(ws *websocket.Conn) os.Error {
+func (h *handler) onClose(ws *websocket.Conn) os.Error {
 	log.Printf("[%s] Connection closed: %s\n", h.path, "") //ws.RemoteAddr())
 	return nil
 }
 
 
-func (h *Handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
+func (h *handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	name := e.Channel
 	if len(name) == 0 {
 		err := os.NewError("invalid channel: " + name)
@@ -277,7 +301,7 @@ func (h *Handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	return nil
 }
 
-func (h* Handler) onUnsubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
+func (h* handler) onUnsubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	name := e.Channel
 	if ch, ok := h.channels[name]; ok {
 		ch.subscribe <- subscription{ws, false}
@@ -287,7 +311,7 @@ func (h* Handler) onUnsubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	return nil
 }
 
-func (h* Handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
+func (h* handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
 	name := e.Channel
 	ch, ok := h.channels[name]
 	if !ok {
@@ -310,6 +334,6 @@ func (h* Handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
 }
 
 // Creates new handler basd on the default JSON protocol.
-func JSONHandler() *Handler {
+func NewJSONHandler() *handler {
 	return NewHandler(websocket.JSON) 
 }

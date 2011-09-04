@@ -34,7 +34,7 @@ func printVersion() {
 func start() {
 	addr := host + ":" + strconv.Uitoa(port)
 	s := webrocket.NewServer(addr)
-	s.Handle("/echo", webrocket.JSONHandler())
+	s.Handle("/echo", webrocket.NewJSONHandler())
 	s.ListenAndServe()
 }
 
