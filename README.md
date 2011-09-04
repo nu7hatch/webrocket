@@ -23,8 +23,12 @@ First of all, i predict you don't have Go installed... Follow this
 newest version of compiler. Go is active actively developed, so the
 best idea is to use head version and update it regullary. 
 
-Once you install the Go compiler, building rocket is super easy. 
-First, clone the repo:
+Once you install the Go compiler, building rocket is very easy.
+First, install dependencies:
+
+    $ goinstall goconf.googlecode.com/hg
+ 
+Next, clone the repo:
 
     $ git clone git://github.com/nu7hatch/webrocket.git
 	$ cd webrocket
@@ -33,7 +37,7 @@ Build and install the `webrocket` library:
  	
 	$ make && make install
 	
-Build `rocket` command line tool:
+Finally, build `rocket` command line tool:
 
     $ cd server
 	$ make
