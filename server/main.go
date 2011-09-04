@@ -13,14 +13,16 @@ const version = "0.0.1"
 
 type HubConfig struct {
 	path        string
+	secret      string
 	handlerName string
-	passphrase  string
 }
 
 func (hc *HubConfig) handler() webrocket.Handler {
 	switch hc.handlerName {
 	case "JSON":
-		return webrocket.NewJSONHandler()
+		h := webrocket.NewJSONHandler()
+		h.Secret = hc.secret
+		return h
 	}
 	log.Fatalf("Invalid handler type: %s\n", hc.handlerName)
 	return nil
@@ -67,7 +69,7 @@ func init() {
 				config.port, _ = c.GetInt("server", "port")
 			default:
 				hc := HubConfig{path: s}
-				hc.passphrase, _ = c.GetString(s, "passphrase")
+				hc.secret, _ = c.GetString(s, "passphrase")
 				hc.handlerName, _ = c.GetString(s, "handler")
 				config.hubs[s] = &hc
 			}

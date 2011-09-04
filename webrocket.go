@@ -52,9 +52,11 @@ type readerMap map[*websocket.Conn]int
 type handlerMap map[string]Handler
 
 var (
-	invalidChannelErr     = ErrorEvent{"INVALID_CHANNEL"}
-	invalidEventFormatErr = ErrorEvent{"INVALID_EVENT_FORMAT"}
-	accessDeniedErr       = ErrorEvent{"ACCESS_DENIED"}
+	invalidChannelErr     = ErrorEvent{"invalid_channel"}
+	invalidEventFormatErr = ErrorEvent{"invalid_event_format"}
+	invalidAuthDataErr    = ErrorEvent{"invalid_auth_data"}
+	accessDeniedErr       = ErrorEvent{"access_denied"}
+	notAuthenticatedErr   = ErrorEvent{"not_authenticated"}
 )
 
 // Server defines parameters for running an WebSocket server.
@@ -190,10 +192,12 @@ type Handler interface {
 // Default handler, with various message codecs support.
 type handler struct {
 	Codec      websocket.Codec
+	Secret     string
 	handler    websocket.Handler
 	path       string
 	registered bool
 	channels   channelMap
+	logins     readerMap
 }
 
 /*
@@ -219,6 +223,7 @@ func (h *handler) Register(id interface {}) (websocket.Handler, os.Error) {
 	h.path = id.(string)
 	h.handler = func(ws *websocket.Conn) { h.eventLoop(ws) }
 	h.channels = make(channelMap)
+	h.logins = make(readerMap)
 	h.registered = true
 	log.Printf("Registered handler: %s\n", h.path)
 	return h.handler, nil
@@ -238,6 +243,8 @@ func (h *handler) eventLoop(ws *websocket.Conn) {
 					h.onSubscribe(ws, &e)
 				case "unsubscribe":
 					h.onUnsubscribe(ws, &e)
+				case "authenticate":
+					h.onAuthenticate(ws, &e)
 				default:
 					h.onEvent(ws, &e)
 				}
@@ -248,6 +255,11 @@ func (h *handler) eventLoop(ws *websocket.Conn) {
 		}
 	}
 	h.onClose(ws)
+}
+
+func (h *handler) loggedIn(ws *websocket.Conn) bool {
+	_, ok := h.logins[ws]
+	return ok
 }
 
 func (h *handler) receive(ws *websocket.Conn, e interface{}) os.Error {
@@ -268,7 +280,7 @@ func (h *handler) send(ws *websocket.Conn, e interface{}) os.Error {
 }
 
 func (h *handler) onOpen(ws *websocket.Conn) os.Error {
-	err := h.send(ws, NamedEvent{"connected"})
+	err := h.send(ws, NamedEvent{"ok"})
 	if err != nil {
 		return err
 	}
@@ -311,6 +323,22 @@ func (h* handler) onUnsubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	return nil
 }
 
+func (h *handler) onAuthenticate(ws *websocket.Conn, e *DataEvent) os.Error {
+	if h.loggedIn(ws) {
+		return nil
+	}
+	secret, ok := e.Data["secret"];
+	if h.Secret != "" && !(ok && h.Secret == secret) {
+		log.Printf("Not authenticated: %s\n", "") //ws.RemoteAddr()
+		h.send(ws, notAuthenticatedErr)
+		return os.NewError("not authenticated")
+	}
+	log.Printf("Authenticated: %s\n", "") //ws.RemoteAddr()
+	h.send(ws, NamedEvent{"ok"})
+	h.logins[ws] = 0, true
+	return nil
+}
+
 func (h* handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
 	name := e.Channel
 	ch, ok := h.channels[name]
@@ -318,6 +346,12 @@ func (h* handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
 		err := os.NewError("invalid channel: " + name)
 		log.Printf("[%s => %s] Event error: %s\n", h.path, name, err.String())
 		h.send(ws, invalidChannelErr)
+		return err
+	}
+	if !h.loggedIn(ws) {
+		err := os.NewError("trying to access denied data") // ws.RemoteAddr()
+		log.Printf("[%s => %s] Event error: %s\n", h.path, name, err.String())
+		h.send(ws, accessDeniedErr)
 		return err
 	}
 	ch.broadcast <- func(ws *websocket.Conn) {
