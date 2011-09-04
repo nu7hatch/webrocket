@@ -46,9 +46,9 @@ current directory.
 Server is quite easy to configure and run. The only thing you have to do
 is to create your own configuration based on the versioned `example.conf` file. 
 
-    $ cp example.conf rocket.conf
+    $ cp example.conf my.conf
 	$ # edit configuration file...
-    $ rocket --config ./rocket.conf
+    $ rocket my.conf
 
 By default rocket listens on port `9772` on localhost. You can change it
 in your configuration or by setting proper flags. Use `rocket --help` to 
