@@ -19,9 +19,14 @@ my first Ruby application (6 years ago?)!
 ## Installation
 
 First of all, i predict you don't have Go installed... Follow this 
-[installation guide](http://golang.org/doc/install.html) and get the 
-newest version of compiler. Go is active actively developed, so the
-best idea is to use head version and update it regullary. 
+[installation guide](http://golang.org/doc/install.html) and get the newest version
+of the compiler. Rocket uses some of unreleased websocket's stuff, so remember to clone
+the head version:
+
+    $ hg clone https://go.googlecode.com/hg/ go
+
+Go is active actively developed, so it's good idea is to use head version and update 
+it regullary. 
 
 Once you install the Go compiler, building rocket is very easy.
 First, clone the repo:
@@ -38,8 +43,8 @@ Finally, build `rocket` command line tool:
     $ cd server
 	$ make
 	
-If everything will go fine, then you will find the `./rocket` binary in 
-current directory.
+If everything will go fine, then you will find the `./rocket` binary in  current 
+directory.
 
 ## Usage
 
