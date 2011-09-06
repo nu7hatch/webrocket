@@ -280,16 +280,12 @@ func (h *handler) send(ws *websocket.Conn, e interface{}) os.Error {
 }
 
 func (h *handler) onOpen(ws *websocket.Conn) os.Error {
-	err := h.send(ws, NamedEvent{"ok"})
-	if err != nil {
-		return err
-	}
-	log.Printf("[%s] Connected: %s\n", h.path, "")// ws.RemoteAddr())
+	log.Printf("[%s] New connection\n", h.path)
 	return nil
 }
 
 func (h *handler) onClose(ws *websocket.Conn) os.Error {
-	log.Printf("[%s] Connection closed: %s\n", h.path, "") //ws.RemoteAddr())
+	log.Printf("[%s] Connection closed\n", h.path)
 	return nil
 }
 
@@ -308,7 +304,7 @@ func (h *handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 		h.channels[name] = ch
 	}
 	ch.subscribe <- subscription{ws, true}
-	h.send(ws, ChanneledEvent{"subscribed", name})
+	h.send(ws, NamedEvent{"ok"})
 	log.Printf("[%s => %s] Subscribed: %s\n", h.path, name, name)
 	return nil
 }
@@ -329,11 +325,11 @@ func (h *handler) onAuthenticate(ws *websocket.Conn, e *DataEvent) os.Error {
 	}
 	secret, ok := e.Data["secret"];
 	if h.Secret != "" && !(ok && h.Secret == secret) {
-		log.Printf("Not authenticated: %s\n", "") //ws.RemoteAddr()
+		log.Printf("Authentication failed\n")
 		h.send(ws, notAuthenticatedErr)
 		return os.NewError("not authenticated")
 	}
-	log.Printf("Authenticated: %s\n", "") //ws.RemoteAddr()
+	log.Printf("Authenticated\n")
 	h.send(ws, NamedEvent{"ok"})
 	h.logins[ws] = 0, true
 	return nil
@@ -349,7 +345,7 @@ func (h* handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
 		return err
 	}
 	if !h.loggedIn(ws) {
-		err := os.NewError("trying to access denied data") // ws.RemoteAddr()
+		err := os.NewError("not authorized to publish on this channel")
 		log.Printf("[%s => %s] Event error: %s\n", h.path, name, err.String())
 		h.send(ws, accessDeniedErr)
 		return err
