@@ -1,11 +1,15 @@
 {
-	"host": "localhost",
-	"port": 9772,
-	"hubs": [
+	"Host": "localhost",
+	"Port": 9772,
+
+	"TLSCertFile": "",
+	"TLSKeyFile": "",
+
+	"Hubs": [
 		{
-			"path": "/echo",
-			"codec": "JSON",
-			"secret": "secret"
+			"Path": "/echo",
+			"Codec": "JSON",
+			"Secret": "secret"
 		}
 	]
 }

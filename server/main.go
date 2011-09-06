@@ -13,9 +13,11 @@ import (
 const version = "0.0.1"
 
 type ServerConfig struct {
-	Host string
-	Port int
-	Hubs []*HubConfig
+	Host        string
+	Port        int
+	TLSCertFile string
+	TLSKeyFile  string
+	Hubs        []*HubConfig
 }
 
 func (sc *ServerConfig) Addr() string {
@@ -49,6 +51,8 @@ func init() {
 	flag.Usage = printUsage
 	flag.StringVar(&flags.Host, "host", "localhost", "serve on given host")
 	flag.IntVar(&flags.Port, "port", 9772, "listen on given port number")
+	flag.StringVar(&flags.TLSCertFile, "tls-cert", "", "path to server certificate")
+	flag.StringVar(&flags.TLSKeyFile, "tls-key", "", "server's private key")
 	flag.Bool("version", false, "display version number")
 	flag.Parse()
 	configure(flags)
@@ -77,13 +81,17 @@ func configure(flags ServerConfig) {
 			config.Port = flags.Port
 		case "host":
 			config.Host = flags.Host
+		case "tls-cert":
+			config.TLSCertFile = flags.TLSCertFile
+		case "tls-key":
+			config.TLSKeyFile = flags.TLSKeyFile
 		}
 	})
 }
 
 func printUsage() {
-	fmt.Printf("Usage: rocket [flags] configpath...\n")
-	fmt.Printf("       rocket [flags]\n")
+	fmt.Fprintf(os.Stderr, "Usage: rocket [flags] configpath...\n")
+	fmt.Fprintf(os.Stderr, "       rocket [flags]\n")
 	flag.PrintDefaults()
 }
 
@@ -96,7 +104,11 @@ func startServer() {
 	for _, hub := range config.Hubs {
 		s.Handle(hub.Path, hub.Handler())
 	}
-	s.ListenAndServe()
+	if config.TLSCertFile != "" && config.TLSKeyFile != "" {
+		s.ListenAndServeTLS(config.TLSCertFile, config.TLSKeyFile)
+	} else {
+		s.ListenAndServe()
+	}
 }
 
 func main() {
