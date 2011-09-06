@@ -44,7 +44,7 @@ func (hc *HubConfig) Handler() webrocket.Handler {
 var (
 	config ServerConfig
 	action string
-	)
+)
 
 func init() {
 	var flags ServerConfig
@@ -59,7 +59,7 @@ func init() {
 }
 
 func configure(flags ServerConfig) {
-	if (flag.NArg() == 1) {
+	if flag.NArg() == 1 {
 		fname := flag.Arg(0)
 		f, err := os.Open(fname)
 		if err != nil {
@@ -73,7 +73,7 @@ func configure(flags ServerConfig) {
 		log.Printf("Configured using %s\n", fname)
 		action = "serve"
 	}
-	flag.Visit(func (flag *flag.Flag) {
+	flag.Visit(func(flag *flag.Flag) {
 		switch flag.Name {
 		case "version":
 			action = "version"

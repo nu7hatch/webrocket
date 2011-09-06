@@ -3,7 +3,7 @@ package webrocket
 import (
 	"websocket"
 	"testing"
-	)
+)
 
 var ws *websocket.Conn
 
@@ -66,7 +66,7 @@ func TestAuthenticate(t *testing.T) {
 }
 
 func TestEvents(t *testing.T) {
-	event := DataEvent{Event: "my-custom-event", Channel: "wrong", Data: map[string]string{"foo":"bar"}}
+	event := DataEvent{Event: "my-custom-event", Channel: "wrong", Data: map[string]string{"foo": "bar"}}
 	sendAndCheck(t, event)
 	var response ErrorEvent
 	err := websocket.JSON.Receive(ws, &response)

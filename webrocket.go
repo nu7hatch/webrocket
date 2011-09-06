@@ -11,7 +11,7 @@ import (
 	"http"
 	"log"
 	"os"
-	)
+)
 
 // NamedEvent is an raw event with specified name.
 type NamedEvent struct {
@@ -120,7 +120,7 @@ websocket connections.
 func (s *Server) ListenAndServeTLS(certFile, keyFile string) os.Error {
 	log.Printf("About to listen on %s", s.Addr)
 	err := s.Server.ListenAndServeTLS(certFile, keyFile)
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("Secured server startup error: %s\n", err.String())
 	}
 	return err
@@ -164,7 +164,7 @@ func (ch *channel) hub() {
 		case s := <-ch.subscribe:
 			ch.readers[s.reader] = 0, s.active
 		case b := <-ch.broadcast:
-			for reader, _ := range ch.readers {
+			for reader := range ch.readers {
 				b(reader)
 			}
 		}
@@ -186,7 +186,7 @@ Trivial custom handler:
     }
 */
 type Handler interface {
-	Register(id interface {}) (websocket.Handler, os.Error)
+	Register(id interface{}) (websocket.Handler, os.Error)
 }
 
 // Default handler, with various message codecs support.
@@ -216,7 +216,7 @@ func NewHandler(codec websocket.Codec) *handler {
 Register initializes new handle under specified id (in this case an id is query path),
 and returns valid websocket.Handler clojure to handle incoming messages.
 */
-func (h *handler) Register(id interface {}) (websocket.Handler, os.Error) {
+func (h *handler) Register(id interface{}) (websocket.Handler, os.Error) {
 	if h.registered {
 		return nil, os.NewError("Handler already registered")
 	}
@@ -289,7 +289,6 @@ func (h *handler) onClose(ws *websocket.Conn) os.Error {
 	return nil
 }
 
-
 func (h *handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	name := e.Channel
 	if len(name) == 0 {
@@ -309,7 +308,7 @@ func (h *handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	return nil
 }
 
-func (h* handler) onUnsubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
+func (h *handler) onUnsubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	name := e.Channel
 	if ch, ok := h.channels[name]; ok {
 		ch.subscribe <- subscription{ws, false}
@@ -323,7 +322,7 @@ func (h *handler) onAuthenticate(ws *websocket.Conn, e *DataEvent) os.Error {
 	if h.loggedIn(ws) {
 		return nil
 	}
-	secret, ok := e.Data["secret"];
+	secret, ok := e.Data["secret"]
 	if h.Secret != "" && !(ok && h.Secret == secret) {
 		log.Printf("Authentication failed\n")
 		h.send(ws, notAuthenticatedErr)
@@ -335,7 +334,7 @@ func (h *handler) onAuthenticate(ws *websocket.Conn, e *DataEvent) os.Error {
 	return nil
 }
 
-func (h* handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
+func (h *handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
 	name := e.Channel
 	ch, ok := h.channels[name]
 	if !ok {
@@ -365,5 +364,5 @@ func (h* handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
 
 // Creates new handler basd on the default JSON protocol.
 func NewJSONHandler() *handler {
-	return NewHandler(websocket.JSON) 
+	return NewHandler(websocket.JSON)
 }
