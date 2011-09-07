@@ -62,6 +62,7 @@ var (
 // Server defines parameters for running an WebSocket server.
 type Server struct {
 	http.Server
+	Log      *log.Logger
 	handlers handlerMap
 	certFile string
 	keyFile  string
@@ -93,7 +94,7 @@ Registers payload handler under specified path. Handler have to implement
 communication protocol callbacks.
 */
 func (s *Server) Handle(path string, h Handler) {
-	proxy, ok := h.Register(path)
+	proxy, ok := h.Register(s, path)
 	if ok == nil {
 		s.Handler.(*http.ServeMux).Handle(path, proxy)
 		s.handlers[path] = h
@@ -105,10 +106,10 @@ Listens on the TCP network address srv.Addr and handles requests on incoming
 websocket connections.
 */
 func (s *Server) ListenAndServe() os.Error {
-	log.Printf("About to listen on %s\n", s.Addr)
+	s.Log.Printf("About to listen on %s\n", s.Addr)
 	err := s.Server.ListenAndServe()
 	if err != nil {
-		log.Fatalf("Server startup error: %s\n", err.String())
+		s.Log.Fatalf("Server startup error: %s\n", err.String())
 	}
 	return err
 }
@@ -118,10 +119,10 @@ Listens on the TCP network address srv.Addr and handles requests on incoming TLS
 websocket connections.
 */
 func (s *Server) ListenAndServeTLS(certFile, keyFile string) os.Error {
-	log.Printf("About to listen on %s", s.Addr)
+	s.Log.Printf("About to listen on %s", s.Addr)
 	err := s.Server.ListenAndServeTLS(certFile, keyFile)
 	if err != nil {
-		log.Fatalf("Secured server startup error: %s\n", err.String())
+		s.Log.Fatalf("Secured server startup error: %s\n", err.String())
 	}
 	return err
 }
@@ -186,13 +187,15 @@ Trivial custom handler:
     }
 */
 type Handler interface {
-	Register(id interface{}) (websocket.Handler, os.Error)
+	Register(s *Server, id interface{}) (websocket.Handler, os.Error)
 }
 
 // Default handler, with various message codecs support.
 type handler struct {
 	Codec      websocket.Codec
 	Secret     string
+	Log        *log.Logger
+	server     *Server
 	handler    websocket.Handler
 	path       string
 	registered bool
@@ -216,16 +219,20 @@ func NewHandler(codec websocket.Codec) *handler {
 Register initializes new handle under specified id (in this case an id is query path),
 and returns valid websocket.Handler clojure to handle incoming messages.
 */
-func (h *handler) Register(id interface{}) (websocket.Handler, os.Error) {
+func (h *handler) Register(s *Server, id interface{}) (websocket.Handler, os.Error) {
 	if h.registered {
 		return nil, os.NewError("Handler already registered")
 	}
+	if h.Log == nil {
+		h.Log = log.New(os.Stderr, id.(string)+" : ", log.LstdFlags)
+	}
+	h.server = s
 	h.path = id.(string)
 	h.handler = func(ws *websocket.Conn) { h.eventLoop(ws) }
 	h.channels = make(channelMap)
 	h.logins = make(readerMap)
 	h.registered = true
-	log.Printf("Registered handler: %s\n", h.path)
+	s.Log.Printf("Registered handler: %s\n", h.path)
 	return h.handler, nil
 }
 
@@ -265,7 +272,7 @@ func (h *handler) loggedIn(ws *websocket.Conn) bool {
 func (h *handler) receive(ws *websocket.Conn, e interface{}) os.Error {
 	err := h.Codec.Receive(ws, e)
 	if err != nil && err != os.EOF {
-		log.Printf("Receive error: %s\n", err.String())
+		h.Log.Printf("Receive error: %s\n", err.String())
 		h.send(ws, invalidEventFormatErr)
 	}
 	return err
@@ -274,18 +281,18 @@ func (h *handler) receive(ws *websocket.Conn, e interface{}) os.Error {
 func (h *handler) send(ws *websocket.Conn, e interface{}) os.Error {
 	err := h.Codec.Send(ws, e)
 	if err != nil {
-		log.Printf("Send error: %s\n", err.String())
+		h.Log.Printf("Send error: %s\n", err.String())
 	}
 	return err
 }
 
 func (h *handler) onOpen(ws *websocket.Conn) os.Error {
-	log.Printf("[%s] New connection\n", h.path)
+	h.Log.Printf("Connected\n")
 	return nil
 }
 
 func (h *handler) onClose(ws *websocket.Conn) os.Error {
-	log.Printf("[%s] Connection closed\n", h.path)
+	h.Log.Printf("Disconnected\n")
 	return nil
 }
 
@@ -293,7 +300,7 @@ func (h *handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	name := e.Channel
 	if len(name) == 0 {
 		err := os.NewError("invalid channel: " + name)
-		log.Printf("[%s] Subscribtion error: %s\n", h.path, err.String())
+		h.Log.Printf("Subscribtion error: %s\n", err.String())
 		h.send(ws, invalidChannelErr)
 		return err
 	}
@@ -302,9 +309,9 @@ func (h *handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 		ch = newChannel(h, name)
 		h.channels[name] = ch
 	}
-	ch.subscribe <- subscription{ws, true}
+	h.Log.Printf("Subscribed: %s\n", name)
 	h.send(ws, NamedEvent{"ok"})
-	log.Printf("[%s => %s] Subscribed: %s\n", h.path, name, name)
+	ch.subscribe <- subscription{ws, true}
 	return nil
 }
 
@@ -313,7 +320,7 @@ func (h *handler) onUnsubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 	if ch, ok := h.channels[name]; ok {
 		ch.subscribe <- subscription{ws, false}
 		h.send(ws, ChanneledEvent{"unsubscribed", name})
-		log.Printf("[%s => %s] Unsubscribed: %s\n", h.path, name, name)
+		h.Log.Printf("Unsubscribed: %s\n", name, name)
 	}
 	return nil
 }
@@ -324,11 +331,11 @@ func (h *handler) onAuthenticate(ws *websocket.Conn, e *DataEvent) os.Error {
 	}
 	secret, ok := e.Data["secret"]
 	if h.Secret != "" && !(ok && h.Secret == secret) {
-		log.Printf("Authentication failed\n")
 		h.send(ws, notAuthenticatedErr)
+		h.Log.Printf("Authentication failed\n")
 		return os.NewError("not authenticated")
 	}
-	log.Printf("Authenticated\n")
+	h.Log.Printf("Authenticated\n")
 	h.send(ws, NamedEvent{"ok"})
 	h.logins[ws] = 0, true
 	return nil
@@ -339,13 +346,13 @@ func (h *handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
 	ch, ok := h.channels[name]
 	if !ok {
 		err := os.NewError("invalid channel: " + name)
-		log.Printf("[%s => %s] Event error: %s\n", h.path, name, err.String())
+		h.Log.Printf("Event error: %s\n", err.String())
 		h.send(ws, invalidChannelErr)
 		return err
 	}
 	if !h.loggedIn(ws) {
 		err := os.NewError("not authorized to publish on this channel")
-		log.Printf("[%s => %s] Event error: %s\n", h.path, name, err.String())
+		h.Log.Printf("[=> %s] Event error: %s\n", name, err.String())
 		h.send(ws, accessDeniedErr)
 		return err
 	}
@@ -353,12 +360,12 @@ func (h *handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
 		if ws != nil {
 			err := h.send(ws, e)
 			if err != nil {
-				log.Printf("[%s => %s] Event error: %s\n", h.path, name, err.String())
+				h.Log.Printf("=> %s / Event error: %s\n", name, err.String())
 			}
 		}
 	}
 	h.send(ws, NamedEvent{"ok"})
-	log.Printf("[%s => %s] Broadcasted: %s\n", h.path, name, e)
+	h.Log.Printf("[=> %s] Broadcasted: %s\n", name, e)
 	return nil
 }
 

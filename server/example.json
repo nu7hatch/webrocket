@@ -9,7 +9,8 @@
 		{
 			"Path": "/echo",
 			"Codec": "JSON",
-			"Secret": "secret"
+			"Secret": "secret",
+			"Log": "./echo.log"
 		}
 	]
 }

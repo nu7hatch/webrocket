@@ -17,6 +17,7 @@ type ServerConfig struct {
 	Port        int
 	TLSCertFile string
 	TLSKeyFile  string
+	Log         string
 	Hubs        []*HubConfig
 }
 
@@ -24,17 +25,33 @@ func (sc *ServerConfig) Addr() string {
 	return sc.Host + ":" + strconv.Itoa(sc.Port)
 }
 
+func (sc *ServerConfig) CreateServer() *webrocket.Server {
+	s := webrocket.NewServer(sc.Addr())
+	if sc.Log != "" {
+		logFile := openLogFile(sc.Log)
+		s.Log = log.New(logFile, "S : ", log.LstdFlags)
+	}
+	return s
+}
+
 type HubConfig struct {
 	Path   string
 	Secret string
 	Codec  string
+	Log    string
 }
 
-func (hc *HubConfig) Handler() webrocket.Handler {
+func (hc *HubConfig) CreateHandler() webrocket.Handler {
+	var logger *log.Logger
+	if hc.Log != "" {
+		logFile := openLogFile(hc.Log)
+		logger = log.New(logFile, hc.Path+" : ", log.LstdFlags)
+	}
 	switch hc.Codec {
 	case "JSON":
 		h := webrocket.NewJSONHandler()
 		h.Secret = hc.Secret
+		h.Log = logger
 		return h
 	}
 	log.Fatalf("Invalid handler type: %s\n", hc.Codec)
@@ -42,7 +59,7 @@ func (hc *HubConfig) Handler() webrocket.Handler {
 }
 
 var (
-	config ServerConfig
+	server ServerConfig
 	action string
 )
 
@@ -53,6 +70,7 @@ func init() {
 	flag.IntVar(&flags.Port, "port", 9772, "listen on given port number")
 	flag.StringVar(&flags.TLSCertFile, "tls-cert", "", "path to server certificate")
 	flag.StringVar(&flags.TLSKeyFile, "tls-key", "", "server's private key")
+	flag.StringVar(&flags.Log, "log", "", "path to log file")
 	flag.Bool("version", false, "display version number")
 	flag.Parse()
 	configure(flags)
@@ -66,7 +84,7 @@ func configure(flags ServerConfig) {
 			log.Fatalf("Config reading error: %s\n", err.String())
 		}
 		dec := json.NewDecoder(f)
-		err = dec.Decode(&config)
+		err = dec.Decode(&server)
 		if err != nil {
 			log.Fatalf("Config parsing error: %s\n", err.String())
 		}
@@ -78,15 +96,25 @@ func configure(flags ServerConfig) {
 		case "version":
 			action = "version"
 		case "port":
-			config.Port = flags.Port
+			server.Port = flags.Port
 		case "host":
-			config.Host = flags.Host
+			server.Host = flags.Host
 		case "tls-cert":
-			config.TLSCertFile = flags.TLSCertFile
+			server.TLSCertFile = flags.TLSCertFile
 		case "tls-key":
-			config.TLSKeyFile = flags.TLSKeyFile
+			server.TLSKeyFile = flags.TLSKeyFile
+		case "log":
+			server.Log = flags.Log
 		}
 	})
+}
+
+func openLogFile(fname string) *os.File {
+	f, err := os.OpenFile(fname, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+	if err != nil {
+		log.Fatalf("Log file error: %s", err.String())
+	}
+	return f
 }
 
 func printUsage() {
@@ -100,12 +128,12 @@ func printVersion() {
 }
 
 func startServer() {
-	s := webrocket.NewServer(config.Addr())
-	for _, hub := range config.Hubs {
-		s.Handle(hub.Path, hub.Handler())
+	s := server.CreateServer()
+	for _, hub := range server.Hubs {
+		s.Handle(hub.Path, hub.CreateHandler())
 	}
-	if config.TLSCertFile != "" && config.TLSKeyFile != "" {
-		s.ListenAndServeTLS(config.TLSCertFile, config.TLSKeyFile)
+	if server.TLSCertFile != "" && server.TLSKeyFile != "" {
+		s.ListenAndServeTLS(server.TLSCertFile, server.TLSKeyFile)
 	} else {
 		s.ListenAndServe()
 	}
