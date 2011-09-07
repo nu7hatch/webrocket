@@ -1,3 +1,7 @@
+# 0.1.1
+
+* Fixed panics caused by logging
+
 # 0.1.0
 
 * Advanced logging (logging to files, separate loggers for hubs, ...)
