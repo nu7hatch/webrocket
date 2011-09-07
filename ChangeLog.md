@@ -1,3 +1,10 @@
+# 0.1.0
+
+* Advanced logging (logging to files, separate loggers for hubs, ...)
+* Fully-functional CLI with JSON config files support
+* Optimized broadcasting
+* Bugfixes
+
 # 0.0.1 (proof of concept)
 
 * Default JSON handler
