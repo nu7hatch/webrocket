@@ -86,6 +86,7 @@ func NewServer(addr string) *Server {
 	s := new(Server)
 	s.Addr, s.Handler = addr, http.NewServeMux()
 	s.handlers = make(handlerMap)
+	s.Log = log.New(os.Stderr, "S : ", log.LstdFlags)
 	return s
 }
 

@@ -88,7 +88,6 @@ func configure(flags ServerConfig) {
 		if err != nil {
 			log.Fatalf("Config parsing error: %s\n", err.String())
 		}
-		log.Printf("Configured using %s\n", fname)
 		action = "serve"
 	}
 	flag.Visit(func(flag *flag.Flag) {
