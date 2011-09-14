@@ -68,11 +68,11 @@ when successfully performed, should return:
     
 Otherwise, when error encountered, then response message has following format:
 
-    {"error": "error-type"}
+    {"err": "error-code"}
 
 ### Authentication
 
-    {"authenticate": {"access": "access-type", "secret": "secret-key"}}
+    {"auth": {"access": "access-type", "secret": "secret-key"}}
 
 * `secret` - key for specified access type
 * `access` - can be either `read-only` or `read-write`
@@ -81,16 +81,19 @@ Error responses:
 
 * `invalid_credentials` - obviously, returned when given secret is invalid
 
-### Channel subscribing/unsubscribing
+### Subscribing
 
     {"subscribe": {"channel": "channel-name"}}
-    {"unsubscribe": {"channel": "channel-name"}}
 
 * `channel` - name of channel you want to (un)subscribe, not existing channels are created automatically
     
 Error responses:
 
 * `access_denied` - returned when current session is not authenticated for reading
+
+### Unsubscribing
+
+    {"unsubscribe": {"channel": "channel-name"}}
 
 ### Publishing
 
@@ -113,7 +116,7 @@ Error responses:
 ### Safe disconnecting
 
     {"disconnect": true}
-    
+
 ## Hacking
 
 TODO...
