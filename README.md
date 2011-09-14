@@ -32,16 +32,16 @@ Once you install the Go compiler, building rocket is very easy.
 First, clone the repo:
 
     $ git clone git://github.com/nu7hatch/webrocket.git
-	$ cd webrocket
+    $ cd webrocket
 	
 Build and install the `webrocket` library:
  	
-	$ make && make install
+    $ make && make install
 	
 Finally, build `rocket` command line tool:
 
     $ cd server
-	$ make
+    $ make
 	
 If everything will go fine, then you will find the `./rocket` binary in  current 
 directory.
@@ -52,12 +52,77 @@ Server is quite easy to configure and run. The only thing you have to do
 is to create your own configuration based on the versioned `example.json` file. 
 
     $ cp example.json my.json
-	$ # edit configuration file...
+    $ # edit configuration file...
     $ rocket my.json
 
 By default rocket listens on port `9772` on localhost. You can change it
 in your configuration or by setting proper flags. Use `rocket --help` to 
 check available flags and options.
+
+## Protocol (TODO...)
+
+By default, Rocket implements simple JSON protocol for pub-sub channels:
+
+#### Authentication
+
+    {"authenticate": {"access": "access-type", "secret": "secret-key"}}
+
+* `secret` - key for specified access type
+* `access` - can be either `read-only` or `read-write`
+
+Responses:
+
+    {"ok": true}
+    {"error": "invalid_credentials"}
+
+* `invalid_credentials` - obviously, returned when given secret is invalid
+
+#### Channel subscribing/unsubscribing
+
+    {"subscribe": {"channel": "channel-name"}}
+    {"unsubscribe": {"channel": "channel-name"}}
+
+* `channel` - name of channel you want to (un)subscribe, not existing channels are created automatically
+    
+Responses:
+
+    {"ok": true}
+    {"error": "access_denied"}
+
+* `access_denied` - returned when current session is not authenticated for reading
+
+#### Publishing
+
+    {"publish": {"event": "event-name", "channel": "channel-name", "data": {"foo": "bar"}}}
+
+* `event` - communication is event oriented, so each message needs to specify which event triggers it
+* `channel` - channel have to exist
+* `data` - published data
+
+Responses:
+
+    {"ok": true}
+    {"error": "access_denied"}
+    {"error": "invalid_format"}
+    {"error": "invalid_channel"}
+
+* `access_denied` - returned when current session is not authenticated for writing
+* `invalid_format` - returned when published message has invalid format
+* `invalid_channel` - returned when desctination channel doesn't exist
+
+#### Closing session
+
+    {"logout": true}
+    
+Responses:
+
+    {"ok": true}
+
+#### Safe closing connection
+
+    {"disconnect": true}
+    
+No responses, closes current connection.
 
 ## Hacking
 
