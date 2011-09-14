@@ -61,33 +61,34 @@ check available flags and options.
 
 ## Protocol (TODO...)
 
-By default, Rocket implements simple JSON protocol for pub-sub channels:
+By default, Rocket implements simple JSON protocol for pub-sub channels. All following actions, 
+when successfully performed, should return:
 
-#### Authentication
+    {"ok": true}
+    
+Otherwise, when error encountered, then response message has following format:
+
+    {"error": "error-type"}
+
+### Authentication
 
     {"authenticate": {"access": "access-type", "secret": "secret-key"}}
 
 * `secret` - key for specified access type
 * `access` - can be either `read-only` or `read-write`
 
-Responses:
-
-    {"ok": true}
-    {"error": "invalid_credentials"}
+Error responses:
 
 * `invalid_credentials` - obviously, returned when given secret is invalid
 
-#### Channel subscribing/unsubscribing
+### Channel subscribing/unsubscribing
 
     {"subscribe": {"channel": "channel-name"}}
     {"unsubscribe": {"channel": "channel-name"}}
 
 * `channel` - name of channel you want to (un)subscribe, not existing channels are created automatically
     
-Responses:
-
-    {"ok": true}
-    {"error": "access_denied"}
+Error responses:
 
 * `access_denied` - returned when current session is not authenticated for reading
 
@@ -99,12 +100,7 @@ Responses:
 * `channel` - channel have to exist
 * `data` - published data
 
-Responses:
-
-    {"ok": true}
-    {"error": "access_denied"}
-    {"error": "invalid_format"}
-    {"error": "invalid_channel"}
+Error responses:
 
 * `access_denied` - returned when current session is not authenticated for writing
 * `invalid_format` - returned when published message has invalid format
@@ -114,16 +110,10 @@ Responses:
 
     {"logout": true}
     
-Responses:
-
-    {"ok": true}
-
-#### Safe closing connection
+#### Safe disconnecting
 
     {"disconnect": true}
     
-No responses, closes current connection.
-
 ## Hacking
 
 TODO...
