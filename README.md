@@ -92,7 +92,7 @@ Error responses:
 
 * `access_denied` - returned when current session is not authenticated for reading
 
-#### Publishing
+### Publishing
 
     {"publish": {"event": "event-name", "channel": "channel-name", "data": {"foo": "bar"}}}
 
@@ -106,11 +106,11 @@ Error responses:
 * `invalid_format` - returned when published message has invalid format
 * `invalid_channel` - returned when desctination channel doesn't exist
 
-#### Closing session
+### Closing session
 
     {"logout": true}
     
-#### Safe disconnecting
+### Safe disconnecting
 
     {"disconnect": true}
     
