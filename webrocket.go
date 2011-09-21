@@ -191,10 +191,16 @@ type Handler interface {
 	Register(s *Server, id interface{}) (websocket.Handler, os.Error)
 }
 
+// Storage for credentials setup.
+type Credentials struct {
+	ReadOnly  string
+	ReadWrite string
+}
+
 // Default handler, with various message codecs support.
 type handler struct {
 	Codec      websocket.Codec
-	Secret     string
+	Secrets    Credentials
 	Log        *log.Logger
 	server     *Server
 	handler    websocket.Handler
@@ -237,73 +243,205 @@ func (h *handler) Register(s *Server, id interface{}) (websocket.Handler, os.Err
 	return h.handler, nil
 }
 
+type Payload map[string]interface{}
+type Data    map[string]interface{}
+
+func (p *Payload) Event() (string, os.Error) {
+	for k, _ := range *p {
+		return k, nil
+	}
+	return "", os.NewError("invalid event")
+}
+
+func (p *Payload) Data() (*Data, os.Error) {
+	for _, v := range *p {
+		var d Data
+		val, ok := v.(map[string]interface{})
+		if ok {
+			d = val
+			return &d, nil
+		}
+		_, ok = v.(bool)
+		if ok {
+			return &d, nil
+		}
+	}
+	return nil, os.NewError("invalid data")
+}
+
+var (
+	Ok                 Payload = Payload{"ok": true}
+	InvalidData        Payload = Payload{"err": "invalid_data"}
+	InvalidCredentials Payload = Payload{"err": "invalid_credentials"}
+	InvalidChannelName Payload = Payload{"err": "invalid_channel_name"}
+	InvalidChannel     Payload = Payload{"err": "invalid_channel"}
+	AccessDenied       Payload = Payload{"err": "access_denied"}
+)
+
+const (
+	ReadOnlyAccess  = "read-only"
+	ReadWriteAccess = "read-write"
+)
+
+var AccessCodes map[string]int = map[string]int{
+	ReadOnlyAccess: 1,
+	ReadWriteAccess: 2,
+}
+	
 func (h *handler) eventLoop(ws *websocket.Conn) {
-	err := h.onOpen(ws)
-	if err == nil {
-		for {
-			var e DataEvent
-			err = h.receive(ws, &e)
-			if err == nil {
-				switch e.Event {
-				case "ok":
-					continue
-				case "subscribe":
-					h.onSubscribe(ws, &e)
-				case "unsubscribe":
-					h.onUnsubscribe(ws, &e)
-				case "authenticate":
-					h.onAuthenticate(ws, &e)
-				default:
-					h.onEvent(ws, &e)
-				}
-			}
+	h.onOpen(ws)
+	for {
+		var recv Payload
+		err = h.Codec.Receive(ws, &recv)
+		if err != nil {
 			if err == os.EOF {
 				break
 			}
+			h.onError(ws, err)
+			continue
+		}
+		event, err := recv.Event()
+		if err != nil {
+			h.onError(ws, err)
+			continue
+		}
+		data, err := recv.Data()
+		if err != nil {
+			h.onError(ws, err)
+			continue
+		}
+		ok := h.dispatch(ws, event, data)
+		if !ok {
+			break
 		}
 	}
 	h.onClose(ws)
 }
 
-func (h *handler) loggedIn(ws *websocket.Conn) bool {
-	_, ok := h.logins[ws]
-	return ok
-}
-
-func (h *handler) receive(ws *websocket.Conn, e interface{}) os.Error {
-	err := h.Codec.Receive(ws, e)
-	if err != nil && err != os.EOF {
-		h.Log.Printf("Receive error: %s\n", err.String())
-		h.send(ws, invalidEventFormatErr)
+func (h *handler) dispatch(ws *websocket.Conn, event string, data *Data) bool {
+	switch event {
+	case "auth":
+		h.onAuthenticate(ws, data)
+	case "subscribe":
+		h.onSubscribe(ws, data)
+	case "unsubscribe":
+		h.onUnsubscribe(ws, data)
+	case "publish":
+		h.onPublish(ws, data)
+	case "logout":
+		h.onLogout(ws)
+	case "disconnect":
+		h.onDisconnect(ws)
+		return false
 	}
-	return err
+	return true
 }
 
-func (h *handler) send(ws *websocket.Conn, e interface{}) os.Error {
-	err := h.Codec.Send(ws, e)
+
+func (h *handler) send(ws *websocket.Conn, data interface{}) os.Error {
+	err := h.Codec.Send(ws, data)
 	if err != nil {
-		h.Log.Printf("Send error: %s\n", err.String())
+		h.Log.Printf("Error: %s\n", err.String())
 	}
 	return err
 }
 
-func (h *handler) onOpen(ws *websocket.Conn) os.Error {
+func (h *handler) assertAccess(ws *websocket.Conn, access string) bool {
+	code, ok := h.logins[ws]
+	if !ok || code < AccessCodes[access] {
+		h.Log.Printf("Error: access denied\n")
+		h.send(ws, AccessDenied)
+		return false
+	}
+	return true
+}
+
+func (h *handler) secretFor(access string) (string, os.Error) {
+	if access == ReadOnlyAccess {
+		return h.Secrets.ReadOnly, nil
+	}
+	if access == ReadWriteAccess {
+		return h.Secrets.ReadWrite, nil
+	}
+	return "", os.NewError("invalid access method\n")
+}
+
+func (h *handler) onError(ws *websocket.Conn, err os.Error) {
+	h.Log.Printf("Error: %s\n", err.String())
+	h.send(ws, InvalidData)
+}
+
+func (h *handler) onOpen(ws *websocket.Conn) {
 	h.Log.Printf("Connected\n")
-	return nil
 }
 
-func (h *handler) onClose(ws *websocket.Conn) os.Error {
+func (h *handler) onClose(ws *websocket.Conn) {
 	h.Log.Printf("Disconnected\n")
-	return nil
 }
 
-func (h *handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
-	name := e.Channel
+func (h *handler) onDisconnect(ws *websocket.Conn) {
+	h.send(ws, Ok)
+	ws.Close()
+}
+
+func (h *handler) onAuthenticate(ws *websocket.Conn, data *Data) {
+	access, ok := (*data)["access"]
+	if !ok {
+		h.onError(ws, os.NewError("invalid auth data"))
+		return
+	}
+	secret, ok := (*data)["secret"]
+	if !ok {
+		h.onError(ws, os.NewError("invalid auth data"))
+		return
+	}
+	accessId, ok := access.(string)
+	if !ok {
+		h.onError(ws, os.NewError("invalid auth data"))
+		return
+	}
+	validSecret, err := h.secretFor(accessId)
+	if err != nil {
+		h.onError(ws, err)
+		return
+	}
+	if validSecret != "" && validSecret != secret {
+		h.logins[ws] = 0, false
+		h.send(ws, InvalidCredentials)
+		h.Log.Printf("Authentication failed\n")
+		return
+	}
+	h.Log.Printf("Authenticated (%s access)\n", accessId)
+	h.logins[ws] = AccessCodes[accessId], true
+	h.send(ws, Ok)
+}
+
+func (h *handler) onLogout(ws *websocket.Conn) {
+	h.Log.Printf("Logged out\n")
+	h.logins[ws] = 0, false
+	h.send(ws, Ok)
+}
+
+func (h *handler) onSubscribe(ws *websocket.Conn, data *Data) {
+	ok := h.assertAccess(ws, ReadOnlyAccess)
+	if !ok {
+		return
+	}
+	channel, ok := (*data)["channel"]
+	if !ok {
+		h.onError(ws, os.NewError("invalid subscribe data"))
+		return
+	}
+	name, ok := channel.(string)
+	if !ok {
+		h.onError(ws, os.NewError("invalid unsubscribe data"))
+		return
+	}
 	if len(name) == 0 {
-		err := os.NewError("invalid channel: " + name)
-		h.Log.Printf("Subscribtion error: %s\n", err.String())
-		h.send(ws, invalidChannelErr)
-		return err
+		err := os.NewError("empty channel name")
+		h.Log.Printf("Error: %s\n", err.String())
+		h.send(ws, InvalidChannelName)
+		return
 	}
 	ch, ok := h.channels[name]
 	if !ok {
@@ -311,63 +449,63 @@ func (h *handler) onSubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
 		h.channels[name] = ch
 	}
 	h.Log.Printf("Subscribed: %s\n", name)
-	h.send(ws, NamedEvent{"ok"})
 	ch.subscribe <- subscription{ws, true}
-	return nil
+	h.send(ws, Ok)
 }
 
-func (h *handler) onUnsubscribe(ws *websocket.Conn, e *DataEvent) os.Error {
-	name := e.Channel
-	if ch, ok := h.channels[name]; ok {
+func (h *handler) onUnsubscribe(ws *websocket.Conn, data *Data) {
+	channel, ok := (*data)["channel"]
+	if !ok {
+		h.onError(ws, os.NewError("invalid unsubscribe data"))
+		return
+	}
+	name, ok := channel.(string)
+	if !ok {
+		h.onError(ws, os.NewError("invalid unsubscribe data"))
+		return
+	}
+	ch, ok := h.channels[name]
+	if ok {
+		h.Log.Printf("Unsubscribed: %s\n", name)
 		ch.subscribe <- subscription{ws, false}
-		h.send(ws, ChanneledEvent{"unsubscribed", name})
-		h.Log.Printf("Unsubscribed: %s\n", name, name)
 	}
-	return nil
+	h.send(ws, Ok)
 }
 
-func (h *handler) onAuthenticate(ws *websocket.Conn, e *DataEvent) os.Error {
-	if h.loggedIn(ws) {
-		return nil
+func (h *handler) onPublish(ws *websocket.Conn, data *Data) {
+	ok := h.assertAccess(ws, ReadWriteAccess)
+	if !ok {
+		return
 	}
-	secret, ok := e.Data["secret"]
-	if h.Secret != "" && !(ok && h.Secret == secret) {
-		h.send(ws, notAuthenticatedErr)
-		h.Log.Printf("Authentication failed\n")
-		return os.NewError("not authenticated")
+	_, ok = (*data)["event"]
+	if !ok {
+		h.onError(ws, os.NewError("invalid publish data"))
+		return
 	}
-	h.Log.Printf("Authenticated\n")
-	h.send(ws, NamedEvent{"ok"})
-	h.logins[ws] = 0, true
-	return nil
-}
-
-func (h *handler) onEvent(ws *websocket.Conn, e *DataEvent) os.Error {
-	name := e.Channel
+	channel, ok := (*data)["channel"]
+	if !ok {
+		h.onError(ws, os.NewError("invalid publish data"))
+		return
+	}	
+	name, ok := channel.(string)
+	if !ok {
+		h.onError(ws, os.NewError("invalid publish data"))
+		return
+	}
 	ch, ok := h.channels[name]
 	if !ok {
 		err := os.NewError("invalid channel: " + name)
-		h.Log.Printf("Event error: %s\n", err.String())
-		h.send(ws, invalidChannelErr)
-		return err
+		h.Log.Printf("Error: %s\n", err.String())
+		h.send(ws, InvalidChannel)
+		return
 	}
-	if !h.loggedIn(ws) {
-		err := os.NewError("not authorized to publish on this channel")
-		h.Log.Printf("[=> %s] Event error: %s\n", name, err.String())
-		h.send(ws, accessDeniedErr)
-		return err
-	}
-	ch.broadcast <- func(ws *websocket.Conn) {
-		if ws != nil {
-			err := h.send(ws, e)
-			if err != nil {
-				h.Log.Printf("=> %s / Event error: %s\n", name, err.String())
-			}
+	ch.broadcast <- func (reader *websocket.Conn) {
+		if reader != nil {
+			h.send(reader, *data)
 		}
 	}
-	h.send(ws, NamedEvent{"ok"})
-	h.Log.Printf("[=> %s] Broadcasted: %s\n", name, e)
-	return nil
+	h.Log.Printf("[=> %s] Broadcasted: %s\n", name, *data)
+	h.send(ws, Ok)
 }
 
 // Creates new handler basd on the default JSON protocol.
