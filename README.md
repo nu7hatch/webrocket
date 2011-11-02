@@ -59,7 +59,7 @@ By default rocket listens on port `9772` on localhost. You can change it
 in your configuration or by setting proper flags. Use `rocket --help` to 
 check available flags and options.
 
-## Protocol (TODO...)
+## Protocol
 
 By default, Rocket implements simple JSON protocol for pub-sub channels. All following actions, 
 when successfully performed, should return:
@@ -90,6 +90,7 @@ Error responses:
 Error responses:
 
 * `access_denied` - returned when current session is not authenticated for reading
+* `invalid_channel_name` - returned when given channel name is invalid
 
 ### Unsubscribing
 
@@ -106,8 +107,8 @@ Error responses:
 Error responses:
 
 * `access_denied` - returned when current session is not authenticated for writing
-* `invalid_format` - returned when published message has invalid format
-* `invalid_channel` - returned when desctination channel doesn't exist
+* `invalid_data` - returned when published message has invalid format
+* `invalid_channel` - returned when destination channel doesn't exist
 
 ### Closing session
 

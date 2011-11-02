@@ -1,16 +1,17 @@
 {
 	"Host": "localhost",
 	"Port": 9772,
-
 	"TLSCertFile": "",
 	"TLSKeyFile": "",
-
 	"Hubs": [
 		{
 			"Path": "/echo",
 			"Codec": "JSON",
-			"Secret": "secret",
-			"Log": "./echo.log"
+			"Log": "./echo.log",
+			"Secrets": {
+				"ReadOnly": "",
+				"ReadWrite": "secret"
+			}
 		}
 	]
 }

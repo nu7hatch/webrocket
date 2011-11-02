@@ -13,51 +13,8 @@ import (
 	"os"
 )
 
-// NamedEvent is an raw event with specified name.
-type NamedEvent struct {
-	Event string
-}
-
-// ChanneledEvent is an raw event associated with specified channel.
-type ChanneledEvent struct {
-	Event   string
-	Channel string
-}
-
-/*
-DataEvent is an raw event with data attributes, associated with
-specified channel.
-*/
-type DataEvent struct {
-	Event   string
-	Channel string
-	Data    DataMap
-}
-
-// EventError is response payload containig error string.
-type ErrorEvent struct {
-	Error string
-}
-
-// DataMap contains decoded data attributes of payload message.
-type DataMap map[string]string
-
-// channelMap is a map of channels.
-type channelMap map[string]*channel
-
-// readerMap contains sockets subscribing given channel.
-type readerMap map[*websocket.Conn]int
-
 // handlerMap is a map of resource handlers.
 type handlerMap map[string]Handler
-
-var (
-	invalidChannelErr     = ErrorEvent{"invalid_channel"}
-	invalidEventFormatErr = ErrorEvent{"invalid_event_format"}
-	invalidAuthDataErr    = ErrorEvent{"invalid_auth_data"}
-	accessDeniedErr       = ErrorEvent{"access_denied"}
-	notAuthenticatedErr   = ErrorEvent{"not_authenticated"}
-)
 
 // Server defines parameters for running an WebSocket server.
 type Server struct {
@@ -128,6 +85,9 @@ func (s *Server) ListenAndServeTLS(certFile, keyFile string) os.Error {
 	return err
 }
 
+// readerMap contains sockets subscribing given channel.
+type readerMap map[*websocket.Conn]int
+
 /*
 channel keeps information about specified channel and it's subscriptions.
 It's hub is used to broadcast messages.
@@ -139,6 +99,9 @@ type channel struct {
 	subscribe chan subscription
 	broadcast chan broadcaster
 }
+
+// channelMap is a map of channels.
+type channelMap map[string]*channel
 
 // broadcaster is a function for spreading messages to all chanel's readers. 
 type broadcaster func(ws *websocket.Conn)
@@ -174,6 +137,44 @@ func (ch *channel) hub() {
 }
 
 /*
+Payload is an general strucutre for all sent event messages.
+
+Simple examples how to create new event message:
+
+    Payload SimpleMessage  = Payload("hello": "world")
+    Payload ComplexMessage = Payload("hello": Data{"foo": "bar"})
+*/
+type Payload map[string]interface{}
+
+// Data is an general structure for all received event messages.
+type Data    map[string]interface{}
+
+// Returns name of event represented by this payload.
+func (p *Payload) Event() (string, os.Error) {
+	for k, _ := range *p {
+		return k, nil
+	}
+	return "", os.NewError("invalid event")
+}
+
+// Returns data contained by this payload.
+func (p *Payload) Data() (*Data, os.Error) {
+	for _, v := range *p {
+		var d Data
+		val, ok := v.(map[string]interface{})
+		if ok {
+			d = val
+			return &d, nil
+		}
+		_, ok = v.(bool)
+		if ok {
+			return &d, nil
+		}
+	}
+	return nil, os.NewError("invalid data")
+}
+
+/*
 Handler handlers all incoming requestes using defined protocol. Handler also
 manages all registered channels.
 
@@ -196,6 +197,28 @@ type Credentials struct {
 	ReadOnly  string
 	ReadWrite string
 }
+
+// Access control defaults.
+var AccessCodes map[string]int = map[string]int{
+	ReadOnlyAccess: 1,
+	ReadWriteAccess: 2,
+}
+
+// Access control constants.
+const (
+	ReadOnlyAccess  = "read-only"
+	ReadWriteAccess = "read-write"
+)
+
+// Predefined payloads.
+var (
+	Ok                 Payload = Payload{"ok": true}
+	InvalidData        Payload = Payload{"err": "invalid_data"}
+	InvalidCredentials Payload = Payload{"err": "invalid_credentials"}
+	InvalidChannelName Payload = Payload{"err": "invalid_channel_name"}
+	InvalidChannel     Payload = Payload{"err": "invalid_channel"}
+	AccessDenied       Payload = Payload{"err": "access_denied"}
+)
 
 // Default handler, with various message codecs support.
 type handler struct {
@@ -242,57 +265,12 @@ func (h *handler) Register(s *Server, id interface{}) (websocket.Handler, os.Err
 	s.Log.Printf("Registered handler: %s\n", h.path)
 	return h.handler, nil
 }
-
-type Payload map[string]interface{}
-type Data    map[string]interface{}
-
-func (p *Payload) Event() (string, os.Error) {
-	for k, _ := range *p {
-		return k, nil
-	}
-	return "", os.NewError("invalid event")
-}
-
-func (p *Payload) Data() (*Data, os.Error) {
-	for _, v := range *p {
-		var d Data
-		val, ok := v.(map[string]interface{})
-		if ok {
-			d = val
-			return &d, nil
-		}
-		_, ok = v.(bool)
-		if ok {
-			return &d, nil
-		}
-	}
-	return nil, os.NewError("invalid data")
-}
-
-var (
-	Ok                 Payload = Payload{"ok": true}
-	InvalidData        Payload = Payload{"err": "invalid_data"}
-	InvalidCredentials Payload = Payload{"err": "invalid_credentials"}
-	InvalidChannelName Payload = Payload{"err": "invalid_channel_name"}
-	InvalidChannel     Payload = Payload{"err": "invalid_channel"}
-	AccessDenied       Payload = Payload{"err": "access_denied"}
-)
-
-const (
-	ReadOnlyAccess  = "read-only"
-	ReadWriteAccess = "read-write"
-)
-
-var AccessCodes map[string]int = map[string]int{
-	ReadOnlyAccess: 1,
-	ReadWriteAccess: 2,
-}
 	
 func (h *handler) eventLoop(ws *websocket.Conn) {
 	h.onOpen(ws)
 	for {
 		var recv Payload
-		err = h.Codec.Receive(ws, &recv)
+		err := h.Codec.Receive(ws, &recv)
 		if err != nil {
 			if err == os.EOF {
 				break

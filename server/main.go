@@ -35,10 +35,10 @@ func (sc *ServerConfig) CreateServer() *webrocket.Server {
 }
 
 type HubConfig struct {
-	Path   string
-	Secret string
-	Codec  string
-	Log    string
+	Path    string
+	Secrets webrocket.Credentials
+	Codec   string
+	Log     string
 }
 
 func (hc *HubConfig) CreateHandler() webrocket.Handler {
@@ -50,7 +50,7 @@ func (hc *HubConfig) CreateHandler() webrocket.Handler {
 	switch hc.Codec {
 	case "JSON":
 		h := webrocket.NewJSONHandler()
-		h.Secret = hc.Secret
+		h.Secrets = hc.Secrets
 		h.Log = logger
 		return h
 	}
