@@ -147,11 +147,11 @@ Simple examples how to create new event message:
 type Payload map[string]interface{}
 
 // Data is an general structure for all received event messages.
-type Data    map[string]interface{}
+type Data map[string]interface{}
 
 // Returns name of event represented by this payload.
 func (p *Payload) Event() (string, os.Error) {
-	for k, _ := range *p {
+	for k := range *p {
 		return k, nil
 	}
 	return "", os.NewError("invalid event")
@@ -200,7 +200,7 @@ type Credentials struct {
 
 // Access control defaults.
 var AccessCodes map[string]int = map[string]int{
-	ReadOnlyAccess: 1,
+	ReadOnlyAccess:  1,
 	ReadWriteAccess: 2,
 }
 
@@ -265,7 +265,7 @@ func (h *handler) Register(s *Server, id interface{}) (websocket.Handler, os.Err
 	s.Log.Printf("Registered handler: %s\n", h.path)
 	return h.handler, nil
 }
-	
+
 func (h *handler) eventLoop(ws *websocket.Conn) {
 	h.onOpen(ws)
 	for {
@@ -314,7 +314,6 @@ func (h *handler) dispatch(ws *websocket.Conn, event string, data *Data) bool {
 	}
 	return true
 }
-
 
 func (h *handler) send(ws *websocket.Conn, data interface{}) os.Error {
 	err := h.Codec.Send(ws, data)
@@ -464,7 +463,7 @@ func (h *handler) onPublish(ws *websocket.Conn, data *Data) {
 	if !ok {
 		h.onError(ws, os.NewError("invalid publish data"))
 		return
-	}	
+	}
 	name, ok := channel.(string)
 	if !ok {
 		h.onError(ws, os.NewError("invalid publish data"))
@@ -477,7 +476,7 @@ func (h *handler) onPublish(ws *websocket.Conn, data *Data) {
 		h.send(ws, InvalidChannel)
 		return
 	}
-	ch.broadcast <- func (reader *websocket.Conn) {
+	ch.broadcast <- func(reader *websocket.Conn) {
 		if reader != nil {
 			h.send(reader, *data)
 		}

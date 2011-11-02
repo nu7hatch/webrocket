@@ -18,7 +18,7 @@ func init() {
 	go func() {
 		logger := log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags)
 		server := NewServer(":9771")
-		server.Log = logger 
+		server.Log = logger
 		handler := NewHandler(websocket.JSON)
 		handler.Log = logger
 		handler.Secrets = Credentials{"read-secret", "read-write-secret"}
@@ -43,7 +43,7 @@ func wsReadResponse(t *testing.T) Payload {
 	}
 	return resp
 }
-	
+
 func TestConnect(t *testing.T) {
 	ws, err = websocket.Dial("ws://localhost:9771/echo", "ws", "http://localhost/")
 	if err != nil {
@@ -202,8 +202,8 @@ func TestPublishAsSubscriber(t *testing.T) {
 	data := Payload{
 		"publish": Data{
 			"channel": "hello",
-			"event": "foo",
-			"data": "bar",
+			"event":   "foo",
+			"data":    "bar",
 		},
 	}
 	wsSendJSON(t, data)
@@ -229,8 +229,8 @@ func TestPublishInvalidChannel(t *testing.T) {
 	data := Payload{
 		"publish": Data{
 			"channel": "invalid-channel",
-			"event": "foo",
-			"data": "bar",
+			"event":   "foo",
+			"data":    "bar",
 		},
 	}
 	wsSendJSON(t, data)
@@ -244,7 +244,7 @@ func TestPublishWithMissingEvent(t *testing.T) {
 	data := Payload{
 		"publish": Data{
 			"channel": "hello",
-			"data": "bar",
+			"data":    "bar",
 		},
 	}
 	wsSendJSON(t, data)
@@ -274,8 +274,8 @@ func TestPublish(t *testing.T) {
 	wsSendJSON(t, Payload{
 		"publish": Data{
 			"channel": "hello",
-			"event": "foo",
-			"data": "bar",
+			"event":   "foo",
+			"data":    "bar",
 		},
 	})
 	resp = wsReadResponse(t)
