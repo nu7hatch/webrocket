@@ -1,3 +1,9 @@
+# 0.2.0
+
+* Refactored and standarized JSON-based protocol
+* CLI adapted to new protocol
+* Added more flexible configuration
+
 # 0.1.1
 
 * Fixed panics caused by logging
