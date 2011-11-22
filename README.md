@@ -49,62 +49,131 @@ check available flags and options.
 
 ## Protocol
 
-By default, Rocket implements simple JSON protocol for pub-sub channels. All following actions, 
-when successfully performed, should return:
+Webrocket implements simple and fast JSON-based protocol, offering support for authentication and
+basic access controll, channels subscribing, and messages broadcasting. 
 
-    {"ok": true}
-    
-Otherwise, when error encountered, then response message has following format:
+Each message handled by the server may cause possible errors. All error which are not affecting
+connection with the client are forwarded to it using the following payload format:
 
-    {"err": "error-code"}
+    {"err": "ERROR_NAME"}
+	
+Possible errors are listed for each action.
 
-### Authentication
+### Authenticate
 
-    {"auth": {"access": "access-type", "secret": "secret-key"}}
+Payload:
+
+    {"authenticate": {"access": "access-type", "secret": "secret-key"}}
 
 * `secret` - key for specified access type
 * `access` - can be either `read-only` or `read-write`
 
-Error responses:
+Errors:
 
-* `invalid_credentials` - obviously, returned when given secret is invalid
+* `INVALID_CREDENTIALS` - obviously, returned when given secret is invalid
+* `INVALID_PAYLOAD` - when payload format is invalid
 
-### Subscribing
+Success response:
+
+    {"authenticated": "access-type"}
+
+### Subscribe
+
+Payload:
 
     {"subscribe": {"channel": "channel-name"}}
 
-* `channel` - name of channel you want to (un)subscribe, not existing channels are created automatically
+* `channel` - name of channel you want to subscribe, not existing channels are created automatically
     
-Error responses:
+Errors:
 
-* `access_denied` - returned when current session is not authenticated for reading
-* `invalid_channel_name` - returned when given channel name is invalid
+* `ACCESS_DENIED` - returned when current session is not authenticated for reading
+* `INVALID_PAYLOAD` - when payload format is invalid
 
-### Unsubscribing
+Success response:
+
+    {"subscribed": "channel-name"}
+
+### Unsubscribe
+
+Payload:
 
     {"unsubscribe": {"channel": "channel-name"}}
 
-### Publishing
+* `channel` - name of channel you want to unsubscribe
 
-    {"publish": {"event": "event-name", "channel": "channel-name", "data": {"foo": "bar"}}}
+Errors:
+
+* `INVALID_PAYLOAD` - when payload format is invalid
+
+Success response:
+
+    {"unsubscribed": "channel-name"}
+
+### Broadcast
+
+Payload:
+
+    {"broadcast": {"event": "event-name", "channel": "channel-name", "data": {"foo": "bar"}}}
 
 * `event` - communication is event oriented, so each message needs to specify which event triggers it
 * `channel` - channel have to exist
 * `data` - published data
 
-Error responses:
+Errors:
 
-* `access_denied` - returned when current session is not authenticated for writing
-* `invalid_data` - returned when published message has invalid format
-* `invalid_channel` - returned when destination channel doesn't exist
+* `ACCESS_DENIED` - returned when current session is not authenticated for writing
+* `INVALID_CHANNEL` - returned when destination channel doesn't exist
+* `INVALID_PAYLOAD` - when payload format is invalid
 
-### Closing session
+Success response:
+
+    {"broadcasted": "channel-name"}
+
+### Direct message (NOT IMPLEMENTED)
+
+Payload:
+
+    {"direct": {"event": "event-name", "client": "client-token", "data": {"foo": "bar"}}}
+
+* `event` - communication is event oriented, so each message needs to specify which event triggers it
+* `channel` - channel have to exist
+* `data` - published data
+
+Errors:
+
+* `INVALID_CLIENT` - returned when destination client doesn't exist
+* `INVALID_PAYLOAD` - when payload format is invalid
+
+Success response:
+
+    {"directSent": "client-token"}
+
+### Session logout
+
+Payload:
 
     {"logout": true}
     
-### Safe disconnecting
+Errors:
+
+* `INVALID_PAYLOAD` - when payload format is invalid
+
+Success response:
+
+    {"loggedOut": true}
+	
+### Safe disconnect
+
+Payload:
 
     {"disconnect": true}
+
+Errors:
+
+* `INVALID_PAYLOAD` - when payload format is invalid
+
+No success response, connection is closed immediately after this message.
 
 ## Hacking
 
