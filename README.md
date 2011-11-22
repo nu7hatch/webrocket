@@ -4,31 +4,19 @@ Rocket is very fast and reliable WebSockets server written in [Go language](http
 Package contains also the `webrocket` library, which provides highly extensible
 backend, eg. for defining your own protocols (see *Hacking* section for details). 
 
-## History and motivation
-
-Some time ago i wrote [first version of Rocket](https://github.com/araneo/rocket) 
-server in Ruby at top of EventMachine and EM-Websocket libs. This proof of concept
-version worked fine and done his job properly so i din't touched anything... until 
-i found perfect platform to reimplement it! Go language with its concurrency model 
-powered by goroutines and channels, and with amazing standard library impressed me 
-and gave opportunity to write much faster, nicer and more stable Rocket implementation. 
-
-Btw. Last time i was so impressed by language and it's standard library when i wrote
-my first Ruby application (6 years ago?)!
-
 ## Installation
 
-First of all, i predict you don't have Go installed... Follow this 
-[installation guide](http://golang.org/doc/install.html) and get the newest version
+First of all, I predict you don't have Go installed... Follow this 
+[installation guide](http://golang.org/doc/install.html) and get **the newest version**
 of the compiler. Rocket uses some of unreleased websocket's stuff, so remember to clone
-the head version:
+**the head version** or the latest **weekly release**:
 
     $ hg clone https://go.googlecode.com/hg/ go
 
-Go is active actively developed, so it's good idea is to use head version and update 
+Go is very actively developed, so it's good idea is to use head version and update 
 it regullary. 
 
-Once you install the Go compiler, building rocket is very easy.
+Once you install the Go compiler, building the webrocket is very easy.
 First, clone the repo:
 
     $ git clone git://github.com/nu7hatch/webrocket.git
@@ -43,7 +31,7 @@ Finally, build `rocket` command line tool:
     $ cd server
     $ make
 	
-If everything will go fine, then you will find the `./rocket` binary in  current 
+If everything will go fine, then you will find the `./rocket` binary in current 
 directory.
 
 ## Usage
