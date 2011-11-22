@@ -11,7 +11,35 @@ import (
 	"http"
 	"log"
 	"os"
+	"container/list"
+	"crypto/sha1"
+	"fmt"
 )
+
+// Wrapper for standard websocket.Conn structure.
+type conn struct {
+	*websocket.Conn
+	token string
+}
+
+// generateUniqueToken creates unique token using system `/dev/urandom`.
+func generateUniqueToken() string {
+	f, _ := os.OpenFile("/dev/urandom", os.O_RDONLY, 0) 
+	b := make([]byte, 16) 
+	f.Read(b) 
+	f.Close() 
+	token := sha1.New()
+	token.Write(b)
+	return fmt.Sprintf("%x", token.Sum())
+}
+
+/*
+wrapConn wraps standard websocket connection object into one adjusted for
+webrocker server funcionalities.
+*/
+func wrapConn(ws *websocket.Conn) *conn {
+	return &conn{Conn: ws, token: generateUniqueToken()}
+}
 
 // handlerMap is a map of resource handlers.
 type handlerMap map[string]Handler
@@ -86,7 +114,7 @@ func (s *Server) ListenAndServeTLS(certFile, keyFile string) os.Error {
 }
 
 // readerMap contains sockets subscribing given channel.
-type readerMap map[*websocket.Conn]int
+type readerMap map[*conn]int
 
 /*
 channel keeps information about specified channel and it's subscriptions.
@@ -103,15 +131,18 @@ type channel struct {
 // channelMap is a map of channels.
 type channelMap map[string]*channel
 
+// connectionMap is a map of active connections.
+type connectionMap map[string]*conn
+
 // broadcaster is a function for spreading messages to all chanel's readers. 
-type broadcaster func(ws *websocket.Conn)
+type broadcaster func(ws *conn)
 
 /*
 subscription struct is used to modify channel subscription state
 from within the handler.
 */
 type subscription struct {
-	reader *websocket.Conn
+	reader *conn
 	active bool
 }
 
@@ -154,7 +185,7 @@ func (p *Payload) Event() (string, os.Error) {
 	for k := range *p {
 		return k, nil
 	}
-	return "", os.NewError("invalid event")
+	return "", os.NewError("No event specified")
 }
 
 // Returns data contained by this payload.
@@ -171,7 +202,7 @@ func (p *Payload) Data() (*Data, os.Error) {
 			return &d, nil
 		}
 	}
-	return nil, os.NewError("invalid data")
+	return nil, os.NewError("Invalid format of the data")
 }
 
 /*
@@ -210,27 +241,52 @@ const (
 	ReadWriteAccess = "read-write"
 )
 
-// Predefined payloads.
+// Predefined reply for successfull authentication.
+func Authenticated(accessType string) *Payload {
+	return &Payload{"authenticated": accessType}
+}
+
+// Predefined reply for successfull subscription.
+func Subscribed(channelName string) *Payload {
+	return &Payload{"subscribed": channelName}
+}
+
+// Predefined reply for successfull unsubscription.
+func Unsubscribed(channelName string) *Payload {
+	return &Payload{"unsubscribed": channelName}
+}
+
+// Predefined reply for successfull broadcast.
+func Broadcasted(channelName string) *Payload {
+	return &Payload{"broadcasted": channelName}
+}
+
+// Other predefined payloads.
 var (
-	Ok                 Payload = Payload{"ok": true}
-	InvalidData        Payload = Payload{"err": "invalid_data"}
-	InvalidCredentials Payload = Payload{"err": "invalid_credentials"}
-	InvalidChannelName Payload = Payload{"err": "invalid_channel_name"}
-	InvalidChannel     Payload = Payload{"err": "invalid_channel"}
-	AccessDenied       Payload = Payload{"err": "access_denied"}
+	LoggedOut Payload = Payload{"loggedOut": true}
+)
+
+// Error payloads.
+var (
+	InvalidPayload       Payload = Payload{"err": "INVALID_PAYLOAD"}
+	InvalidCredentials   Payload = Payload{"err": "INVALID_CREDENTIALS"}
+	InvalidChannel       Payload = Payload{"err": "INVALID_CHANNEL"}
+	AccessDenied         Payload = Payload{"err": "ACCESS_DENIED"}
 )
 
 // Default handler, with various message codecs support.
 type handler struct {
-	Codec      websocket.Codec
-	Secrets    Credentials
-	Log        *log.Logger
-	server     *Server
-	handler    websocket.Handler
-	path       string
-	registered bool
-	channels   channelMap
-	logins     readerMap
+	Codec         websocket.Codec
+	Secrets       Credentials
+	Log           *log.Logger
+	server        *Server
+	handler       websocket.Handler
+	path          string
+	registered    bool
+	connections   connectionMap
+	channels      channelMap
+	logins        readerMap
+	subscriptions *list.List
 }
 
 /*
@@ -258,34 +314,39 @@ func (h *handler) Register(s *Server, id interface{}) (websocket.Handler, os.Err
 	}
 	h.server = s
 	h.path = id.(string)
-	h.handler = func(ws *websocket.Conn) { h.eventLoop(ws) }
+	h.handler = func(ws *websocket.Conn) {
+		wrapped := wrapConn(ws)
+		h.eventLoop(wrapped)
+	}
+	h.connections = make(connectionMap)
 	h.channels = make(channelMap)
 	h.logins = make(readerMap)
+	h.subscriptions = list.New()
 	h.registered = true
 	s.Log.Printf("Registered handler: %s\n", h.path)
 	return h.handler, nil
 }
 
-func (h *handler) eventLoop(ws *websocket.Conn) {
+func (h *handler) eventLoop(ws *conn) {
 	h.onOpen(ws)
 	for {
 		var recv Payload
-		err := h.Codec.Receive(ws, &recv)
+		err := h.Codec.Receive(ws.Conn, &recv)
 		if err != nil {
 			if err == os.EOF {
 				break
 			}
-			h.onError(ws, err)
+			h.onError(ws, InvalidPayload, err)
 			continue
 		}
 		event, err := recv.Event()
 		if err != nil {
-			h.onError(ws, err)
+			h.onError(ws, InvalidPayload, err)
 			continue
 		}
 		data, err := recv.Data()
 		if err != nil {
-			h.onError(ws, err)
+			h.onError(ws, InvalidPayload, err)
 			continue
 		}
 		ok := h.dispatch(ws, event, data)
@@ -296,16 +357,16 @@ func (h *handler) eventLoop(ws *websocket.Conn) {
 	h.onClose(ws)
 }
 
-func (h *handler) dispatch(ws *websocket.Conn, event string, data *Data) bool {
+func (h *handler) dispatch(ws *conn, event string, data *Data) bool {
 	switch event {
-	case "auth":
+	case "authenticate":
 		h.onAuthenticate(ws, data)
 	case "subscribe":
 		h.onSubscribe(ws, data)
 	case "unsubscribe":
 		h.onUnsubscribe(ws, data)
-	case "publish":
-		h.onPublish(ws, data)
+	case "broadcast":
+		h.onBroadcast(ws, data)
 	case "logout":
 		h.onLogout(ws)
 	case "disconnect":
@@ -315,18 +376,18 @@ func (h *handler) dispatch(ws *websocket.Conn, event string, data *Data) bool {
 	return true
 }
 
-func (h *handler) send(ws *websocket.Conn, data interface{}) os.Error {
-	err := h.Codec.Send(ws, data)
+func (h *handler) send(ws *conn, data interface{}) os.Error {
+	err := h.Codec.Send(ws.Conn, data)
 	if err != nil {
-		h.Log.Printf("Error: %s\n", err.String())
+		h.Log.Printf("[%s] \033[35m~~> %s\033[0m\n", ws.token, err.String())
 	}
 	return err
 }
 
-func (h *handler) assertAccess(ws *websocket.Conn, access string) bool {
+func (h *handler) assertAccess(action string, ws *conn, access string) bool {
 	code, ok := h.logins[ws]
 	if !ok || code < AccessCodes[access] {
-		h.Log.Printf("Error: access denied\n")
+		h.Log.Printf("[%s] \033[33m[-> %s] Access denied\033[0m\n", ws.token, action)
 		h.send(ws, AccessDenied)
 		return false
 	}
@@ -340,84 +401,108 @@ func (h *handler) secretFor(access string) (string, os.Error) {
 	if access == ReadWriteAccess {
 		return h.Secrets.ReadWrite, nil
 	}
-	return "", os.NewError("invalid access method\n")
+	return "", os.NewError("Invalid access method\n")
 }
 
-func (h *handler) onError(ws *websocket.Conn, err os.Error) {
-	h.Log.Printf("Error: %s\n", err.String())
-	h.send(ws, InvalidData)
+/*
+onError is a helper for dealing with failures caused mainly by invalid payload format,
+or other message problems.
+*/
+func (h *handler) onError(ws *conn, payload Payload, err os.Error) {
+	errName := payload["err"]
+	h.Log.Printf("[%s] \033[31m[<~ %s] %s\033[0m\n", ws.token, errName, err.String())
+	h.send(ws, payload)
 }
 
-func (h *handler) onOpen(ws *websocket.Conn) {
-	h.Log.Printf("Connected\n")
+/*
+onMinorError is a helper for dealing with small errors, like failed authentication,
+access denied errors etc.
+*/
+func (h *handler) onMinorError(ws *conn, payload Payload, err os.Error) {
+	errName := payload["err"]
+	h.Log.Printf("[%s] \033[33m[<- %s] %s\033[0m\n", ws.token, errName, err.String())
+	h.send(ws, payload)
 }
 
-func (h *handler) onClose(ws *websocket.Conn) {
-	h.Log.Printf("Disconnected\n")
+/*
+onOpen handles registration of the new connection in the system. Each new connection
+has assigned SHA1 token to easily distinguish them from the others.
+*/
+func (h *handler) onOpen(ws *conn) {
+	h.connections[ws.token] = ws
+	h.Log.Printf("[%s] \033[34m~~> Connected\033[0m\n", ws.token)
 }
 
-func (h *handler) onDisconnect(ws *websocket.Conn) {
-	h.send(ws, Ok)
+func (h *handler) onClose(ws *conn) {
+	h.Log.Printf("[%s] \033[34m<~~ Disconnected\033[0m\n", ws.token)
+}
+
+// onClose handles safe disconnection requested by the client.
+func (h *handler) onDisconnect(ws *conn) {
 	ws.Close()
 }
 
-func (h *handler) onAuthenticate(ws *websocket.Conn, data *Data) {
+// onAuthenticate manages session authentication for the connected client.
+func (h *handler) onAuthenticate(ws *conn, data *Data) {
 	access, ok := (*data)["access"]
 	if !ok {
-		h.onError(ws, os.NewError("invalid auth data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing access type: %s", *data)))
 		return
 	}
 	secret, ok := (*data)["secret"]
 	if !ok {
-		h.onError(ws, os.NewError("invalid auth data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing secret: %s", *data)))
 		return
 	}
 	accessId, ok := access.(string)
 	if !ok {
-		h.onError(ws, os.NewError("invalid auth data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid access type data: %s", *data)))
 		return
 	}
 	validSecret, err := h.secretFor(accessId)
 	if err != nil {
-		h.onError(ws, err)
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid access type: %s", *data)))
 		return
 	}
 	if validSecret != "" && validSecret != secret {
+		h.onMinorError(ws, InvalidCredentials, os.NewError("Authentication failed"))
 		h.logins[ws] = 0, false
-		h.send(ws, InvalidCredentials)
-		h.Log.Printf("Authentication failed\n")
 		return
 	}
-	h.Log.Printf("Authenticated (%s access)\n", accessId)
+	h.Log.Printf("[%s] \033[36m~~> Authenticated (%s access)\033[0m\n", ws.token, accessId)
 	h.logins[ws] = AccessCodes[accessId], true
-	h.send(ws, Ok)
+	h.send(ws, Authenticated(accessId))
 }
 
-func (h *handler) onLogout(ws *websocket.Conn) {
-	h.Log.Printf("Logged out\n")
+// onLogout finishes current session and unsubscribes all channels subscribed by the client. 
+func (h *handler) onLogout(ws *conn) {
+	h.Log.Printf("[%s] \033[34m<~~ Logged out\033[0m\n", ws.token)
 	h.logins[ws] = 0, false
-	h.send(ws, Ok)
+	for e := h.subscriptions.Front(); e != nil; e = e.Next() {
+		ch := e.Value.(*channel)
+		ch.subscribe <- subscription{ws, false}
+	}
+	h.send(ws, LoggedOut)
 }
 
-func (h *handler) onSubscribe(ws *websocket.Conn, data *Data) {
-	ok := h.assertAccess(ws, ReadOnlyAccess)
+// onSubscribe handlers subscription of the specified channel.
+func (h *handler) onSubscribe(ws *conn, data *Data) {
+	ok := h.assertAccess("SUBSCRIBE", ws, ReadOnlyAccess)
 	if !ok {
 		return
 	}
-	channel, ok := (*data)["channel"]
+	chanName, ok := (*data)["channel"]
 	if !ok {
-		h.onError(ws, os.NewError("invalid subscribe data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing channel name: %s", *data)))
 		return
 	}
-	name, ok := channel.(string)
+	name, ok := chanName.(string)
 	if !ok {
-		h.onError(ws, os.NewError("invalid unsubscribe data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
 		return
 	}
 	if len(name) == 0 {
-		err := os.NewError("empty channel name")
-		h.Log.Printf("Error: %s\n", err.String())
-		h.send(ws, InvalidChannelName)
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
 		return
 	}
 	ch, ok := h.channels[name]
@@ -425,64 +510,78 @@ func (h *handler) onSubscribe(ws *websocket.Conn, data *Data) {
 		ch = newChannel(h, name)
 		h.channels[name] = ch
 	}
-	h.Log.Printf("Subscribed: %s\n", name)
+	h.Log.Printf("[%s] \033[32m[-> SUBSCRIBE ~ %s] Channel subscribed\033[0m\n", ws.token, name)
 	ch.subscribe <- subscription{ws, true}
-	h.send(ws, Ok)
+	h.subscriptions.PushBack(ch)
+	h.send(ws, Subscribed(name))
 }
 
-func (h *handler) onUnsubscribe(ws *websocket.Conn, data *Data) {
-	channel, ok := (*data)["channel"]
+// onUnsubscribe handles unsubscribing of the specified channel.
+func (h *handler) onUnsubscribe(ws *conn, data *Data) {
+	chanName, ok := (*data)["channel"]
 	if !ok {
-		h.onError(ws, os.NewError("invalid unsubscribe data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing channel name: %s", *data)))
 		return
 	}
-	name, ok := channel.(string)
+	name, ok := chanName.(string)
 	if !ok {
-		h.onError(ws, os.NewError("invalid unsubscribe data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
+		return
+	}
+	if len(name) == 0 {
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
 		return
 	}
 	ch, ok := h.channels[name]
 	if ok {
-		h.Log.Printf("Unsubscribed: %s\n", name)
 		ch.subscribe <- subscription{ws, false}
+		for e := h.subscriptions.Front(); e != nil; e = e.Next() {
+			cmp := e.Value.(*channel)
+			if ch == cmp {
+				h.subscriptions.Remove(e)
+			}
+		}
+		h.Log.Printf("[%s] \033[32m[-> UNSUBSCRIBE ~ %s] Channel unsubscribed\033[0m\n", ws.token, name)
 	}
-	h.send(ws, Ok)
+	h.send(ws, Unsubscribed(name))
 }
 
-func (h *handler) onPublish(ws *websocket.Conn, data *Data) {
-	ok := h.assertAccess(ws, ReadWriteAccess)
+/*
+onBroadcasts handles message from the current connection and spreads it out across all
+clients subscribing specified channel.
+*/
+func (h *handler) onBroadcast(ws *conn, data *Data) {
+	ok := h.assertAccess("BROADCAST", ws, ReadWriteAccess)
 	if !ok {
 		return
 	}
 	_, ok = (*data)["event"]
 	if !ok {
-		h.onError(ws, os.NewError("invalid publish data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing event name: %s", *data)))
 		return
 	}
 	channel, ok := (*data)["channel"]
 	if !ok {
-		h.onError(ws, os.NewError("invalid publish data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing channel name: %s", *data)))
 		return
 	}
 	name, ok := channel.(string)
 	if !ok {
-		h.onError(ws, os.NewError("invalid publish data"))
+		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
 		return
 	}
 	ch, ok := h.channels[name]
 	if !ok {
-		err := os.NewError("invalid channel: " + name)
-		h.Log.Printf("Error: %s\n", err.String())
-		h.send(ws, InvalidChannel)
+		h.onMinorError(ws, InvalidChannel, os.NewError(fmt.Sprintf("Channel does not exist: %s", *data)))
 		return
 	}
-	ch.broadcast <- func(reader *websocket.Conn) {
+	ch.broadcast <- func(reader *conn) {
 		if reader != nil {
 			h.send(reader, *data)
 		}
 	}
-	h.Log.Printf("[=> %s] Broadcasted: %s\n", name, *data)
-	h.send(ws, Ok)
+	h.Log.Printf("[%s] \033[32m[=> BROADCAST ~ %s] Broadcasted: %s\033[0m\n", ws.token, name, *data)
+	h.send(ws, Broadcasted(name))
 }
 
 // Creates new handler basd on the default JSON protocol.

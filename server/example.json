@@ -9,8 +9,8 @@
 			"Codec": "JSON",
 			"Log": "./echo.log",
 			"Secrets": {
-				"ReadOnly": "",
-				"ReadWrite": "secret"
+				"Admin": "secret",
+				"Regular": ""
 			}
 		}
 	]
