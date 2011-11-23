@@ -419,7 +419,7 @@ clients subscribing specified channel.
 */
 func (h *handler) onBroadcast(ws *conn, data *Data) os.Error {
 	ok := h.assertAccess("BROADCAST", ws, Permissions["READ|WRITE"])
-	if !ok {
+	if !ok { 
 		return os.NewError("Access denied")
 	}
 	event, ok := (*data)["event"]

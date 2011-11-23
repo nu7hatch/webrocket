@@ -20,7 +20,7 @@ func init() {
 		server := NewServer(":9771")
 		server.Log = logger
 		handler := NewHandler(websocket.JSON)
-		//handler.Log = logger
+		handler.Log = logger
 		users[0] = &User{"front", "read-secret", Permissions["READ"]}
 		users[1] = &User{"back", "read-write-secret", Permissions["READ|WRITE"]}
 		handler.Users = userMap{"front": users[0], "back": users[1]}

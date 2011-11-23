@@ -31,11 +31,11 @@ A Trivial example server:
 
     package main
 
-    import "rocket"
+    import "webrocket"
 
     func main() {
-         s := rocket.NewServer("ws://localhost:8080")
-         s.Handle("/echo", rocket.NewJSONHandler())
+         s := webrocket.NewServer("ws://localhost:8080")
+         s.Handle("/echo", webrocket.NewJSONHandler())
          s.ListenAndServe()
     }
 */
