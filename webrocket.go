@@ -446,26 +446,31 @@ func (h *handler) onDisconnect(ws *conn) {
 func (h *handler) onAuthenticate(ws *conn, data *Data) {
 	access, ok := (*data)["access"]
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing access type: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Missing access type: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	secret, ok := (*data)["secret"]
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing secret: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Missing secret: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	accessId, ok := access.(string)
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid access type data: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Invalid access type data: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	validSecret, err := h.secretFor(accessId)
 	if err != nil {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid access type: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Invalid access type: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	if validSecret != "" && validSecret != secret {
-		h.onMinorError(ws, InvalidCredentials, os.NewError("Authentication failed"))
+		err := os.NewError("Authentication failed")
+		h.onMinorError(ws, InvalidCredentials, err)
 		h.logins[ws] = 0, false
 		return
 	}
@@ -493,16 +498,19 @@ func (h *handler) onSubscribe(ws *conn, data *Data) {
 	}
 	chanName, ok := (*data)["channel"]
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing channel name: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Missing channel name: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	name, ok := chanName.(string)
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Invalid channel name: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	if len(name) == 0 {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Invalid channel name: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	ch, ok := h.channels[name]
@@ -520,16 +528,19 @@ func (h *handler) onSubscribe(ws *conn, data *Data) {
 func (h *handler) onUnsubscribe(ws *conn, data *Data) {
 	chanName, ok := (*data)["channel"]
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing channel name: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Missing channel name: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	name, ok := chanName.(string)
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Invalid channel name: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	if len(name) == 0 {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Invalid channel name: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	ch, ok := h.channels[name]
@@ -557,22 +568,26 @@ func (h *handler) onBroadcast(ws *conn, data *Data) {
 	}
 	_, ok = (*data)["event"]
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing event name: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Missing event name: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	channel, ok := (*data)["channel"]
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Missing channel name: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Missing channel name: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	name, ok := channel.(string)
 	if !ok {
-		h.onError(ws, InvalidPayload, os.NewError(fmt.Sprintf("Invalid channel name: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Invalid channel name: %s", *data))
+		h.onError(ws, InvalidPayload, err)
 		return
 	}
 	ch, ok := h.channels[name]
 	if !ok {
-		h.onMinorError(ws, InvalidChannel, os.NewError(fmt.Sprintf("Channel does not exist: %s", *data)))
+		err := os.NewError(fmt.Sprintf("Channel does not exist: %s", *data))
+		h.onMinorError(ws, InvalidChannel, err)
 		return
 	}
 	ch.broadcast <- func(reader *conn) {
