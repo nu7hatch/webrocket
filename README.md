@@ -63,14 +63,15 @@ Possible errors are listed for each action.
 
 Payload:
 
-    {"authenticate": {"access": "access-type", "secret": "secret-key"}}
+    {"authenticate": {"user": "user-name", "secret": "secret-key"}}
 
-* `secret` - key for specified access type
-* `access` - can be either `read-only` or `read-write`
+* `user` - name of the configured user you want to authenticate
+* `secret` - authentication secret for specified user
 
 Errors:
 
-* `INVALID_CREDENTIALS` - obviously, returned when given secret is invalid
+* `INVALID_CREDENTIALS` - returned when given secret is invalid
+* `INVALID_USER` - returned when given user does not exist
 * `INVALID_PAYLOAD` - when payload format is invalid
 
 Success response:

@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	ws      *websocket.Conn
-	err     os.Error
-	secrets *Credentials
+	ws    *websocket.Conn
+	err   os.Error
+	users [2]*User
 )
 
 func init() {
@@ -21,8 +21,9 @@ func init() {
 		server.Log = logger
 		handler := NewHandler(websocket.JSON)
 		//handler.Log = logger
-		handler.Secrets = Credentials{"read-secret", "read-write-secret"}
-		secrets = &handler.Secrets
+		users[0] = &User{"front", "read-secret", Permissions["READ"]}
+		users[1] = &User{"back", "read-write-secret", Permissions["READ|WRITE"]}
+		handler.Users = userMap{"front": users[0], "back": users[1]}
 		server.Handle("/echo", handler)
 		server.ListenAndServe()
 	}()
@@ -54,7 +55,7 @@ func TestConnect(t *testing.T) {
 func TestAuthInvalidCredentials(t *testing.T) {
 	data := Payload{
 		"authenticate": Data{
-			"access": "read-write",
+			"user": "front",
 			"secret": "invalid-secret",
 		},
 	}
@@ -89,7 +90,7 @@ func TestAuthWithMissingAccessType(t *testing.T) {
 
 func TestAuthWithMissingSecret(t *testing.T) {
 	data := Payload{
-		"authenticate": Data{"access": "read-write"},
+		"authenticate": Data{"user": "read-write"},
 	}
 	wsSendJSON(t, data)
 	resp := wsReadResponse(t)
@@ -98,20 +99,20 @@ func TestAuthWithMissingSecret(t *testing.T) {
 	}
 }
 
-func TestAuthWithInvalidAccessTypeType(t *testing.T) {
+func TestAuthWithInvalidUser(t *testing.T) {
 	data := Payload{
-		"authenticate": Data{"access": "invalid", "secret": ""},
+		"authenticate": Data{"user": "invalid", "secret": ""},
 	}
 	wsSendJSON(t, data)
 	resp := wsReadResponse(t)
-	if resp["err"] != "INVALID_PAYLOAD" {
+	if resp["err"] != "INVALID_USER" {
 		t.Error("Expected invalid data error response, given: %s", resp)
 	}
 }
 
-func TestAuthInvalidAccessTypeValue(t *testing.T) {
+func TestAuthInvalidUserValue(t *testing.T) {
 	data := Payload{
-		"authenticate": Data{"access": Data{"foo": "bar"}, "secret": ""},
+		"authenticate": Data{"user": Data{"foo": "bar"}, "secret": ""},
 	}
 	wsSendJSON(t, data)
 	resp := wsReadResponse(t)
@@ -123,13 +124,13 @@ func TestAuthInvalidAccessTypeValue(t *testing.T) {
 func TestAuthAsSubscriber(t *testing.T) {
 	data := Payload{
 		"authenticate": Data{
-			"access": "read-only",
+			"user": "front",
 			"secret": "read-secret",
 		},
 	}
 	wsSendJSON(t, data)
 	resp := wsReadResponse(t)
-	if resp["authenticated"] != "read-only" {
+	if resp["authenticated"] != "front" {
 		t.Error("Expected OK response, given: %s", resp)
 	}
 }
@@ -137,31 +138,31 @@ func TestAuthAsSubscriber(t *testing.T) {
 func TestAuthAsPublisher(t *testing.T) {
 	data := Payload{
 		"authenticate": Data{
-			"access": "read-write",
+			"user": "back",
 			"secret": "read-write-secret",
 		},
 	}
 	wsSendJSON(t, data)
 	resp := wsReadResponse(t)
-	if resp["authenticated"] != "read-write" {
+	if resp["authenticated"] != "back" {
 		t.Error("Expected success response, given: %s", resp)
 	}
 }
 
 func TestAuthWithNoSecret(t *testing.T) {
-	secrets.ReadWrite = ""
+	users[1].Secret = ""
 	data := Payload{
 		"authenticate": Data{
-			"access": "read-write",
+			"user": "back",
 			"secret": "",
 		},
 	}
 	wsSendJSON(t, data)
 	resp := wsReadResponse(t)
-	if resp["authenticated"] != "read-write" {
+	if resp["authenticated"] != "back" {
 		t.Error("Expected OK response, given: %s", resp)
 	}
-	secrets.ReadWrite = "read-write-secret"
+	users[1].Secret= "read-write-secret"
 }
 
 func TestSubscribeWithInvalidChannel(t *testing.T) {
@@ -398,7 +399,7 @@ func TestBroadcast(t *testing.T) {
 	ws2, _ := websocket.Dial("ws://localhost:9771/echo", "ws", "http://localhost/")
 	websocket.JSON.Send(ws2, Payload{
 		"authenticate": Data{
-			"access": "read-only",
+			"user": "front",
 			"secret": "read-secret",
 		},
 	})

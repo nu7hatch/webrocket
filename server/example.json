@@ -7,10 +7,17 @@
 		{
 			"Path": "/echo",
 			"Codec": "JSON",
-			"Log": "./echo.log",
-			"Secrets": {
-				"Admin": "secret",
-				"Regular": ""
+			"Users": {
+				"backend": {
+					"Name": "backend",
+					"Secret": "secret",
+					"Permission": 7
+				},
+				"frontend": {
+					"Name": "frontend",
+					"Secret": "",
+					"Permission": 3
+				}
 			}
 		}
 	]

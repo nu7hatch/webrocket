@@ -2,7 +2,8 @@ include ${GOROOT}/src/Make.inc
 
 TARG = webrocket
 GOFILES = \
-	webrocket.go
+	webrocket.go \
+	protocol.go
 
 include ${GOROOT}/src/Make.pkg
 
