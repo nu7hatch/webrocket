@@ -63,7 +63,12 @@ Possible errors are listed for each action.
 
 Payload:
 
-    {"authenticate": {"user": "user-name", "secret": "secret-key"}}
+    {
+	    "authenticate": {
+		    "user": "user-name", 
+			"secret": "secret-key"
+		}
+	}
 
 * `user` - name of the configured user you want to authenticate
 * `secret` - authentication secret for specified user
@@ -72,11 +77,11 @@ Errors:
 
 * `INVALID_CREDENTIALS` - returned when given secret is invalid
 * `INVALID_USER` - returned when given user does not exist
-* `INVALID_PAYLOAD` - when payload format is invalid
+* `INVALID_PAYLOAD` - returned when payload format is invalid
 
 Success response:
 
-    {"authenticated": "access-type"}
+    {"authenticated": "user-name"}
 
 ### Subscribe
 
