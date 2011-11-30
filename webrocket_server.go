@@ -22,6 +22,7 @@ type Server struct {
 	vhosts   map[string]*Vhost
 	certFile string
 	keyFile  string
+	ctl      string
 }
 
 // Creates new rocket's server bound to specified addr.
@@ -82,6 +83,11 @@ func (s *Server) Vhosts() (vhosts []string) {
 		i += 1
 	}
 	return vhosts
+}
+
+// Binds control interface with specified address.
+func (s *Server) BindCtl(addr string) {
+	s.ctl = newCtl(addr)
 }
 
 // Listens on the TCP network address srv.Addr and handles requests on incoming

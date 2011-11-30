@@ -99,6 +99,11 @@ func (v *Vhost) Connections() map[string]*conn {
 	return v.connections
 }
 
+// Returns path name.
+func (v *Vhost) Path() string {
+	return v.path
+}
+
 // AddUser configures new user account within this vhost.
 func (v *Vhost) AddUser(name, secret string, permission int) error {
 	if len(name) == 0 {
