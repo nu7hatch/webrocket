@@ -41,7 +41,8 @@ Obviously you can tweak up the configuration whatever you want:
 
     $ rocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
 
-To get more information about all settings run server with help switch:
+To get more information check `man rocket-server` or just run
+the server with help switch:
 
     $ rocket-server -help
 
@@ -55,15 +56,10 @@ have to create a **vhost** and add at least one user for it.
     $ rocket-ctl add_vhost /hello
 	$ rocket-ctl add_user /hello joe READ|WRITE
 	
-Again, for more details simply run help command:
+Again, for more details check `man rocket-ctl` or simply run it with
+help command:
 
     $ rocket-ctl -help
-
-## Monitoring (UNDER DEVELOPMENT)
-
-To monitor your server or cluster activity use the `rocket-monitor` tool:
-
-    $ rocket-monitor
 
 ## Note on Patches/Pull Requests
  

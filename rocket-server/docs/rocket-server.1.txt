@@ -1,0 +1,53 @@
+rocket-server(1)
+================
+
+NAME
+----
+rocket-server - Start server node instance
+
+SYNOPSIS
+--------
+*rocket-server* [-wsaddr 'ADDR'] [-ctladdr 'ADDR'] [-cert 'TLS_CERT_FILE'] [-key 'TLS_KEY_FILE']
+
+DESCRIPTION
+-----------
+The *rocket-server*(1) tool is used to start and initially configure single
+node instance. To further configure your node, use the *rocket-ctl* tool.
+
+OPTIONS
+-------
+*-wsaddr*='ADDR'::
+		WebSocket server will be bound with the specified interface.
+		The 'ADDR' can be either full host name with port, eg. 'myhost.com:9772'
+		or just a port ':9772'. In the second case server will be bound to all
+		available interfaces. By default ':9772'.
+
+*-ctladdr*='ADDR'::
+		The management API server will be bound to specified interface.
+		By default 'localhost:9773'.
+
+*-cert*='TLS_CERT_FILE'::
+		Path to TLS certificate file.
+
+*-key*='TLS_KEY_FILE'::
+		Path to TLS public key file.
+
+EXAMPLES
+--------
+Specifying endpoints for WebSocket server and management API:
+------------
+rocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
+------------
+
+Starting the server with TLS support enabled:
+------------
+rocket-server -cert "~/my-cert.pem" -key "~/my-key.pem"
+------------
+
+SEE ALSO
+--------
+*rocket-ctl*(1), *rocket-monitor*(1)
+
+AUTHOR
+------
+Chris Kowalik <chris@nu7hat.ch>

@@ -4,7 +4,6 @@ _test
 *.out
 _testmain.go
 server/rocket
-rocket-server/rocket-server
 \#*
 .\#*
 *.log

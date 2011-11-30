@@ -22,7 +22,7 @@ var conf Config
 
 func init() {
 	flag.StringVar(&conf.WsAddr, "wsaddr", ":9772", "bind server with given address")
-	flag.StringVar(&conf.CtlAddr, "ctladdr", ":9773", "bind control interface with given address")
+	flag.StringVar(&conf.CtlAddr, "ctladdr", "localhost:9773", "bind control interface with given address")
 	flag.StringVar(&conf.CertFile, "cert", "", "path to server certificate")
 	flag.StringVar(&conf.KeyFile, "key", "", "private key")
 	flag.Parse()
