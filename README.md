@@ -1,189 +1,69 @@
-# Rocket - Advanced WebSocket server
+# WEBROCKET - Distributed WebSockets/MQ server
 
-Rocket is very fast and reliable WebSockets server written in [Go language](http://golang.org)!
+WebRocket is a hybrid of MQ and WebSockets server with great support for 
+horizontal scalability. WebRocket is very fast and easy to use from both
+sides: backend (via MQ conneciton) and frontend (via WebSockets). 
+This combination will lead you to new quality of web development and
+will finally make bidirectional Web easy for everyone. 
+ 
 Package contains also the `webrocket` library, which provides highly extensible
 backend, eg. for defining your own protocols (see *Hacking* section for details). 
 
 ## Installation
 
-First of all, I predict you don't have Go installed... Follow this 
-[installation guide](http://golang.org/doc/install.html) and get **the newest version**
-of the compiler. Rocket uses some of unreleased websocket's stuff, so remember to clone
-**the head version** or the latest **weekly release**:
+Project is writter in awesome [Go language](http://golang.org)!
+If you don't have Go installed yet... Follow this [installation guide](http://golang.org/doc/install.html) 
+and get **the newest version** of the compiler. 
+
+WebRocket is using bunch of unreleased features, and want to catch up with 
+Go's development, so remember to clone **the head version** or the latest 
+**weekly release**:
 
     $ hg clone https://go.googlecode.com/hg/ go
 
-Go is very actively developed, so it's good idea is to use head version and update 
-it regullary. 
-
-Once you install the Go compiler, building the webrocket is very easy.
+Once you install the Go compiler, building the WebRocket is very easy.
 First, clone the repo:
 
     $ git clone git://github.com/nu7hatch/webrocket.git
     $ cd webrocket
 	
-Build and install the `webrocket` library:
+... and install the WebRocket library with all tools:
  	
-    $ make && make install
+    $ ./all.bash
 	
-Finally, build `rocket` command line tool:
+## Server
 
-    $ cd server
-    $ make
+To start the server node with defauld configuration simply run:
+
+    $ rocket-server
 	
-If everything will go fine, then you will find the `./rocket` binary in current 
-directory.
+Obviously you can tweak up the configuration whatever you want:
 
-## Usage
+    $ rocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
 
-Server is quite easy to configure and run. The only thing you have to do
-is to create your own configuration based on the versioned `example.json` file. 
+To get more information about all settings run server with help switch:
 
-    $ cp example.json my.json
-    $ # edit configuration file...
-    $ rocket my.json
+    $ rocket-server -help
 
-By default rocket listens on port `9772` on localhost. You can change it
-in your configuration or by setting proper flags. Use `rocket --help` to 
-check available flags and options.
+## Management (UNDER DEVELOPMENT)
 
-## Protocol
+Architecture of WebRocket is oriented on distributed deployment and
+horizontal scalability, that's why to manage your node you have to use
+another tool, `rocket-ctl`. To quick start with the server you just
+have to create a **vhost** and add at least one user for it. 
 
-Webrocket implements simple and fast JSON-based protocol, offering support for authentication and
-basic access controll, channels subscribing, and messages broadcasting. 
-
-Each message handled by the server may cause possible errors. All error which are not affecting
-connection with the client are forwarded to it using the following payload format:
-
-    {"err": "ERROR_NAME"}
+    $ rocket-ctl add_vhost /hello
+	$ rocket-ctl add_user /hello joe READ|WRITE
 	
-Possible errors are listed for each action.
+Again, for more details simply run help command:
 
-### Authenticate
+    $ rocket-ctl -help
 
-Payload:
+## Monitoring (UNDER DEVELOPMENT)
 
-    {
-	    "authenticate": {
-		    "user": "user-name", 
-			"secret": "secret-key"
-		}
-	}
+To monitor your server or cluster activity use the `rocket-monitor` tool:
 
-* `user` - name of the configured user you want to authenticate
-* `secret` - authentication secret for specified user
-
-Errors:
-
-* `INVALID_CREDENTIALS` - returned when given secret is invalid
-* `INVALID_USER` - returned when given user does not exist
-* `INVALID_PAYLOAD` - returned when payload format is invalid
-
-Success response:
-
-    {"authenticated": "user-name"}
-
-### Subscribe
-
-Payload:
-
-    {"subscribe": {"channel": "channel-name"}}
-
-* `channel` - name of channel you want to subscribe, not existing channels are created automatically
-    
-Errors:
-
-* `ACCESS_DENIED` - returned when current session is not authenticated for reading
-* `INVALID_PAYLOAD` - when payload format is invalid
-
-Success response:
-
-    {"subscribed": "channel-name"}
-
-### Unsubscribe
-
-Payload:
-
-    {"unsubscribe": {"channel": "channel-name"}}
-
-* `channel` - name of channel you want to unsubscribe
-
-Errors:
-
-* `INVALID_PAYLOAD` - when payload format is invalid
-
-Success response:
-
-    {"unsubscribed": "channel-name"}
-
-### Broadcast
-
-Payload:
-
-    {"broadcast": {"event": "event-name", "channel": "channel-name", "data": {"foo": "bar"}}}
-
-* `event` - communication is event oriented, so each message needs to specify which event triggers it
-* `channel` - channel have to exist
-* `data` - published data
-
-Errors:
-
-* `ACCESS_DENIED` - returned when current session is not authenticated for writing
-* `INVALID_CHANNEL` - returned when destination channel doesn't exist
-* `INVALID_PAYLOAD` - when payload format is invalid
-
-Success response:
-
-    {"broadcasted": "channel-name"}
-
-### Direct message (NOT IMPLEMENTED)
-
-Payload:
-
-    {"direct": {"event": "event-name", "client": "client-token", "data": {"foo": "bar"}}}
-
-* `event` - communication is event oriented, so each message needs to specify which event triggers it
-* `channel` - channel have to exist
-* `data` - published data
-
-Errors:
-
-* `INVALID_CLIENT` - returned when destination client doesn't exist
-* `INVALID_PAYLOAD` - when payload format is invalid
-
-Success response:
-
-    {"directSent": "client-token"}
-
-### Session logout
-
-Payload:
-
-    {"logout": true}
-    
-Errors:
-
-* `INVALID_PAYLOAD` - when payload format is invalid
-
-Success response:
-
-    {"loggedOut": true}
-	
-### Safe disconnect
-
-Payload:
-
-    {"disconnect": true}
-
-Errors:
-
-* `INVALID_PAYLOAD` - when payload format is invalid
-
-No success response, connection is closed immediately after this message.
-
-## Hacking
-
-TODO...
+    $ rocket-monitor
 
 ## Note on Patches/Pull Requests
  
