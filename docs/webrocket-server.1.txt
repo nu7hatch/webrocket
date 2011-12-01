@@ -1,17 +1,17 @@
-rocket-server(1)
-================
+webrocket-server(1)
+===================
 
 NAME
 ----
-rocket-server - Start server node instance
+webrocket-server - Start server node instance
 
 SYNOPSIS
 --------
-*rocket-server* [-wsaddr 'ADDR'] [-ctladdr 'ADDR'] [-cert 'TLS_CERT_FILE'] [-key 'TLS_KEY_FILE']
+*webrocket-server* [-wsaddr 'ADDR'] [-ctladdr 'ADDR'] [-cert 'TLS_CERT_FILE'] [-key 'TLS_KEY_FILE']
 
 DESCRIPTION
 -----------
-The *rocket-server*(1) tool is used to start and initially configure single
+The *webrocket-server*(1) tool is used to start and initially configure single
 node instance. To further configure your node, use the *rocket-ctl* tool.
 
 OPTIONS
@@ -36,17 +36,17 @@ EXAMPLES
 --------
 Specifying endpoints for WebSocket server and management API:
 ------------
-rocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
+webrocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
 ------------
 
 Starting the server with TLS support enabled:
 ------------
-rocket-server -cert "~/my-cert.pem" -key "~/my-key.pem"
+webrocket-server -cert "~/my-cert.pem" -key "~/my-key.pem"
 ------------
 
 SEE ALSO
 --------
-*rocket-ctl*(1), *rocket-monitor*(1)
+*webrocket-ctl*(1), *webrocket-monitor*(1)
 
 AUTHOR
 ------

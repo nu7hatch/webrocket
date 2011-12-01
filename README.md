@@ -35,16 +35,16 @@ First, clone the repo:
 
 To start the server node with defauld configuration simply run:
 
-    $ rocket-server
+    $ webrocket-server
 	
 Obviously you can tweak up the configuration whatever you want:
 
-    $ rocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
+    $ webrocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
 
-To get more information check `man rocket-server` or just run
+To get more information check `man webrocket-server` or just run
 the server with help switch:
 
-    $ rocket-server -help
+    $ webrocket-server -help
 
 ## Management (UNDER DEVELOPMENT)
 
@@ -53,13 +53,13 @@ horizontal scalability, that's why to manage your node you have to use
 another tool, `rocket-ctl`. To quick start with the server you just
 have to create a **vhost** and add at least one user for it. 
 
-    $ rocket-ctl add_vhost /hello
-	$ rocket-ctl add_user /hello joe READ|WRITE
+    $ webrocket-ctl add_vhost /hello
+	$ webrocket-ctl add_user /hello joe READ|WRITE
 	
 Again, for more details check `man rocket-ctl` or simply run it with
 help command:
 
-    $ rocket-ctl -help
+    $ webrocket-ctl -help
 
 ## Note on Patches/Pull Requests
  

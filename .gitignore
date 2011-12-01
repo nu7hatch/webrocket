@@ -3,7 +3,6 @@ _test
 *.6
 *.out
 _testmain.go
-server/rocket
 \#*
 .\#*
 *.log

@@ -8,10 +8,10 @@ fail() {
 echo "Installing awesomness of the WebRocket!"
 
 echo -e "\n--- building webrocket library"
-(make && make test && make install) || fail
+(cd webrocket && make && make test && make install) || fail
 
-echo -e "\n--- building rocket-server tool"
-(cd rocket-server && make && make install) || fail
+echo -e "\n--- building webrocket-server tool"
+(cd webrocket-server && make && make install) || fail
 cd ..
 
 echo -e "\nSuccess!"

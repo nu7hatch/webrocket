@@ -1,12 +1,27 @@
-include ${GOROOT}/src/Make.inc
+all: lib server man
+clean: clean-lib clean-server clean-man
+install: install-lib install-server install-man
+check: check-lib
 
-TARG = webrocket
-GOFILES = \
-	webrocket_user.go \
-	webrocket_server.go \
-	webrocket_channel.go \
-	webrocket_connection.go \
-	webrocket_websocket_api.go \
-	webrocket_vhost.go
+lib:
+	@cd webrocket && $(MAKE)
+clean-lib:
+	@cd webrocket && $(MAKE) clean
+install-lib:
+	@cd webrocket && $(MAKE) install
+check-lib:
+	@cd webrocket && $(MAKE) test
 
-include ${GOROOT}/src/Make.pkg
+server:
+	@cd webrocket-server && $(MAKE)
+clean-server:
+	@cd webrocket-server && $(MAKE) clean
+install-server:
+	@cd webrocket-server && $(MAKE) install
+
+man:
+	-@cd docs && $(MAKE)
+clean-man:
+	-@cd docs && $(MAKE) clean
+install-man:
+	-@cd docs && $(MAKE) install

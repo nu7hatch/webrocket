@@ -2,10 +2,13 @@ ASCIIDOC = asciidoc
 A2X = a2x
 
 DOCS_MAN1 = \
-	rocket-server.1
+	webrocket-server.1
 
 DOCS_MAN1_HTML = \
-	rocket-server.1.html
+	webrocket-server.1.html
+
+all: man
+clean: clean-man
 
 man: man1
 man1: $(DOCS_MAN1) $(DOCS_MAN1_HTML)
@@ -19,5 +22,5 @@ $(DOCS_MAN1_HTML): %.html : %.txt
 %.html: %.txt
 	$(ASCIIDOC) -d manpage -o $@ $<
 
-clean:
+clean-man:
 	rm -f $(DOCS_MAN1) $(DOCS_MAN1_HTML)
