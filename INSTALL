@@ -1,6 +1,8 @@
-Basic installation
-==================
+Installation
+============
 
+Basic installation
+------------------
 WebRocket is written in Go language. If you don't have Go compiler
 installed yet, follow this installation guide: http://golang.org/doc/install.html
 
@@ -21,11 +23,22 @@ use standard `make` targets to build and install:
     cd webrocket
     make install
 
+Development environment
+-----------------------
+To start working on WebRocket development you have to install some
+additional dependencies:
+
+'asciidoc'::
+		documentation and man pages generator
+
+Make sure you read contributors guide before you submit patches.
+You can find it in the 'CONTRIBUTE' file.
+		
 Usage
 -----
-Now all WebRocket tools should be available in your system. Check the manual
-entries for each of them to get information about how do they work. List of
-available manual entries:
+Now all WebRocket tools should be available in your system. Check
+the manual entries for each of them to get information about how do
+they work. List of available manual entries:
 
 * *webrocket*(7)
 * *webrocket-server*(1)
