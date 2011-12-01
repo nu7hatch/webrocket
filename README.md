@@ -21,15 +21,11 @@ Go's development, so remember to clone **the head version** or the latest
 
     $ hg clone https://go.googlecode.com/hg/ go
 
-Once you install the Go compiler, building the WebRocket is very easy.
-First, clone the repo:
+Once you install the Go compiler, building the WebRocket is very easy:
 
     $ git clone git://github.com/nu7hatch/webrocket.git
     $ cd webrocket
-	
-... and install the WebRocket library with all tools:
- 	
-    $ ./all.bash
+    $ make install
 	
 ## Server
 
@@ -42,9 +38,7 @@ Obviously you can tweak up the configuration whatever you want:
     $ webrocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
 
 To get more information check `man webrocket-server` or just run
-the server with help switch:
-
-    $ webrocket-server -help
+the server with `-help` switch.
 
 ## Management (UNDER DEVELOPMENT)
 
@@ -57,9 +51,7 @@ have to create a **vhost** and add at least one user for it.
 	$ webrocket-ctl add_user /hello joe READ|WRITE
 	
 Again, for more details check `man rocket-ctl` or simply run it with
-help command:
-
-    $ webrocket-ctl -help
+help command.
 
 ## Note on Patches/Pull Requests
  
@@ -73,4 +65,17 @@ help command:
 
 ## Copyright
 
-Copyright (c) 2011 Chris Kowalik (nu7hatch). See LICENSE for details.
+Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
