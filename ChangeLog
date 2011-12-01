@@ -1,9 +1,12 @@
 2011-12-02  Krzysztof Kowalik  <chris@nu7hat.ch>
 
-	* INSTALL: added development environment setup info
+	* INSTALL: added dependencies info and OSX troubleshooting
 	* webrocket-server/README: created, short info about the tool
 	* docs/webrocket-server.1.txt: fixed typos
-	
+	* docs/webrocket.7.txt: created, descibed core library functionalities
+	* docs/Makefile: fixed manpage generation
+	* webrocket/websocket_api.go: improved docs
+
 2011-12-01  Krzysztof Kowalik  <chris@nu7hat.ch>
 
 	* CONTRIBUTE: created, described contributing guides

@@ -1,2 +1,4 @@
-webrocket-server.1
-webrocket-server.1.html
+*.1
+*.7
+*.*.html
+*.*.xml

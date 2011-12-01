@@ -3,11 +3,11 @@ webrocket-server(1)
 
 NAME
 ----
-webrocket-server - Start server node instance
+webrocket-server - Start and preconfigure server node instance
 
 SYNOPSIS
 --------
-*webrocket-server* [-wsaddr 'ADDR'] [-ctladdr 'ADDR'] [-cert 'TLS_CERT_FILE'] [-key 'TLS_KEY_FILE']
+*webrocket-server* [-wsaddr '<addr>'] [-ctladdr '<addr>'] [-cert '<path>'] [-key '<path>']
 
 DESCRIPTION
 -----------
@@ -16,37 +16,36 @@ node instance. To further configure your node, use the *rocket-ctl*(1) tool.
 
 OPTIONS
 -------
-*-wsaddr*='ADDR'::
+*-wsaddr*='<addr>'::
 		WebSocket server will be bound with the specified interface.
-		The 'ADDR' can be either full host name with port, eg. 'myhost.com:9772'
+		The '<addr>' can be either full host name with port, eg. 'myhost.com:9772'
 		or just a port ':9772'. In the second case server will be bound to all
 		available interfaces. By default ':9772'.
 
-*-ctladdr*='ADDR'::
+*-ctladdr*='<addr>'::
 		The management API server will be bound to specified interface.
 		By default 'localhost:9773'.
 
-*-cert*='TLS_CERT_FILE'::
+*-cert*='<path>'::
 		Path to TLS certificate file.
 
-*-key*='TLS_KEY_FILE'::
+*-key*='<path>'::
 		Path to TLS public key file.
 
 EXAMPLES
 --------
 Specifying endpoints for WebSocket server and management API:
-------------
-webrocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
-------------
+
+	$ webrocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
+	$ webrocket-server -ctladdr ":9773"
 
 Starting the server with TLS support enabled:
-------------
-webrocket-server -cert "~/my-cert.pem" -key "~/my-key.pem"
-------------
+
+	$ webrocket-server -cert "~/my-cert.pem" -key "~/my-key.pem"
 
 SEE ALSO
 --------
-*webrocket-ctl*(1), *webrocket-monitor*(1)
+*webrocket*(7), *webrocket-ctl*(1), *webrocket-monitor*(1)
 
 AUTHOR
 ------

@@ -29,14 +29,14 @@ of requried deps:
 TIP: If you're happy user of shitty OSX, in case to make the 'asciidoc'
 work properly you have to register the installed docbook.
 
-    brew install docbook asciidoc
-    sudo docbook-register
+	 brew install docbook asciidoc
+	 sudo docbook-register
 
 On any other normal Linux/Unix distribution it's enough to just install deps
 with your favorite package manager:
 
-   sudo apt-get install docbook asciidoc
-	
+	 sudo apt-get install docbook asciidoc
+
 .WebRocket
 
 Once you have the Go compiler and all dependencies installed, we can move
@@ -44,10 +44,10 @@ to building our WebRocket installation. Building WebRocket is very easy and
 shouldn't cause too much problems. After you will clone the repository, just
 use standard `make` targets to build and install:
 
-    git clone git://github.com/nu7hatch/webrocket.git
-    cd webrocket
-    make install
-		
+	git clone git://github.com/nu7hatch/webrocket.git
+	cd webrocket
+	make install
+
 Usage
 -----
 Now all WebRocket tools should be available in your system. Check

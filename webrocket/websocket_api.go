@@ -70,28 +70,25 @@ func (api *websocketAPI) error(c *conn, payload map[string]string) error {
 	return err
 }
 
-// Handles the `authenticate` operation.
+// Authenticates session for the specified user.
+//
+// Example:
+//
+//     { "authenticate": {"user": "joe", "secret": "53cr37"}}
 //
 // Payload:
-//
-//     {
-//         "authenticate": {
-//             "user": "user-name",
-//             "secret": "secret-key"
-//         }
-//     }
 //
 // * `user` - name of the configured user you want to authenticate (required)
 // * `secret` - authentication secret for specified user (optional)
 //
-// Possible errors:
+// Errors:
 //
 // * `INVALID_CREDENTIALS` - returned when given secret is invalid
 // * `USER_NOT_FOUND` - returned when given user does not exist
-// * `INVALID_USER_NAME` - returned when no username given in the payload
+// * `INVALID_USER_NAME` - returned when no username given or its format is invalid
 // * `INVALID_PAYLOAD` - returned when data format is invalid
 //
-// Success response:
+// Success:
 //
 //     {"authenticated": "user-name"}
 //
@@ -130,25 +127,24 @@ func (api *websocketAPI) doAuthenticate(c *conn, data interface{}) error {
 	return nil
 }
 
-// Handles the `subscribe` operation.
+// Subscribes client to the specified channel.
+//
+// Example:
+//
+//     {"subscribe": {"channel": "hello"}}
 //
 // Payload:
 //
-//     {
-//         "subscribe": {
-//             "channel": "channel-name"
-//         }
-//     }
-//
-// * `channel` - name of channel you want to subscribe, not existing channels are created automatically
+// * `channel` - name of channel you want to subscribe, not existing
+//               channels are created automatically (required)
 //     
 // Errors:
 //
-// * `INVALID_CHANNEL_NAME` - returned when no channel name given
+// * `INVALID_CHANNEL_NAME` - returned when no channel name given or when given name is invalid
 // * `ACCESS_DENIED` - returned when current session is not authenticated for reading
 // * `INVALID_PAYLOAD` - returned when payload format is invalid
 //
-// Success response:
+// Success:
 // 
 //    {"subscribed": "channel-name"}
 //
@@ -179,26 +175,24 @@ func (api *websocketAPI) doSubscribe(c *conn, data interface{}) error {
 	return nil
 }
 
-// Handles the `unsubscribe` operation.
+// Unsubscribes client from the specified channnel.
+//
+// Example:
+//
+//     {"unsubscribe": {"channel": "channel-name"}}
 //
 // Payload:
-//
-//     {
-//         "unsubscribe": {
-//             "channel": "channel-name"
-//         }
-//     }
-//
-// * `channel` - name of channel you want to unsubscribe
+//             
+// * `channel` - name of channel you want to unsubscribe (required)
 //     
 // Errors:
 //
-// * `INVALID_CHANNEL_NAME` - returned when no channel name given
+// * `INVALID_CHANNEL_NAME` - returned when no channel name given or when given name is invalid
 // * `CHANNEL_NOT_FOUND` - returned when given channel doesn't exist
 // * `ACCESS_DENIED` - returned when current session is not authenticated for reading
 // * `INVALID_PAYLOAD` - returned when payload format is invalid
 //
-// Success response:
+// Success:
 // 
 //    {"unsubscribed": "channel-name"}
 //
@@ -233,33 +227,27 @@ func (api *websocketAPI) doUnsubscribe(c *conn, data interface{}) error {
 	return nil
 }
 
-// Handles the `broadcast` event.
+// Broadcasts and triggers client events with specified data on given channels.
+//
+// Example:
+//
+//     {"broadcast": {"event": "hello", "channel": "world", data: {"x": 1}}}
 //
 // Payload:
 //
-//     {
-//        "broadcast": {
-//            "event": "event-name",
-//            "channel": "channel-name",
-//            "data": {
-//                "foo": "bar"
-//            }
-//         }
-//     }
-//
-// * `event` - communication is event oriented, so each message needs to specify which event triggers it
-// * `channel` - channel have to exist
+// * `event` - name of the event which will be triggerred on the client side (required)
+// * `channel` - channel have to exist (required)
 // * `data` - data to publish (optional)
 //
 // Errors:
 //
-// * `INVALID_EVENT_NAME` - returned when no event name given
+// * `INVALID_EVENT_NAME` - returned when no event name given when given name is invalid
 // * `INVALID_CHANNEL_NAME` - returned when no channel name given
 // * `CHANNEL_NOT_FOUND` - returned when given channel doesn't exist
 // * `ACCESS_DENIED` - returned when current session is not authenticated for writing
-// * `INVALID_PAYLOAD` - when payload format is invalid
+// * `INVALID_PAYLOAD` - returned when payload format is invalid
 //
-// Success response:
+// Success:
 //
 //     {"broadcasted": "channel-name"}
 //
@@ -297,18 +285,18 @@ func (api *websocketAPI) doBroadcast(c *conn, data interface{}) error {
 	return nil
 }
 
-// Handles the `logout` operation.
+// Finishes current session and unsubscribes from all channels.
 //
-// Payload:
+// Example:
 //
 //     {"logout": true}
 //
 // Errors:
 //
 // * `ACCESS_DENIED` - returned when current session is not authenticated
-// * `INVALID_PAYLOAD` - when payload format is invalid
+// * `INVALID_PAYLOAD` - returned when payload format is invalid
 //
-// Success response:
+// Success:
 //
 //     {"loggedOut": true}
 //
@@ -328,15 +316,17 @@ func (api *websocketAPI) doLogout(c *conn) error {
 	return nil
 }
 
-// Handles the `disconnect` operation.
+// Safely closes connection.
 //
-// Payload:
+// Example:
 //
 //     {"disconnect": true}
 //
 // Errors:
 //
 // * `INVALID_PAYLOAD` - returned when payload format is invalid
+//
+// Success:
 //
 // No success response, connection is closed immediately after this message.
 //

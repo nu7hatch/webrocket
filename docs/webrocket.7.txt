@@ -1,0 +1,249 @@
+webrocket(7)
+============
+
+NAME
+----
+webrocket - The WebRocket server core library
+
+SYNOPSIS
+--------
+`import "webrocket"`
+
+DESCRIPTION
+-----------
+This Go language library contains the core functionality of the
+WebRocket server. The *webrocket-server*(1) implements a ready to
+use server application based on the *webrocket*(7) library.
+
+ARCHITECTURE
+------------
+WebRocket is a hybrid of 2 interfaces: the 'WebSockets server' and
+the 'MQ exchange server'. In the middle, everything is tied with
+internal channels, which allows for easy clustering and hence
+horizontal scalability.
+
+VHost
+~~~~~
+Also because of horizontal scalability goals, the server has been
+divided into independent 'vhosts'. Speaking shortly, 'vhost' is just
+a request handler defined for specified path on the server, eg.
+vhost '/world' defined on the server bound to 'hello.com:9772'
+is just a websockets endpoint at 'ws://hello.com:9772/world'.
+
+Each 'vhost' is fully independent from the others, defines its
+own 'channels' and 'users', and allows for specific permissions
+management.
+
+Channel
+~~~~~~~
+WebRocket 'channels' are used for broadcasting information across many
+clients. Each 'channel' allows users to connect and subscribe its
+activity.
+
+User
+~~~~
+The 'user' is defined within 'vhost', so the same user names can
+be duplicated in the server instance. User permissions can be
+combined from three rights: 'READ', 'WRITE' and 'MANAGE'.
+
+
+WEBSOCKETS SERVER
+-----------------
+The WebSockets server handles communication with the clients
+(browsers) over the HTML5WebSockets protocol. This layer implements
+simple JSON-based API for communicating with the clients.
+
+All standard messages are in the following format:
+
+	{"event-name": "data"}
+
+Where `data` type can be any of `string`, `bool` or `hash`.
+When speaking about the server, 'event' refers to supported internal
+operation requested by the client.
+
+Error messages can additionally contain some extra information
+about the encountered problem:
+
+	{"err": "ERROR_ID", "additional_info": "..."}
+	
+Here is the list of all supported events:
+
+AUTHENTICATE
+~~~~~~~~~~~~
+Authenticates session for the specified user. 
+
+Example
+^^^^^^^
+	{"authenticate": {"user": "joe", "secret": "53cr37"}}
+
+Payload
+^^^^^^^
+[horizontal]
+'user'::   name of the configured user you want to authenticate (required)
+'secret':: authentication secret for specified user (optional)
+
+Errors
+^^^^^^
+[horizontal]
+`INVALID_CREDENTIALS`:: given secret is invalid
+`USER_NOT_FOUND`::      given user does not exist
+`INVALID_USER_NAME`::   no username given or its format is invalid
+`INVALID_PAYLOAD`::     data format is invalid
+
+Success
+^^^^^^^
+	{"authenticated": "user-name"}
+
+SUBSCRIBE
+~~~~~~~~~
+Subscribes client to the specified channel.
+
+Example
+^^^^^^^
+	{"subscribe": {"channel": "hello"}}
+
+Payload
+^^^^^^^
+[horizontal]
+'channel':: name of the channel you want to subscribe, not existing
+			channels are created automatically (required)
+
+Errors
+^^^^^^
+[horizontal]
+`INVALID_CHANNEL_NAME`:: no channel name given or when given name is invalid
+`ACCESS_DENIED`::        current session is not authenticated for reading
+`INVALID_PAYLOAD`::      payload format is invalid
+
+Success
+^^^^^^^
+	{"subscribed": "channel-name"}
+
+UNSUBSCRIBE
+~~~~~~~~~~~
+Unsubscribes client from the specified channnel.
+
+Example
+^^^^^^^
+	{"unsubscribe": {"channel": "hello"}}
+
+Payload
+^^^^^^^
+[horizontal]
+'channel':: name of the channel you want to unsubscribe (required)
+
+Errors
+^^^^^^
+[horizontal]
+`INVALID_CHANNEL_NAME`:: no channel name given or when given name is invalid
+`CHANNEL_NOT_FOUND`::    given channel doesn't exist
+`ACCESS_DENIED`::        current session is not authenticated for reading
+`INVALID_PAYLOAD`::      payload format is invalid
+
+Success
+^^^^^^^
+	{"unsubscribed": "channel-name"}
+
+BROADCAST
+~~~~~~~~~
+Broadcasts and triggers client events with specified data on given channels.
+
+Example
+^^^^^^^
+	{"broadcast": {"event": "hello", "channel": "world", data: {"x": 1}}}
+
+Payload
+^^^^^^^
+[horizontal]
+'event'::   name of the event which will be triggerred on the client side (required)
+'channel':: channel have to exist (required)
+'data'::    data to publish (optional)
+
+Errors
+^^^^^^
+[horizontal]
+`INVALID_EVENT_NAME`::   no event name given
+`INVALID_CHANNEL_NAME`:: no channel name given
+`CHANNEL_NOT_FOUND`::    given channel doesn't exist
+`ACCESS_DENIED`::        current session is not authenticated for writing
+`INVALID_PAYLOAD`::      payload format is invalid
+
+Success
+^^^^^^^
+	{"broadcasted": "channel-name"}
+
+TRIGGER
+~~~~~~~
+Sends direct request to server side application.
+
+Example
+^^^^^^^
+	{"trigger": {"event": "hello", "data": {"x": 1}}}
+
+Payload
+^^^^^^^
+[horizontal]
+'event':: name of the event which will be triggerred on the server side (required)
+'data'::  request parameters (optional)
+
+Errors
+^^^^^^
+[horizontal]
+`INVALID_EVENT_NAME`:: no event name given
+`ASSIGNATION_FAILED`:: there is no active worker which can handle specified request
+`ACCESS_DENIED`::      current session is not authenticated for writing
+`INVALID_PAYLOAD`::    payload format is invalid
+
+Success
+^^^^^^^
+	{"triggered": "event-name"}
+
+LOGOUT
+~~~~~~
+Finishes current session and unsubscribes from all channels.
+
+Example
+^^^^^^^
+	{"logout": true}
+
+Errors
+^^^^^^
+
+[horizontal]
+`ACCESS_DENIED`::   current session is not authenticated
+`INVALID_PAYLOAD`:: payload format is invalid
+
+Success
+^^^^^^^
+	{"loggedOut": true}
+
+DISCONNECT
+~~~~~~~~~~
+Safely closes connection.
+
+Example
+^^^^^^^
+	{"disconnect": true}
+
+Errors
+^^^^^^
+[horizontal]
+`INVALID_PAYLOAD`:: payload format is invalid
+
+Success
+^^^^^^^
+No success response, connection is closed immediately after this message.
+
+MQ EXCHANGE SERVER
+~~~~~~~~~~~~~~~~~~
+The MQ exhange Handles communication with the server side applications
+and spreads the internal tasks across all nodes using the 'ZeroMQ'
+library.
+
+SEE ALSO
+--------
+*webrocket-server*(1), *webrocket-ctl*(1), *webrocket-monitor*(1)
+
+AUTHOR
+------
+Chris Kowalik <chris@nu7hat.ch>
