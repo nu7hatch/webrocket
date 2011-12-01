@@ -18,11 +18,11 @@
 package webrocket
 
 import (
-	"net/http"
-	"io"
-	"os"
-	"log"
 	"errors"
+	"io"
+	"log"
+	"net/http"
+	"os"
 	"websocket"
 )
 

@@ -18,12 +18,12 @@
 package webrocket
 
 import (
-	"net/http"
-	"log"
-	"os"
-	"fmt"
-	"path"
 	"errors"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"path"
 )
 
 // Server defines parameters for running an WebSocket server.
@@ -67,7 +67,7 @@ func NewServer(addr string) *Server {
 func (s *Server) AddVhost(path string) (*Vhost, error) {
 	vhost := NewVhost(path)
 	vhost.Log = s.Log
-	s.vhosts[path] = vhost		
+	s.vhosts[path] = vhost
 	s.Handler.(*ServeMux).AddHandler(path, vhost)
 	s.Log.Printf("server: ADD_VHOST path='%s'", path)
 	return vhost, nil
@@ -89,7 +89,7 @@ func (s *Server) DeleteVhost(path string) error {
 // Returns array with registered vhost paths.
 func (s *Server) Vhosts() (vhosts []string) {
 	vhosts, i := make([]string, len(s.vhosts)), 0
-	for path, _ := range s.vhosts {
+	for path := range s.vhosts {
 		vhosts[i] = path
 		i += 1
 	}

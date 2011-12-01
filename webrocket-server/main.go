@@ -18,8 +18,8 @@
 package main
 
 import (
-	"webrocket"
 	"flag"
+	"webrocket"
 )
 
 type Config struct {

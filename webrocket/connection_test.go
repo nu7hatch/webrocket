@@ -22,7 +22,7 @@ import (
 )
 
 func TestNewMessageWithValidData(t *testing.T) {
-	msg, err := NewMessage(map[string]interface{}{"hello":"world"})
+	msg, err := NewMessage(map[string]interface{}{"hello": "world"})
 	if err != nil {
 		t.Errorf("Expected message to be ok, error found: %s", err.Error())
 	}

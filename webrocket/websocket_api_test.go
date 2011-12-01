@@ -18,11 +18,11 @@
 package webrocket
 
 import (
-	"websocket"
-	"testing"
-	"io"
 	"bytes"
+	"io"
 	"log"
+	"testing"
+	"websocket"
 )
 
 var (
@@ -68,7 +68,7 @@ func TestConnect(t *testing.T) {
 func TestAuthInvalidCredentials(t *testing.T) {
 	data := map[string]interface{}{
 		"authenticate": map[string]string{
-			"user": "front",
+			"user":   "front",
 			"secret": "invalid-secret",
 		},
 	}
@@ -92,7 +92,7 @@ func TestAuthInvalidData(t *testing.T) {
 
 func TestAuthWithMissingUserName(t *testing.T) {
 	data := map[string]interface{}{
-		"authenticate": map[string]string {
+		"authenticate": map[string]string{
 			"secret": "foo",
 		},
 	}
@@ -105,7 +105,7 @@ func TestAuthWithMissingUserName(t *testing.T) {
 
 func TestAuthWithMissingSecret(t *testing.T) {
 	data := map[string]interface{}{
-		"authenticate": map[string]string {
+		"authenticate": map[string]string{
 			"user": "front",
 		},
 	}
@@ -132,7 +132,7 @@ func TestAuthWithInvalidUser(t *testing.T) {
 func TestAuthInvalidUserValue(t *testing.T) {
 	data := map[string]interface{}{
 		"authenticate": map[string]interface{}{
-			"user": map[string]string{"foo": "bar"},
+			"user":   map[string]string{"foo": "bar"},
 			"secret": "",
 		},
 	}
@@ -146,7 +146,7 @@ func TestAuthInvalidUserValue(t *testing.T) {
 func TestAuthInvalidSecretValue(t *testing.T) {
 	data := map[string]interface{}{
 		"authenticate": map[string]interface{}{
-			"user": "front",
+			"user":   "front",
 			"secret": map[string]string{"foo": "bar"},
 		},
 	}
@@ -160,7 +160,7 @@ func TestAuthInvalidSecretValue(t *testing.T) {
 func TestAuthAsSubscriber(t *testing.T) {
 	data := map[string]interface{}{
 		"authenticate": map[string]string{
-			"user": "front",
+			"user":   "front",
 			"secret": "read-secret",
 		},
 	}
@@ -174,7 +174,7 @@ func TestAuthAsSubscriber(t *testing.T) {
 func TestAuthAsPublisher(t *testing.T) {
 	data := map[string]interface{}{
 		"authenticate": map[string]string{
-			"user": "back",
+			"user":   "back",
 			"secret": "read-write-secret",
 		},
 	}
@@ -430,7 +430,7 @@ func TestBroadcast(t *testing.T) {
 	ws2, _ := websocket.Dial("ws://localhost:9771/echo", "ws", "http://localhost/")
 	websocket.JSON.Send(ws2, map[string]interface{}{
 		"authenticate": map[string]string{
-			"user": "front",
+			"user":   "front",
 			"secret": "read-secret",
 		},
 	})

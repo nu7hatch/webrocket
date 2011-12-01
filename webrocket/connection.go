@@ -18,11 +18,11 @@
 package webrocket
 
 import (
-	"os"
-	"fmt"
-	"errors"
-	"websocket"
 	"crypto/sha1"
+	"errors"
+	"fmt"
+	"os"
+	"websocket"
 )
 
 // message is a simple structure which keeps the incoming events
@@ -47,10 +47,10 @@ func NewMessage(data map[string]interface{}) (*message, error) {
 
 // generateUniqueToken creates unique token using system `/dev/urandom`.
 func generateUniqueToken() string {
-	f, _ := os.OpenFile("/dev/urandom", os.O_RDONLY, 0) 
-	b := make([]byte, 16) 
-	f.Read(b) 
-	f.Close() 
+	f, _ := os.OpenFile("/dev/urandom", os.O_RDONLY, 0)
+	b := make([]byte, 16)
+	f.Read(b)
+	f.Close()
 	token := sha1.New()
 	token.Write(b)
 	return fmt.Sprintf("%x", token.Sum())

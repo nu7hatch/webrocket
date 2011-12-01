@@ -18,15 +18,15 @@
 package webrocket
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 // Shortcut for defining payload data.
 type Payload map[string]string
 
 // Handles API calls via frontend WebSockets protocol.
-type websocketAPI struct { }
+type websocketAPI struct{}
 
 // Predefined error payloads.
 var (

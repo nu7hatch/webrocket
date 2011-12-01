@@ -44,5 +44,5 @@ func (u *User) Authenticate(secret string) bool {
 
 // IsAllowed checks if the user is permitted to do given operation.
 func (u *User) IsAllowed(permission int) bool {
-	return (u.Permission & permission == permission)
+	return (u.Permission&permission == permission)
 }

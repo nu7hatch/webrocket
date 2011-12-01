@@ -18,9 +18,9 @@
 package webrocket
 
 import (
-	"testing"
-	"log"
 	"bytes"
+	"log"
+	"testing"
 )
 
 func NewTestVhost() *Vhost {
@@ -59,7 +59,7 @@ func TestAddUser(t *testing.T) {
 	}
 	if user.Name != "foo" {
 		t.Errorf("Expected to create valid user")
-	} 
+	}
 }
 
 func TestAddUserWithInvalidName(t *testing.T) {

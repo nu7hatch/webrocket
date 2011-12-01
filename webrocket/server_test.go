@@ -18,9 +18,9 @@
 package webrocket
 
 import (
-	"testing"
-	"log"
 	"bytes"
+	"log"
+	"testing"
 )
 
 func NewTestServer() *Server {
@@ -61,6 +61,6 @@ func TestVhosts(t *testing.T) {
 	for i, vhost := range []string{"/bar", "/foo"} {
 		if vhosts[i] != vhost {
 			t.Errorf("Expected to have [/bar /foo] vhosts registered, given %s", vhosts)
-		} 
+		}
 	}
 }
