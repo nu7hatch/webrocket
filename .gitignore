@@ -6,3 +6,7 @@ _testmain.go
 \#*
 .\#*
 *.log
+INSTALL.html
+NEWS.html
+CONTRIBUTE.html
+README.html

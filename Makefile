@@ -1,3 +1,5 @@
+ASCIIDOC = asciidoc
+
 all: lib server man
 clean: clean-lib clean-server clean-man
 install: install-lib install-server install-man
@@ -25,3 +27,9 @@ clean-man:
 	-@cd docs && $(MAKE) clean
 install-man:
 	-@cd docs && $(MAKE) install
+
+papers:
+	-$(ASCIIDOC) -d article -o INSTALL.html INSTALL
+	-$(ASCIIDOC) -d article -o NEWS.html NEWS
+	-$(ASCIIDOC) -d article -o CONTRIBUTE.html CONTRIBUTE
+	-$(ASCIIDOC) -d article -o README.html README

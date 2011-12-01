@@ -1,0 +1,33 @@
+Basic installation
+==================
+
+WebRocket is written in Go language. If you don't have Go compiler
+installed yet, follow this installation guide: http://golang.org/doc/install.html
+
+IMPORTANT: So far, WebRocket is using bunch of unreleased features
+and want to catch up with the Go's development, that's why you
+should remember to clone *the head version* or the latest *weakly release*:
+
+To get head version of the compiler use following command:
+
+    hg clone https://go.googlecode.com/hg/ go
+
+Once you have the Go compiler installed, we can move to building our
+WebRocket installation. Building WebRocket is very easy and shouldn't
+cause too much problems. After you will clone the repository, just
+use standard `make` targets to build and install:
+
+    git clone git://github.com/nu7hatch/webrocket.git
+    cd webrocket
+    make install
+
+Usage
+-----
+Now all WebRocket tools should be available in your system. Check the manual
+entries for each of them to get information about how do they work. List of
+available manual entries:
+
+* *webrocket*(7)
+* *webrocket-server*(1)
+* *webrocket-ctl*(1)
+* *webrocket-monitor*(1)

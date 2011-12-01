@@ -1,0 +1,12 @@
+2011-12-01  Krzysztof Kowalik  <chris@nu7hat.ch>
+
+	* CONTRIBUTE: created, described contributing guides
+	* COPYING: created, filled with GNU GPLv3 license
+	* INSTALL: created, describe basic installation scenario
+	* README: renamed from old README.md, described project information
+	* NEWS: renamed from old ChangeLog.md
+	* docs/webrocket-server.1.txt: created, written manual for the `webrocket-server` command
+	* webrocket/*: all *.go files moved from root directory
+	* webrocket-server/main.go: created, simple server configurator and runner  implementation
+	* webrocket-server/Makefile: created
+	* Makefile: added targets for easy building and installing the project

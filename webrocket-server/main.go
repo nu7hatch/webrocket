@@ -1,4 +1,4 @@
-// This package implements executable for starting and configuring
+// This package implements executable for starting and preconfiguring
 // single webrocket server node.
 //
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
@@ -18,8 +18,8 @@
 package main
 
 import (
-	"flag"
 	"webrocket"
+	"flag"
 )
 
 type Config struct {
