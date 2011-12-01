@@ -1,3 +1,9 @@
+2011-12-02  Krzysztof Kowalik  <chris@nu7hat.ch>
+
+	* INSTALL: added development environment setup info
+	* webrocket-server/README: created, short info about the tool
+	* docs/webrocket-server.1.txt: fixed typos
+	
 2011-12-01  Krzysztof Kowalik  <chris@nu7hat.ch>
 
 	* CONTRIBUTE: created, described contributing guides

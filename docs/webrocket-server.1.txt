@@ -12,7 +12,7 @@ SYNOPSIS
 DESCRIPTION
 -----------
 The *webrocket-server*(1) tool is used to start and initially configure single
-node instance. To further configure your node, use the *rocket-ctl* tool.
+node instance. To further configure your node, use the *rocket-ctl*(1) tool.
 
 OPTIONS
 -------
