@@ -88,10 +88,6 @@ func (api *websocketAPI) error(c *conn, payload map[string]string) error {
 // * `INVALID_USER_NAME` - returned when no username given or its format is invalid
 // * `INVALID_PAYLOAD` - returned when data format is invalid
 //
-// Success:
-//
-//     {"authenticated": "user-name"}
-//
 func (api *websocketAPI) doAuthenticate(c *conn, data interface{}) error {
 	payload, ok := data.(map[string]interface{})
 	if !ok {
@@ -144,10 +140,6 @@ func (api *websocketAPI) doAuthenticate(c *conn, data interface{}) error {
 // * `ACCESS_DENIED` - returned when current session is not authenticated for reading
 // * `INVALID_PAYLOAD` - returned when payload format is invalid
 //
-// Success:
-// 
-//    {"subscribed": "channel-name"}
-//
 func (api *websocketAPI) doSubscribe(c *conn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermRead) {
@@ -191,10 +183,6 @@ func (api *websocketAPI) doSubscribe(c *conn, data interface{}) error {
 // * `CHANNEL_NOT_FOUND` - returned when given channel doesn't exist
 // * `ACCESS_DENIED` - returned when current session is not authenticated for reading
 // * `INVALID_PAYLOAD` - returned when payload format is invalid
-//
-// Success:
-// 
-//    {"unsubscribed": "channel-name"}
 //
 func (api *websocketAPI) doUnsubscribe(c *conn, data interface{}) error {
 	user := c.session
@@ -247,10 +235,6 @@ func (api *websocketAPI) doUnsubscribe(c *conn, data interface{}) error {
 // * `ACCESS_DENIED` - returned when current session is not authenticated for writing
 // * `INVALID_PAYLOAD` - returned when payload format is invalid
 //
-// Success:
-//
-//     {"broadcasted": "channel-name"}
-//
 func (api *websocketAPI) doBroadcast(c *conn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermWrite) {
@@ -296,10 +280,6 @@ func (api *websocketAPI) doBroadcast(c *conn, data interface{}) error {
 // * `ACCESS_DENIED` - returned when current session is not authenticated
 // * `INVALID_PAYLOAD` - returned when payload format is invalid
 //
-// Success:
-//
-//     {"loggedOut": true}
-//
 func (api *websocketAPI) doLogout(c *conn) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermRead) {
@@ -326,10 +306,6 @@ func (api *websocketAPI) doLogout(c *conn) error {
 //
 // * `INVALID_PAYLOAD` - returned when payload format is invalid
 //
-// Success:
-//
-// No success response, connection is closed immediately after this message.
-//
 func (api *websocketAPI) doDisconnect(c *conn) error {
 	c.unsubscribeAll()
 	c.Close()
@@ -338,11 +314,6 @@ func (api *websocketAPI) doDisconnect(c *conn) error {
 
 // Handles error when operation specified in payload is not
 // defined in the API.
-//
-// Error response:
-//
-//     {"err": "undefined_event", "event": "event-name"}
-//
 func (api *websocketAPI) notFound(c *conn, event string) error {
 	payload := Payload(ErrUndefinedEvent)
 	payload["event"] = event
