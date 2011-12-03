@@ -1,5 +1,9 @@
 2011-12-03  Krzysztof Kowalik  <chris@nu7hat.ch>
 
+	* docs/webrocket.7.txt: added MQ exchange server protocol info
+
+2011-12-03  Krzysztof Kowalik  <chris@nu7hat.ch>
+
 	* docs/webrocket.7.txt: added some docs, examples updated with _id's
 	* webrocket/webrocket_api.go: updated docs
 
