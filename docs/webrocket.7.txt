@@ -55,7 +55,7 @@ server' and 'the ZeroMQ exchange', connected by internal channels.
 The following schema explains it more accurately:
 
 -----
-
+ 
     +---------+                    +-------------------+
     | Browser | <----------------> |                   |
     +---------+     WEBSOCKETS     | WebSockets SERVER |
@@ -266,7 +266,7 @@ Messages format
 This exchange server implements very simple text-based protocol. All
 messages have the following format:
 
-	CMD param1, ..., paramN
+	CMD param1 ... paramN
 
 Success responses
 ~~~~~~~~~~~~~~~~~
@@ -292,11 +292,11 @@ Authenticates current session for the specified user and vhost.
 
 Format
 ^^^^^^
-	AUTH vhost, user, secret
+	AUTH vhost user secret
 
 Example
 ^^^^^^^
-	AUTH /echo, joe, 53cr3t
+	AUTH /echo joe 53cr3t
 	
 Payload
 ^^^^^^^
@@ -321,11 +321,11 @@ Broadcasts given JSON data on the specified channel.
 
 Format
 ^^^^^^
-	BROADCAST channel, data
+	BROADCAST channel data
 
 Example
 ^^^^^^^	
-	BROADCAST foo, {"event": "hello", "data": "world"}
+	BROADCAST foo {"event": "hello", "data": "world"}
 	
 Payload
 ^^^^^^^
@@ -347,11 +347,11 @@ Sends direct message to specified client.
 
 Format
 ^^^^^^
-	DIRECT sid, data
+	DIRECT sid data
 
 Example
 ^^^^^^^
-	DIRECT 178dfdsf87, {"event": "hello", "data": "world"}
+	DIRECT abc...xyz {"event": "hello", "data": "world"}
 
 Errors
 ^^^^^^
