@@ -1,6 +1,9 @@
 2011-12-03  Krzysztof Kowalik  <chris@nu7hat.ch>
 
+	* Makefile: hacks to make tools working with local package
+	* webrocket-server/main.go: changed imports to load local webrocket package
 	* docs/webrocket.7.txt: improved MQ exchange protocol
+	* .gitignore: ignored *.a files
 
 2011-12-03  Krzysztof Kowalik  <chris@nu7hat.ch>
 

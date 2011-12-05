@@ -18,7 +18,7 @@
 package main
 
 import (
-	"webrocket"
+	"../webrocket"
 	"flag"
 )
 
