@@ -208,7 +208,7 @@ Called when requested backend event has been successfully triggered.
 Format
 ^^^^^^
 	{
-	    "__tigerred": {
+	    "__tiggered": {
 	        "event": "event-name"
 	    }
 	}
