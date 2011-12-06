@@ -218,5 +218,6 @@ func (api *websocketAPI) doClose(c *conn) error {
 func (api *websocketAPI) notFound(c *conn, event string) error {
 	payload := ErrUndefinedEvent
 	payload["event"] = event
+	c.vhost.Log.Printf("ws[%s]: NOT_FOUND event='%s'", c.vhost.path, event)
 	return api.error(c, payload)
 }
