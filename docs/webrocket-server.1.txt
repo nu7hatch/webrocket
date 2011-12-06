@@ -45,7 +45,9 @@ Starting the server with TLS support enabled:
 
 SEE ALSO
 --------
-*webrocket*(7), *webrocket-ctl*(1), *webrocket-monitor*(1)
+link:webrocket.7.html[*webrocket*(7)],
+link:webrocket-ctl.1.html[*webrocket-ctl*(1)],
+link:webrocket-monitor.1.html[*webrocket-monitor*(1)]
 
 AUTHOR
 ------
