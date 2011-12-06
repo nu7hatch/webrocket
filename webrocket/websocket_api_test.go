@@ -35,7 +35,7 @@ var (
 func init() {
 	go func() {
 		server = NewServer(":9771")
-		server.Log = log.New(bytes.NewBuffer([]byte{}), "a", log.LstdFlags)
+		server.Log = log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags)
 		vhost, _ = server.AddVhost("/echo")
 		vhost.AddUser("front", "read-secret", PermRead)
 		vhost.AddUser("back", "read-write-secret", PermRead|PermWrite)

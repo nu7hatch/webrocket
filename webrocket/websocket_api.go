@@ -46,7 +46,7 @@ type websocketAPI struct{}
 // Dispatch matches message given event with protocol and
 // executes proper operation. Returns information if the
 // conneciton should be still maintained, and eventual error.
-func (api *websocketAPI) Dispatch(c *conn, msg *Message) (bool, error) {
+func (api *websocketAPI) Dispatch(c *wsConn, msg *Message) (bool, error) {
 	switch msg.Event {
 	case "broadcast":
 		return true, api.doBroadcast(c, msg.Data)
@@ -57,21 +57,21 @@ func (api *websocketAPI) Dispatch(c *conn, msg *Message) (bool, error) {
 	case "auth":
 		return true, api.doAuthenticate(c, msg.Data)
 	case "close":
-		return true, api.doClose(c)
+		return false, api.doClose(c)
 	}
 	return true, api.notFound(c, msg.Event)
 }
 
 // A helper for quick handling error responses.
-func (api *websocketAPI) error(c *conn, payload map[string]interface{}) error {
-	err := errors.New(fmt.Sprintf("ERR_%s", payload["err"]))
+func (api *websocketAPI) error(c *wsConn, payload map[string]interface{}) error {
+	err := errors.New(fmt.Sprintf("ERR_%s", payload["id"]))
 	c.vhost.Log.Printf("ws[%s]: %s", c.vhost.path, err.Error())
 	c.send(map[string]interface{}{"__error": payload})
 	return err
 }
 
 // Authenticates session for the specified user.
-func (api *websocketAPI) doAuthenticate(c *conn, data interface{}) error {
+func (api *websocketAPI) doAuthenticate(c *wsConn, data interface{}) error {
 	payload, ok := data.(map[string]interface{})
 	if !ok {
 		// INVALID_PAYLOAD
@@ -113,7 +113,7 @@ func (api *websocketAPI) doAuthenticate(c *conn, data interface{}) error {
 }
 
 // Subscribes client to the specified channel.
-func (api *websocketAPI) doSubscribe(c *conn, data interface{}) error {
+func (api *websocketAPI) doSubscribe(c *wsConn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermRead) {
 		// ACCESS_DENIED
@@ -145,7 +145,7 @@ func (api *websocketAPI) doSubscribe(c *conn, data interface{}) error {
 }
 
 // Unsubscribes client from the specified channnel.
-func (api *websocketAPI) doUnsubscribe(c *conn, data interface{}) error {
+func (api *websocketAPI) doUnsubscribe(c *wsConn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermRead) {
 		// ACCESS_DENIED
@@ -173,7 +173,7 @@ func (api *websocketAPI) doUnsubscribe(c *conn, data interface{}) error {
 
 // Broadcasts and triggers client events with specified data on
 // given channels.
-func (api *websocketAPI) doBroadcast(c *conn, data interface{}) error {
+func (api *websocketAPI) doBroadcast(c *wsConn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermWrite) {
 		// ACCESS_DENIED
@@ -205,7 +205,7 @@ func (api *websocketAPI) doBroadcast(c *conn, data interface{}) error {
 }
 
 // Safely closes connection.
-func (api *websocketAPI) doClose(c *conn) error {
+func (api *websocketAPI) doClose(c *wsConn) error {
 	c.session = nil
 	c.unsubscribeAll()
 	c.Close()
@@ -215,7 +215,7 @@ func (api *websocketAPI) doClose(c *conn) error {
 
 // Handles error when operation specified in payload is not
 // defined in the API.
-func (api *websocketAPI) notFound(c *conn, event string) error {
+func (api *websocketAPI) notFound(c *wsConn, event string) error {
 	payload := ErrUndefinedEvent
 	payload["event"] = event
 	c.vhost.Log.Printf("ws[%s]: NOT_FOUND event='%s'", c.vhost.path, event)

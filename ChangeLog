@@ -1,11 +1,12 @@
 2011-12-06  Krzysztof Kowalik  <chris@nu7hat.ch>
 
-	* webrocket/channel.go: channel made public, added Name() and Subscriptions() funcs
+	* webrocket/channel.go: channel made public, added Name() and Subscriptions() funcs, updated conn refs
 	* webrocket/connection.go: updated channel references, message extracted to the separate file
-	* webrocket/vhost.go: updated channel references
+	* webrocket/connection.go: introduced wsConn
+	* webrocket/vhost.go: updated channel and conn references
 	* webrocket/message.go: created, content extracted from the connection.go
 	* webrocket/message_test.go: created, added better tests for the message extraction
-	* webrocket/websocket_api.go: updated message references, API adjusted to specs
+	* webrocket/websocket_api.go: updated message and conn references, API adjusted to specs
 	* webrocket/websocket_api_test.go: fixed tests
 	* webrocket/server_test.go: fixed randomly passing test
 

@@ -20,7 +20,7 @@ package webrocket
 // subscription struct is used to modify channel subscription state
 // from within the handler.
 type subscription struct {
-	conn   *conn
+	conn   *wsConn
 	active bool
 }
 
@@ -29,14 +29,14 @@ type subscription struct {
 type Channel struct {
 	name        string
 	vhost       *Vhost
-	subscribers map[*conn]bool
+	subscribers map[*wsConn]bool
 	subscribe   chan subscription
 	broadcast   chan interface{}
 }
 
 // NewChannel creates and configures new channel in specified vhost.
 func NewChannel(v *Vhost, name string) *Channel {
-	ch := &Channel{name: name, vhost: v, subscribers: make(map[*conn]bool)}
+	ch := &Channel{name: name, vhost: v, subscribers: make(map[*wsConn]bool)}
 	ch.subscribe, ch.broadcast = make(chan subscription), make(chan interface{})
 	go ch.hub()
 	return ch
@@ -68,8 +68,8 @@ func (ch *Channel) Name() string {
 }
 
 // Returns list of subscribers.
-func (ch *Channel) Subscribers() []*conn {
-	conns, i := make([]*conn, len(ch.subscribers)), 0
+func (ch *Channel) Subscribers() []*wsConn {
+	conns, i := make([]*wsConn, len(ch.subscribers)), 0
 	for conn, _ := range ch.subscribers {
 		conns[i] = conn
 		i += 1

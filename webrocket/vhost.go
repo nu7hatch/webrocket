@@ -35,7 +35,7 @@ type Vhost struct {
 	isRunning   bool
 	handler     websocket.Handler
 	users       map[string]*User
-	connections map[string]*conn
+	connections map[string]*wsConn
 	channels    map[string]*Channel
 	codec       websocket.Codec
 	frontAPI    websocketAPI
@@ -46,7 +46,7 @@ func NewVhost(path string) *Vhost {
 	v := &Vhost{path: path, isRunning: true}
 	v.handler = websocket.Handler(func(ws *websocket.Conn) { v.handle(ws) })
 	v.users = make(map[string]*User)
-	v.connections = make(map[string]*conn)
+	v.connections = make(map[string]*wsConn)
 	v.channels = make(map[string]*Channel)
 	v.codec = websocket.JSON
 	v.Log = log.New(os.Stderr, "", log.LstdFlags)
@@ -55,7 +55,7 @@ func NewVhost(path string) *Vhost {
 
 // Prepares new connection to enter in the event loop.
 func (v *Vhost) handle(ws *websocket.Conn) {
-	c := wrapConn(ws, v)
+	c := wrapWsConn(ws, v)
 	v.connections[c.token] = c
 	v.eventLoop(c)
 	v.cleanup(c)
@@ -63,13 +63,13 @@ func (v *Vhost) handle(ws *websocket.Conn) {
 
 // cleanup removes all subscprionts and other relations
 // between closed connection and the system.
-func (v *Vhost) cleanup(c *conn) {
+func (v *Vhost) cleanup(c *wsConn) {
 	c.unsubscribeAll()
 	delete(v.connections, c.token)
 }
 
 // eventLoop maintains main loop for handled connection.
-func (v *Vhost) eventLoop(c *conn) {
+func (v *Vhost) eventLoop(c *wsConn) {
 	for {
 		if !v.IsRunning() {
 			return
@@ -106,7 +106,7 @@ func (v *Vhost) IsRunning() bool {
 }
 
 // Returns list of active connections.
-func (v *Vhost) Connections() map[string]*conn {
+func (v *Vhost) Connections() map[string]*wsConn {
 	return v.connections
 }
 
