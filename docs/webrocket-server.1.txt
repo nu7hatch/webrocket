@@ -22,10 +22,13 @@ OPTIONS
 		or just a port ':9772'. In the second case server will be bound to all
 		available interfaces. By default ':9772'.
 
+*-mqaddr*='<addr>'::
+		The MQ exchange will be bound to this interface. By default 'localhost:9773'
+
 *-ctladdr*='<addr>'::
 		The management API server will be bound to specified interface.
-		By default 'localhost:9773'.
-
+		By default 'localhost:9774'.
+		
 *-cert*='<path>'::
 		Path to TLS certificate file.
 
@@ -36,8 +39,8 @@ EXAMPLES
 --------
 Specifying endpoints for WebSocket server and management API:
 
-	$ webrocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9773"
-	$ webrocket-server -ctladdr ":9773"
+	$ webrocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9774"
+	$ webrocket-server -ctladdr ":9774"
 
 Starting the server with TLS support enabled:
 

@@ -101,6 +101,11 @@ func (s *Server) BindCtl(addr string) {
 	//s.httpCtl = newHttpCtl(addr)
 }
 
+// Binds MQ exchange with specified address.
+func (s *Server) BindMq(addr string) {
+	//s.mqServer = newMqServer(addr)
+}
+
 // Listens on the TCP network address srv.Addr and handles requests on incoming
 // websocket connections.
 func (s *Server) ListenAndServe() error {

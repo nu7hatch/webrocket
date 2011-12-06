@@ -10,6 +10,8 @@
 	* webrocket/websocket_api.go: updated message and conn references, API adjusted to specs
 	* webrocket/websocket_api_test.go: fixed tests
 	* webrocket/server_test.go: fixed randomly passing test
+	* webrocket-server/main.go: added `-mqaddr` option
+	* docs/webrocket-server.1.txt: added `-mqaddr` description
 
 2011-12-05  Krzysztof Kowalik  <chris@nu7hat.ch>
 
