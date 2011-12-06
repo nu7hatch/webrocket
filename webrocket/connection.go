@@ -19,31 +19,10 @@ package webrocket
 
 import (
 	"crypto/sha1"
-	"errors"
 	"fmt"
 	"os"
 	"websocket"
 )
-
-// message is a simple structure which keeps the incoming events
-// information and data.
-type message struct {
-	Event string
-	Data  interface{}
-}
-
-// extractMessage converts received map into message structure. 
-func NewMessage(data map[string]interface{}) (*message, error) {
-	if len(data) != 1 {
-		return nil, errors.New("Invalid message format")
-	}
-	msg := &message{}
-	for k := range data {
-		msg.Event = k
-	}
-	msg.Data = data[msg.Event]
-	return msg, nil
-}
 
 // generateUniqueToken creates unique token using system `/dev/urandom`.
 func generateUniqueToken() string {
@@ -63,14 +42,14 @@ type conn struct {
 	token    string
 	session  *User
 	vhost    *Vhost
-	channels map[*channel]bool
+	channels map[*Channel]bool
 }
 
 // wrapConn wraps standard websocket connection object into one
 // adjusted for webrocket server funcionalities.
 func wrapConn(ws *websocket.Conn, vhost *Vhost) *conn {
 	c := &conn{Conn: ws, token: generateUniqueToken(), vhost: vhost}
-	c.channels = make(map[*channel]bool)
+	c.channels = make(map[*Channel]bool)
 	return c
 }
 

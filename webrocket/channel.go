@@ -26,7 +26,7 @@ type subscription struct {
 
 // channel keeps information about specified channel and it's subscriptions.
 // It's hub is used to broadcast messages.
-type channel struct {
+type Channel struct {
 	name        string
 	vhost       *Vhost
 	subscribers map[*conn]bool
@@ -34,16 +34,16 @@ type channel struct {
 	broadcast   chan interface{}
 }
 
-// newChannel creates and configures new channel in specified vhost.
-func newChannel(v *Vhost, name string) *channel {
-	ch := &channel{name: name, vhost: v, subscribers: make(map[*conn]bool)}
+// NewChannel creates and configures new channel in specified vhost.
+func NewChannel(v *Vhost, name string) *Channel {
+	ch := &Channel{name: name, vhost: v, subscribers: make(map[*conn]bool)}
 	ch.subscribe, ch.broadcast = make(chan subscription), make(chan interface{})
 	go ch.hub()
 	return ch
 }
 
 // Channel's hub manages subscriptions and broacdasts messages to all subscribers.
-func (ch *channel) hub() {
+func (ch *Channel) hub() {
 	for {
 		select {
 		case s := <-ch.subscribe:
@@ -60,4 +60,19 @@ func (ch *channel) hub() {
 			}
 		}
 	}
+}
+
+// Returns name of the channel. 
+func (ch *Channel) Name() string {
+	return ch.name
+}
+
+// Returns list of subscribers.
+func (ch *Channel) Subscribers() []*conn {
+	conns, i := make([]*conn, len(ch.subscribers)), 0
+	for conn, _ := range ch.subscribers {
+		conns[i] = conn
+		i += 1
+	}
+	return conns
 }

@@ -58,9 +58,9 @@ func TestVhosts(t *testing.T) {
 	server.AddVhost("/foo")
 	server.AddVhost("/bar")
 	vhosts := server.Vhosts()
-	for i, vhost := range []string{"/bar", "/foo"} {
+	for i, vhost := range []string{"/foo", "/bar"} {
 		if vhosts[i] != vhost {
-			t.Errorf("Expected to have [/bar /foo] vhosts registered, given %s", vhosts)
+			t.Errorf("Expected to have [/foo /bar] vhosts registered, given %s", vhosts)
 		}
 	}
 }

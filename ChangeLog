@@ -1,3 +1,12 @@
+2011-12-06  Krzysztof Kowalik  <chris@nu7hat.ch>
+
+	* webrocket/channel.go: channel made public, added Name() and Subscriptions() funcs
+	* webrocket/connection.go: updated channel references, message extracted to the separate file
+	* webrocket/vhost.go: updated channel references
+	* webrocket/message.go: created, content extracted from the connection.go
+	* webrocket/message_test.go: created, added better tests for the message extraction
+	* webrocket/websocket_api.go: updated message references
+	
 2011-12-05  Krzysztof Kowalik  <chris@nu7hat.ch>
 
 	* Makefile: hacks to make tools working with local package

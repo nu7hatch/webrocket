@@ -44,7 +44,7 @@ var (
 // Dispatch matches message given event with protocol and
 // executes proper operation. Returns information if the
 // conneciton should be still maintained, and eventual error.
-func (api *websocketAPI) Dispatch(c *conn, msg *message) (bool, error) {
+func (api *websocketAPI) Dispatch(c *conn, msg *Message) (bool, error) {
 	switch msg.Event {
 	case "broadcast":
 		return true, api.doBroadcast(c, msg.Data)

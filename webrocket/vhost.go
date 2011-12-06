@@ -36,7 +36,7 @@ type Vhost struct {
 	handler     websocket.Handler
 	users       map[string]*User
 	connections map[string]*conn
-	channels    map[string]*channel
+	channels    map[string]*Channel
 	codec       websocket.Codec
 	frontAPI    websocketAPI
 }
@@ -47,7 +47,7 @@ func NewVhost(path string) *Vhost {
 	v.handler = websocket.Handler(func(ws *websocket.Conn) { v.handle(ws) })
 	v.users = make(map[string]*User)
 	v.connections = make(map[string]*conn)
-	v.channels = make(map[string]*channel)
+	v.channels = make(map[string]*Channel)
 	v.codec = websocket.JSON
 	v.Log = log.New(os.Stderr, "", log.LstdFlags)
 	return v
@@ -163,22 +163,22 @@ func (v *Vhost) Users() map[string]*User {
 }
 
 // OpenChannel creates new channel ready to subscribe.
-func (v *Vhost) CreateChannel(name string) *channel {
-	channel := newChannel(v, name)
+func (v *Vhost) CreateChannel(name string) *Channel {
+	channel := NewChannel(v, name)
 	v.channels[name] = channel
 	v.Log.Printf("vhost[%s]: CREATE_CHANNEL name='%s'", v.path, name)
 	return channel
 }
 
 // Returns specified channel.
-func (v *Vhost) GetChannel(name string) (*channel, bool) {
+func (v *Vhost) GetChannel(name string) (*Channel, bool) {
 	channel, ok := v.channels[name]
 	return channel, ok
 }
 
 // Returns specified channel. If channel doesn't exist, then will be
 // created automatically.
-func (v *Vhost) GetOrCreateChannel(name string) *channel {
+func (v *Vhost) GetOrCreateChannel(name string) *Channel {
 	channel, ok := v.channels[name]
 	if !ok {
 		return v.CreateChannel(name)
@@ -187,7 +187,7 @@ func (v *Vhost) GetOrCreateChannel(name string) *channel {
 }
 
 // Returns list of used channels.
-func (v *Vhost) Channels() map[string]*channel {
+func (v *Vhost) Channels() map[string]*Channel {
 	return v.channels
 }
 
