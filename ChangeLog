@@ -3,6 +3,7 @@
 	* webrocket/channel.go: channel made public, added Name() and Subscriptions() funcs, updated conn refs
 	* webrocket/connection.go: updated channel references, message extracted to the separate file
 	* webrocket/connection.go: introduced wsConn
+	* webrocket/connection_test.go: removed redundant tests
 	* webrocket/vhost.go: updated channel and conn references
 	* webrocket/message.go: created, content extracted from the connection.go
 	* webrocket/message_test.go: created, added better tests for the message extraction

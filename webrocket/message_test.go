@@ -21,24 +21,22 @@ import (
 	"testing"
 )
 
-func TestNewMessage(t *testing.T) {
-	msg, err := NewMessage(map[string]interface{}{
-		"hello": "world",
-	})
+func TestNewMessageWithValidData(t *testing.T) {
+	msg, err := NewMessage(map[string]interface{}{"hello": "world"})
 	if err != nil {
-		t.Errorf("Expected to be ok, error given: %s", err.Error())
+		t.Errorf("Expected message to be ok, error found: %s", err.Error())
 	}
 	if msg.Event != "hello" {
-		t.Errorf("Expected event to be 'hello', %s given", msg.Event)
+		t.Errorf("Expected event to be `hello`, given %s", msg.Event)
 	}
 	if msg.Data.(string) != "world" {
-		t.Errorf("Expected data to be 'world', %s given", msg.Data)
+		t.Errorf("Expected data to be `world`, given %s", msg.Data)
 	}
 }
 
-func TestFailedMessage(t *testing.T) {
+func TestNewMessageWithInvalidData(t *testing.T) {
 	_, err := NewMessage(map[string]interface{}{})
 	if err == nil {
-		t.Errorf("Expected to fail creating new message")
+		t.Errorf("Expected message to be invalid")
 	}
 }
