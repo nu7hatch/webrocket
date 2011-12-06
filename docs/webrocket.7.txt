@@ -273,7 +273,9 @@ Format
 	    "broadcast": {
 	        "channel": "channel-name",
 	        "event": "event-name",
-	        "data": "json-encoded-data"
+	        "data": {
+	            ...
+	        }
 	    }
 	}
 
@@ -300,7 +302,9 @@ Format
 	{
 	    "trigger": {
 	        "event": "event-name",
-	        "data": "json-encoded-data"
+	        "data": {
+	            ...
+	        }
 	    }
 	}
 
@@ -337,19 +341,60 @@ The MQ exhange Handles communication with the server side applications
 and spreads the internal tasks across all nodes using the 'ZeroMQ'
 library.
 
-MQ EXCHANGE PROTOCOL
---------------------
+MQ EXCHANGE CLIENT EVENTS
+-------------------------
+The same as the WebSockets client, a client of the MQ exchange
+supports 'system' and 'user' events. User events additionally
+contains 'sid' of the event sender.
+
+	{
+	    "event": {
+	        "sid": "abc...xyz",
+	         ... data ...
+	    }
+	}
+
+Here's the list of supported system events:
+
+__AUTHENTICATED
+~~~~~~~~~~~~~~~
+Triggered when connection has been successfully authenticated as
+specified user.
+
+Format
+^^^^^^
+	{
+	    "__authenticated": {
+	        "user": "username"
+	        "permission": "code"
+	    }
+	}
+
+[horizontal]
+'data.user' (String)::        the name of the user client has been
+					   		  authenticated as
+'data.permission' (Integer):: the permission code
+
+__ERROR
+~~~~~~~
+Triggered when server side error occured, or when requested operation
+couldn't be processed because of invalid payload or message format.
+
+Format
+^^^^^^
+	{
+	    "__error": {
+	        "id": "ERROR_ID"
+	    }
+	}
+
+[horizontal]
+'data.id' (String):: ID of the occured error
+
+MQ EXCHANGE SERVER EVENTS
+-------------------------
 The protocol used by the 'MQ exchange' uses the same JSON-encoded
-message as in WebSockets server. This layer is not evented, so
-all answers are going to the client instantly. When everythin went
-fine, the success response is sent:
-
-	{"ok": true}
-
-Otherwise, when error encountered then appropriate information will
-be sent:
-
-	{"err": "ERROR_ID"}
+messages as in WebSockets server.
 
 Here's the full list of events supported by the MQ exchange:
 
@@ -392,7 +437,9 @@ Format
 	    "broadcast": {
 	        "channel": "channel-name",
 	        "event": "event-name",
-	        "data": "json-encoded-data"
+	        "data": {
+	            ...
+	        }
 	    }
 	}
 
@@ -419,7 +466,9 @@ Format
 	    "direct": {
 	        "sid": "session-id",
 	        "event": "event-name",
-	        "data": "json-encoded-data"
+	        "data": {
+	            ...
+	        }
 	    }
 	}
 
