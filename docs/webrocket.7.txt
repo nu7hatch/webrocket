@@ -169,53 +169,6 @@ Format
 [horizontal]
 'data.channel' (String):: the name of the subscribed channel
 
-__UNSUBSCRIBED
-~~~~~~~~~~~~~~
-Triggered when the client successfully unsubscribed specified channel.
-
-Format
-^^^^^^
-	{
-	    "__unsubscribed": {
-	        "channel": "channel-name"
-	    }
-	}
-
-[horizontal]
-'data.channel' (String):: the name of the unsubscribed channel
-	
-__BROADCASTED
-~~~~~~~~~~~~~
-Triggered when data sent by the client has been successfully
-broadcasted to the channel's subscribers.
-
-Format
-^^^^^^
-	{
-	    "__broadcasted": {
-	        "channel": "channel-name"
-	    }
-	}
-
-[horizontal]
-'data.channel' (String):: the name of the channel to which the data
-			   			  has been broadcasted
-
-__TRIGGERED
-~~~~~~~~~~~
-Called when requested backend event has been successfully triggered.
-
-Format
-^^^^^^
-	{
-	    "__tiggered": {
-	        "event": "event-name"
-	    }
-	}
-
-[horizontal]
-'data.event' (String):: the name of the triggered backend event
-
 __ERROR
 ~~~~~~~
 Triggered when server side error occured, or when requested operation

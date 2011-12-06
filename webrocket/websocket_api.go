@@ -22,24 +22,26 @@ import (
 	"fmt"
 )
 
-// Shortcut for defining payload data.
-type Payload map[string]string
-
-// Handles API calls via frontend WebSockets protocol.
-type websocketAPI struct{}
+// Creates new error payload.
+func newError(id string) map[string]interface{} {
+	return map[string]interface{}{"id": id}
+}
 
 // Predefined error payloads.
 var (
-	ErrInvalidPayload     = Payload{"err": "INVALID_PAYLOAD"}
-	ErrAccessDenied       = Payload{"err": "ACCESS_DENIED"}
-	ErrInvalidUserName    = Payload{"err": "INVALID_USER_NAME"}
-	ErrUserNotFound       = Payload{"err": "USER_NOT_FOUND"}
-	ErrInvalidCredentials = Payload{"err": "INVALID_CREDENTIALS"}
-	ErrInvalidChannelName = Payload{"err": "INVALID_CHANNEL_NAME"}
-	ErrChannelNotFound    = Payload{"err": "CHANNEL_NOT_FOUND"}
-	ErrInvalidEventName   = Payload{"err": "INVALID_EVENT_NAME"}
-	ErrUndefinedEvent     = Payload{"err": "UNDEFINED_EVENT"}
+	ErrInvalidPayload     = newError("INVALID_PAYLOAD")
+	ErrAccessDenied       = newError("ACCESS_DENIED")
+	ErrInvalidUserName    = newError("INVALID_USER_NAME")
+	ErrUserNotFound       = newError("USER_NOT_FOUND")
+	ErrInvalidCredentials = newError("INVALID_CREDENTIALS")
+	ErrInvalidChannelName = newError("INVALID_CHANNEL_NAME")
+	ErrChannelNotFound    = newError("CHANNEL_NOT_FOUND")
+	ErrInvalidEventName   = newError("INVALID_EVENT_NAME")
+	ErrUndefinedEvent     = newError("UNDEFINED_EVENT")
 )
+
+// Handles API calls via frontend WebSockets protocol.
+type websocketAPI struct{}
 
 // Dispatch matches message given event with protocol and
 // executes proper operation. Returns information if the
@@ -48,46 +50,27 @@ func (api *websocketAPI) Dispatch(c *conn, msg *Message) (bool, error) {
 	switch msg.Event {
 	case "broadcast":
 		return true, api.doBroadcast(c, msg.Data)
-	case "authenticate":
-		return true, api.doAuthenticate(c, msg.Data)
 	case "subscribe":
 		return true, api.doSubscribe(c, msg.Data)
 	case "unsubscribe":
 		return true, api.doUnsubscribe(c, msg.Data)
-	case "logout":
-		return true, api.doLogout(c)
-	case "disconnect":
-		return false, api.doDisconnect(c)
+	case "auth":
+		return true, api.doAuthenticate(c, msg.Data)
+	case "close":
+		return true, api.doClose(c)
 	}
 	return true, api.notFound(c, msg.Event)
 }
 
 // A helper for quick handling error responses.
-func (api *websocketAPI) error(c *conn, payload map[string]string) error {
+func (api *websocketAPI) error(c *conn, payload map[string]interface{}) error {
 	err := errors.New(fmt.Sprintf("ERR_%s", payload["err"]))
 	c.vhost.Log.Printf("ws[%s]: %s", c.vhost.path, err.Error())
-	c.send(payload)
+	c.send(map[string]interface{}{"__error": payload})
 	return err
 }
 
 // Authenticates session for the specified user.
-//
-// Example:
-//
-//     { "authenticate": {"user": "joe", "secret": "53cr37"}}
-//
-// Payload:
-//
-// * `user` - name of the configured user you want to authenticate (required)
-// * `secret` - authentication secret for specified user (optional)
-//
-// Errors:
-//
-// * `INVALID_CREDENTIALS` - returned when given secret is invalid
-// * `USER_NOT_FOUND` - returned when given user does not exist
-// * `INVALID_USER_NAME` - returned when no username given or its format is invalid
-// * `INVALID_PAYLOAD` - returned when data format is invalid
-//
 func (api *websocketAPI) doAuthenticate(c *conn, data interface{}) error {
 	payload, ok := data.(map[string]interface{})
 	if !ok {
@@ -111,10 +94,16 @@ func (api *websocketAPI) doAuthenticate(c *conn, data interface{}) error {
 	ok = user.Authenticate(secret)
 	if !ok {
 		// AUTH_INVALID_CREDENTIALS
+		c.session = nil
 		return api.error(c, ErrInvalidCredentials)
 	}
 	c.session = user
-	err := c.send(Payload{"authenticated": username})
+	err := c.send(map[string]interface{}{
+		"__authenticated": map[string]interface{}{
+			"user": user.Name,
+			"permission": user.Permission,
+		},
+	})
 	if err != nil {
 		// NOT_SENT
 		return err
@@ -124,22 +113,6 @@ func (api *websocketAPI) doAuthenticate(c *conn, data interface{}) error {
 }
 
 // Subscribes client to the specified channel.
-//
-// Example:
-//
-//     {"subscribe": {"channel": "hello"}}
-//
-// Payload:
-//
-// * `channel` - name of channel you want to subscribe, not existing
-//               channels are created automatically (required)
-//     
-// Errors:
-//
-// * `INVALID_CHANNEL_NAME` - returned when no channel name given or when given name is invalid
-// * `ACCESS_DENIED` - returned when current session is not authenticated for reading
-// * `INVALID_PAYLOAD` - returned when payload format is invalid
-//
 func (api *websocketAPI) doSubscribe(c *conn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermRead) {
@@ -158,7 +131,11 @@ func (api *websocketAPI) doSubscribe(c *conn, data interface{}) error {
 	}
 	ch := c.vhost.GetOrCreateChannel(chanName)
 	ch.subscribe <- subscription{c, true}
-	err := c.send(Payload{"subscribed": chanName})
+	err := c.send(map[string]interface{}{
+		"__subscribed": map[string]interface{}{
+			"channel": chanName,
+		},
+	})
 	if err != nil {
 		// NOT_SENT
 		return err
@@ -168,22 +145,6 @@ func (api *websocketAPI) doSubscribe(c *conn, data interface{}) error {
 }
 
 // Unsubscribes client from the specified channnel.
-//
-// Example:
-//
-//     {"unsubscribe": {"channel": "channel-name"}}
-//
-// Payload:
-//             
-// * `channel` - name of channel you want to unsubscribe (required)
-//     
-// Errors:
-//
-// * `INVALID_CHANNEL_NAME` - returned when no channel name given or when given name is invalid
-// * `CHANNEL_NOT_FOUND` - returned when given channel doesn't exist
-// * `ACCESS_DENIED` - returned when current session is not authenticated for reading
-// * `INVALID_PAYLOAD` - returned when payload format is invalid
-//
 func (api *websocketAPI) doUnsubscribe(c *conn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermRead) {
@@ -206,35 +167,12 @@ func (api *websocketAPI) doUnsubscribe(c *conn, data interface{}) error {
 		return api.error(c, ErrChannelNotFound)
 	}
 	ch.subscribe <- subscription{c, false}
-	err := c.send(Payload{"unsubscribed": chanName})
-	if err != nil {
-		// NOT_SENT
-		return err
-	}
 	c.vhost.Log.Printf("ws[%s]: UNSUBSCRIBED channel='%s'", c.vhost.path, chanName)
 	return nil
 }
 
-// Broadcasts and triggers client events with specified data on given channels.
-//
-// Example:
-//
-//     {"broadcast": {"event": "hello", "channel": "world", data: {"x": 1}}}
-//
-// Payload:
-//
-// * `event` - name of the event which will be triggerred on the client side (required)
-// * `channel` - channel have to exist (required)
-// * `data` - data to publish (optional)
-//
-// Errors:
-//
-// * `INVALID_EVENT_NAME` - returned when no event name given when given name is invalid
-// * `INVALID_CHANNEL_NAME` - returned when no channel name given
-// * `CHANNEL_NOT_FOUND` - returned when given channel doesn't exist
-// * `ACCESS_DENIED` - returned when current session is not authenticated for writing
-// * `INVALID_PAYLOAD` - returned when payload format is invalid
-//
+// Broadcasts and triggers client events with specified data on
+// given channels.
 func (api *websocketAPI) doBroadcast(c *conn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermWrite) {
@@ -262,60 +200,23 @@ func (api *websocketAPI) doBroadcast(c *conn, data interface{}) error {
 		return api.error(c, ErrChannelNotFound)
 	}
 	ch.broadcast <- data
-	// broadcasting is fault tolerant, so we can skip err checking
-	// on sending the answer.
-	c.send(Payload{"broadcasted": chanName})
 	c.vhost.Log.Printf("ws[%s]: BROADCASTED event='%s' channel='%s'", c.vhost.path, event, chanName)
 	return nil
 }
 
-// Finishes current session and unsubscribes from all channels.
-//
-// Example:
-//
-//     {"logout": true}
-//
-// Errors:
-//
-// * `ACCESS_DENIED` - returned when current session is not authenticated
-// * `INVALID_PAYLOAD` - returned when payload format is invalid
-//
-func (api *websocketAPI) doLogout(c *conn) error {
-	user := c.session
-	if user == nil || !user.IsAllowed(PermRead) {
-		// ACCESS_DENIED
-		return api.error(c, ErrAccessDenied)
-	}
-	c.unsubscribeAll()
-	c.session = nil
-	err := c.send(map[string]bool{"loggedOut": true})
-	if err != nil {
-		return err
-	}
-	c.vhost.Log.Printf("ws[%s]: LOGGED_OUT user='%s'", c.vhost.path, user.Name)
-	return nil
-}
-
 // Safely closes connection.
-//
-// Example:
-//
-//     {"disconnect": true}
-//
-// Errors:
-//
-// * `INVALID_PAYLOAD` - returned when payload format is invalid
-//
-func (api *websocketAPI) doDisconnect(c *conn) error {
+func (api *websocketAPI) doClose(c *conn) error {
+	c.session = nil
 	c.unsubscribeAll()
 	c.Close()
+	c.vhost.Log.Printf("ws[%s]: CLOSED", c.vhost.path)
 	return nil
 }
 
 // Handles error when operation specified in payload is not
 // defined in the API.
 func (api *websocketAPI) notFound(c *conn, event string) error {
-	payload := Payload(ErrUndefinedEvent)
+	payload := ErrUndefinedEvent
 	payload["event"] = event
 	return api.error(c, payload)
 }
