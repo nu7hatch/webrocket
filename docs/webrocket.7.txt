@@ -230,7 +230,7 @@ Format
 	}
 
 [horizontal]
-'data.id':: ID of the occured error
+'data.id' (String):: ID of the occured error
 
 WEBSOCKETS SERVER EVENTS
 ------------------------
@@ -387,7 +387,16 @@ library.
 MQ EXCHANGE PROTOCOL
 --------------------
 The protocol used by the 'MQ exchange' uses the same JSON-encoded
-message as in WebSockets server. 
+message as in WebSockets server. This layer is not evented, so
+all answers are going to the client instantly. When everythin went
+fine, the success response is sent:
+
+	{"ok": true}
+
+Otherwise, when error encountered then appropriate information will
+be sent:
+
+	{"err": "ERROR_ID"}
 
 Here's the full list of events supported by the MQ exchange:
 
