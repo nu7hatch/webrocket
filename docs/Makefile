@@ -29,7 +29,8 @@ $(DOCS_MAN7_HTML): %.html : %.txt
 	$(A2X) -L -f manpage $<
 
 %.html: %.txt
-	$(ASCIIDOC) -d manpage -o $@ $<
+	$(ASCIIDOC) -b html5 -d manpage -a linkcss -a stylesheet=style/custom.css \
+	-a disable-javascript -o $@ $<
 
 clean-man:
 	rm -f $(DOCS_MAN1) $(DOCS_MAN1_HTML) $(DOCS_MAN7) $(DOCS_MAN7_HTML)

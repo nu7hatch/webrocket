@@ -2,7 +2,9 @@
 
 	* Makefile: hacks to make tools working with local package
 	* webrocket-server/main.go: changed imports to load local webrocket package
-	* docs/webrocket.7.txt: improved MQ exchange protocol
+	* docs/webrocket.7.txt: improved MQ exchange protocol, added bunch of information
+	* docs/Makefile: tweaked html manpage generation command to include custom css
+	* docs/style/custom.css: created, filled with custom manpage styles
 	* .gitignore: ignored *.a files
 
 2011-12-04  Krzysztof Kowalik  <chris@nu7hat.ch>

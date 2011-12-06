@@ -22,32 +22,6 @@ the 'MQ exchange server'. In the middle, everything is tied with
 internal channels, which allows for easy clustering and hence
 horizontal scalability.
 
-VHost
-~~~~~
-Also because of horizontal scalability goals, the server has been
-divided into independent 'vhosts'. Speaking shortly, 'vhost' is just
-a request handler defined for specified path on the server, eg.
-vhost '/world' defined on the server bound to 'hello.com:9772'
-is just a websockets endpoint at 'ws://hello.com:9772/world'.
-
-Each 'vhost' is fully independent from the others, defines its
-own 'channels' and 'users', and allows for specific permissions
-management.
-
-Channel
-~~~~~~~
-WebRocket 'channels' are used for broadcasting information across many
-clients. Each 'channel' allows users to connect and subscribe its
-activity.
-
-User
-~~~~
-The 'user' is defined within 'vhost', so the same user names can
-be duplicated in the server instance. User permissions can be
-combined from three rights: 'READ', 'WRITE' and 'MANAGE'.
-
-Bidirectional connection
-~~~~~~~~~~~~~~~~~~~~~~~~
 WebRocket bridge keeps distributed, bidirectional connection between the
 browser and the backend instances using combination of the 'WebSockets
 server' and 'the ZeroMQ exchange', connected by internal channels.
@@ -70,63 +44,200 @@ The following schema explains it more accurately:
 
 -----
 
-WEBSOCKETS SERVER
------------------
+VHosts
+~~~~~~
+Server is divided into independent 'vhosts'. Each 'vhost' defines
+its own 'channels' and 'users', and allows for specific access control
+management.
+
+Channels
+~~~~~~~~
+WebRocket 'channels' are used for broadcasting information across
+many clients. Each 'channel' allows 'users' to connect and subscribe
+its activity.
+
+Users
+~~~~~
+The 'user' is defined within 'vhost', so the same user names can
+be duplicated in the server instance.
+
+Permissions
+~~~~~~~~~~~
+User permissions are combination of the three base rights: 'READ',
+'WRITE' and 'MANAGE'.
+
+[horizontal]
+'READ'::   allows to subscribe and read data from the channels
+'WRITE'::  allows to trigger backend events and broadcast data on
+		   the channels
+'MANAGE':: allows to manage the chanels
+
+WEBSOCKETS
+----------
 The WebSockets server handles communication with the clients
-(browsers) over the HTML5WebSockets protocol. This layer implements
-simple JSON-based API for communicating with the clients.
+(browsers) over the HTML5WebSockets protocol. WebSockets endpoint
+is combined up of a number of parts:
 
-Session
+	[scheme]://[host]:[port]/[vhost]
+
+[horizontal]
+'scheme':: for a normal connection will be 'ws' and 'wss' for a secure
+		   connection.
+'host'::   the host of the WebSocket server.
+'port'::   the port to connect to.
+'vhost'::  the VHost to connect to.
+
+Example
 ~~~~~~~
+Here's an example of the not secured WebSockets URL:
+
+	ws://myhost.com:9772/foo
+
+This layer implements simple JSON-based API for communicating with the clients.
+
+WEBSOCKETS CLIENT EVENTS
+------------------------
+Communication over the WebSockets protocol has been divided in
+two parts: 'client' and 'server' side events. Client side events
+are JSON-encoded messages, with the following format:
+
+	{
+	    "event": {
+	        ... data ...
+	    },
+	}
+
+[horizontal]
+'event':: name of the triggered event
+'data'::  payload attached to this event
+
+We can distinguish two types of events: 'system' and 'user' defined.
+The 'system' events are always prefixed with double underscore
+(eg. `__connected`) and used to inform the client about the server
+operations. The 'user' events are just custom payloads, which user
+can handle in his desired way.
+
+Here's the list of the 'system' events produced by WebSockets server:
+	
+__CONNECTED
+~~~~~~~~~~~
 When the connection is successfully established, server sends
-the 'connected' event to the client, which contains an unique
-session id ('sid'):
+an event which contains an unique session id ('sid'):
 
-	{"connected": {"sid": "session-id"}}
+Format
+^^^^^^
+	{
+	    "__connected": {
+	        "sid": "session-id"
+	    }
+	}
 
-Incoming messages format
-~~~~~~~~~~~~~~~~~~~~~~~~
-All messages incoming from the client should have the following
-format:
+[horizontal]
+'data.sid' (String):: an unique session ID
 
-	CMD param1 ... paramN
-
-Where the 'CMD' is an operation supported by the server.
-(eg. 'SUBSCRIBE', 'BROADCAST', etc.)
-	
-Outgoing messages format
-~~~~~~~~~~~~~~~~~~~~~~~~
-All event messages sent by the server to the client are in the
-following JSON format:
-
-	{"event": "event-name", "data": "event-payload"}
-
-Where 'data' type can be any of `string`, `bool` or `hash`.
-
-Success responses
-~~~~~~~~~~~~~~~~~
-When message sent by the client has been successfully processed, then
-the server sents acknowledge information to the client. The success
-response format is the same for all events:
-
-	{"ok": true, "_id": "message-id"}
-
-The '_id' is an unique identifier of the message. The '_id' is
-generated by the client when message is sent and it's just sequential
-number of the message sent by this client.
-	
-Errors handling
+__AUTHENTICATED
 ~~~~~~~~~~~~~~~
-When error occurs, then server sends special error message to the client.
-Error message's payload always contains the error identification code.
-If error occured while processing an incoming message, then contains
-the message '_id' as well.
+Triggered when connection has been successfully authenticated as
+specified user.
 
-	{"err": "ERROR_ID", "_id": "message-id"}
+Format
+^^^^^^
+	{
+	    "__authenticated": {
+	        "user": "username"
+	        "permission": "code"
+	    }
+	}
+
+[horizontal]
+'data.user' (String)::        the name of the user client has been
+					   		  authenticated as
+'data.permission' (Integer):: the permission code
+
+__SUBSCRIBED
+~~~~~~~~~~~~
+Triggered when the client successfully subscribed specified channel.
+
+Format
+^^^^^^
+	{
+	    "__subscribed": {
+	        "channel": "channel-name"
+	    }
+	}
+
+[horizontal]
+'data.channel' (String):: the name of the subscribed channel
+
+__UNSUBSCRIBED
+~~~~~~~~~~~~~~
+Triggered when the client successfully unsubscribed specified channel.
+
+Format
+^^^^^^
+	{
+	    "__unsubscribed": {
+	        "channel": "channel-name"
+	    }
+	}
+
+[horizontal]
+'data.channel' (String):: the name of the unsubscribed channel
+	
+__BROADCASTED
+~~~~~~~~~~~~~
+Triggered when data sent by the client has been successfully
+broadcasted to the channel's subscribers.
+
+Format
+^^^^^^
+	{
+	    "__broadcasted": {
+	        "channel": "channel-name"
+	    }
+	}
+
+[horizontal]
+'data.channel' (String):: the name of the channel to which the data
+			   			  has been broadcasted
+
+__TRIGGERED
+~~~~~~~~~~~
+Called when requested backend event has been successfully triggered.
+
+Format
+^^^^^^
+	{
+	    "__tigerred": {
+	        "event": "event-name"
+	    }
+	}
+
+[horizontal]
+'data.event' (String):: the name of the triggered backend event
+
+__ERROR
+~~~~~~~
+Triggered when server side error occured, or when requested operation
+couldn't be processed because of invalid payload or message format.
+
+Format
+^^^^^^
+	{
+	    "__error": {
+	        "id": "ERROR_ID"
+	    }
+	}
+
+[horizontal]
+'data.id':: ID of the occured error
 
 WEBSOCKETS SERVER EVENTS
 ------------------------
-Here's the full list of events supported by the WebSockets layer.
+All messages incoming from the client should be JSON-encoded as well
+and have exactly the same format as the client side messages.
+
+Here's the full list of WebSockets server events.
 	
 AUTH
 ~~~~
@@ -134,17 +245,16 @@ Authenticates session for the specified user.
 
 Format
 ^^^^^^
-	AUTH user secret
+	{
+	    "auth": {
+	        "user": "user-name",
+	        "secret": "secret"
+	    } 
+	}
 
-Example
-^^^^^^^
-	AUTH "joe" "53cr37"
-	
-Payload
-^^^^^^^
 [horizontal]
-'user'::   name of the configured user you want to authenticate (required)
-'secret':: authentication secret for specified user (optional)
+'user' (String)::              name of the configured user you want to authenticate
+'secret' (String) [optional]:: authentication secret for specified user
 
 Errors
 ^^^^^^
@@ -160,17 +270,15 @@ Subscribes client to the specified channel.
 
 Format
 ^^^^^^
-	SUBSCRIBE channel
+	{
+	    "subscribe": {
+	        "channel": "channel-name"
+	    }
+	}
 
-Example
-^^^^^^^
-	SUBSCRIBE "hello"
-
-Payload
-^^^^^^^
 [horizontal]
-'channel':: name of the channel you want to subscribe, not existing
-			channels are created automatically (required)
+'channel' (String):: name of the channel you want to subscribe, not existing
+					 channels are created automatically
 
 Errors
 ^^^^^^
@@ -185,16 +293,14 @@ Unsubscribes client from the specified channnel.
 
 Format
 ^^^^^^
-	UNSUBSCRIBE channel
+	{
+	    "unsubscribe": {
+	        "channel": "channel-name"
+	    }
+	}
 
-Example
-^^^^^^^
-	UNSUBSCRIBE "hello"
-
-Payload
-^^^^^^^
 [horizontal]
-'channel':: name of the channel you want to unsubscribe (required)
+'channel' (String):: name of the channel you want to unsubscribe
 
 Errors
 ^^^^^^
@@ -210,18 +316,18 @@ Broadcasts and triggers client events with specified data on given channels.
 
 Format
 ^^^^^^
-	BROADCAST event channel data
+	{
+	    "broadcast": {
+	        "channel": "channel-name",
+	        "event": "event-name",
+	        "data": "json-encoded-data"
+	    }
+	}
 
-Example
-^^^^^^^
-	BROADCAST "hello" "world" {"x": 1}
-
-Payload
-^^^^^^^
 [horizontal]
-'event'::   name of the event which will be triggerred on the client side (required)
-'channel':: channel have to exist (required)
-'data'::    data to publish (optional)
+'channel' (String)::         channel have to exist
+'event' (String)::           name of the event which will be triggerred on the client side
+'data' (String) [optional]:: JSON-encoded string with broadcasted data
 
 Errors
 ^^^^^^
@@ -238,17 +344,16 @@ Sends direct request to server side application.
 
 Format
 ^^^^^^
-	TRIGGER event data
+	{
+	    "trigger": {
+	        "event": "event-name",
+	        "data": "json-encoded-data"
+	    }
+	}
 
-Example
-^^^^^^^
-	TRIGGER "hello" {"x": 1}
-
-Payload
-^^^^^^^
 [horizontal]
-'event':: name of the event which will be triggerred on the server side (required)
-'data'::  request parameters (optional)
+'event' (String)::           name of the event which will be triggerred on the server side
+'data' (String) [optional]:: request parameters in JSON-encoded string
 
 Errors
 ^^^^^^
@@ -264,7 +369,9 @@ Unsubscribes all channels and safely closes connection.
 
 Format
 ^^^^^^
-	CLOSE
+	{
+	    "close": true
+	}
 
 Errors
 ^^^^^^
@@ -277,29 +384,11 @@ The MQ exhange Handles communication with the server side applications
 and spreads the internal tasks across all nodes using the 'ZeroMQ'
 library.
 
-Messages format
-~~~~~~~~~~~~~~~
-This exchange server implements very simple text-based protocol. All
-messages have the following format:
+MQ EXCHANGE PROTOCOL
+--------------------
+The protocol used by the 'MQ exchange' uses the same JSON-encoded
+message as in WebSockets server. 
 
-	CMD param1 ... paramN
-
-Success responses
-~~~~~~~~~~~~~~~~~
-When command succeed, instant answer is sent to the client. Answer
-has always the same, extremally simple format:
-
-	OK
-
-Errors handling
-~~~~~~~~~~~~~~~
-When error occurs, then server sends shor error message with appropriate
-error code:
-
-	ERR ERROR_ID
-
-MQ EXCHANGE EVENTS
-------------------
 Here's the full list of events supported by the MQ exchange:
 
 AUTH
@@ -308,18 +397,18 @@ Authenticates current session for the specified user and vhost.
 
 Format
 ^^^^^^
-	AUTH vhost user secret
-
-Example
-^^^^^^^
-	AUTH /echo joe 53cr3t
+	{
+	    "auth": {
+	        "vhost": "vhost-path",
+	        "user": "user-name",
+	        "secret": "secret"
+	    }
+	}
 	
-Payload
-^^^^^^^
 [horizontal]
-'vhost'::  vhost on which user want to be authenticated
-'user'::   name of the configured user you want to authenticate (required)
-'secret':: authentication secret for specified user (optional)
+'vhost' (String)::             vhost to which user want to be connected to
+'user' (String)::              name of the configured user you want to authenticate
+'secret' (String) [optional]:: authentication secret for specified user
 
 Errors
 ^^^^^^
@@ -337,17 +426,18 @@ Broadcasts given JSON data on the specified channel.
 
 Format
 ^^^^^^
-	BROADCAST channel data
+	{
+	    "broadcast": {
+	        "channel": "channel-name",
+	        "event": "event-name",
+	        "data": "json-encoded-data"
+	    }
+	}
 
-Example
-^^^^^^^	
-	BROADCAST foo {"event": "hello", "data": "world"}
-	
-Payload
-^^^^^^^
 [horizontal]
-'channel':: channel name to which data should be broadcasted
-'data'::    JSON-encoded data, should contain the `event` and `data` values
+'channel' (String)::         channel name to which data should be broadcasted
+'event' (String)::           name of the event which will be triggerred on the client side
+'data' (String) [optional]:: JSON-encoded string with broadcasted data
 
 Errors
 ^^^^^^
@@ -363,12 +453,19 @@ Sends direct message to specified client.
 
 Format
 ^^^^^^
-	DIRECT sid data
+	{
+	    "direct": {
+	        "sid": "session-id",
+	        "event": "event-name",
+	        "data": "json-encoded-data"
+	    }
+	}
 
-Example
-^^^^^^^
-	DIRECT abc...xyz {"event": "hello", "data": "world"}
-
+[horizontal]
+'sid' (String)::              session id of the target client
+'event' (String)::            name of the event which will be triggerred on the client side
+'data' (String) [optional]::  JSON-encoded string with data to send
+	
 Errors
 ^^^^^^
 [horizontal]
@@ -383,7 +480,9 @@ Closes current session and disconnects the client.
 
 Format
 ^^^^^^
-	CLOSE
+	{
+	    "close": true
+	}
 
 Errors
 ^^^^^^
