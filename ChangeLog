@@ -12,6 +12,15 @@
 	* webrocket/server_test.go: fixed randomly passing test
 	* webrocket-server/main.go: added `-mqaddr` option
 	* docs/webrocket-server.1.txt: added `-mqaddr` description
+	* vendor/gozmq: linked gozmq dependency
+	* Makefile: added targets for gozmq
+	* webrocket/Makefile: added mq_server.go to files list
+	* webrocket/mq_server.go: created, basic MQ server implementation
+	* webrocket/mq_server_test.go: created, added some tests
+	* webrocket/websocket_server.go: renamed from webrocket/server.go
+	* webrocket/websocket_server_test.go: renamed from webrocket/server_test.go
+	* webrocket/context.go: created, vhosts and some basic conf extracted from server into context
+	* webrocket/context_test.go: created, vhost operation tests moved from server test suite
 
 2011-12-05  Krzysztof Kowalik  <chris@nu7hat.ch>
 

@@ -23,51 +23,16 @@ import (
 	"testing"
 )
 
-func NewTestServer() *Server {
-	server := NewServer(":9771")
-	server.Log = log.New(bytes.NewBuffer([]byte{}), "a", log.LstdFlags)
+func NewWsTestServer() *WebsocketServer {
+	ctx := NewContext()
+	ctx.Log = log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags)
+	server := ctx.NewWebsocketServer(":9771")
 	return server
 }
 
-func TestNewServer(t *testing.T) {
-	server := NewTestServer()
+func TestNewWsServer(t *testing.T) {
+	server := NewWsTestServer()
 	if server.Addr != ":9771" {
 		t.Errorf("Expected server addr to be `:9771`, given %s", server.Addr)
-	}
-}
-
-func TestAddVhost(t *testing.T) {
-	server := NewTestServer()
-	_, err := server.AddVhost("/echo")
-	if err != nil {
-		t.Errorf("Expected to add new vhosts, error encountered: %s", err.Error())
-	}
-}
-
-func TestDeleteVhost(t *testing.T) {
-	server := NewTestServer()
-	server.AddVhost("/echo")
-	server.DeleteVhost("/echo")
-	if len(server.Vhosts()) != 0 {
-		t.Errorf("Expected to delete vhost")
-	}
-}
-
-func TestVhosts(t *testing.T) {
-	server := NewTestServer()
-	server.AddVhost("/foo")
-	server.AddVhost("/bar")
-	vhosts := server.Vhosts()
-	for _, ivhost := range []string{"/foo", "/bar"} {
-		ok := false
-		for _, jvhost := range vhosts {
-			if ivhost == jvhost {
-				ok = true
-				break
-			}
-		}
-		if !ok {
-			t.Errorf("Expected to have [/foo /bar] vhosts registered, given %s", vhosts)
-		}
 	}
 }

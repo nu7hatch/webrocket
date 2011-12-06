@@ -3,7 +3,9 @@ include $(GOROOT)/src/Make.inc
 TARG = webrocket
 GOFILES = \
 	user.go \
-	server.go \
+	context.go \
+	websocket_server.go \
+	mq_server.go \
 	channel.go \
 	message.go \
 	connection.go \

@@ -41,13 +41,22 @@ func init() {
 	flag.Parse()
 }
 
-func main() {
-	server := webrocket.NewServer(conf.WsAddr)
-	server.BindCtl(conf.CtlAddr)
-	server.BindMq(conf.MqAddr)
+func serveWebSockets(ctx *webrocket.Context) {
+	server := ctx.NewWebsocketServer(conf.WsAddr)
 	if conf.CertFile != "" && conf.KeyFile != "" {
 		server.ListenAndServeTLS(conf.CertFile, conf.KeyFile)
 	} else {
 		server.ListenAndServe()
 	}
+}
+
+func serveMq(ctx *webrocket.Context) {
+	mq := ctx.NewMqServer(conf.MqAddr)
+	mq.ListenAndServe()
+}
+
+func main() {
+	ctx := webrocket.NewContext()
+	go serveMq(ctx)
+	serveWebSockets(ctx)
 }

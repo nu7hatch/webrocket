@@ -18,25 +18,21 @@
 package webrocket
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"path"
 )
 
-// Server defines parameters for running an WebSocket server.
-type Server struct {
+// WebsocketServer defines parameters for running an WebSocket server.
+type WebsocketServer struct {
 	http.Server
 	Log      *log.Logger
-	vhosts   map[string]*Vhost
+	ctx      *Context
 	certFile string
 	keyFile  string
-	httpCtl  string
 }
 
-// Creates new rocket's server bound to specified addr.
+// Creates new websockets server bound to specified addr.
 // A Trivial example server:
 // 
 //     package main
@@ -44,86 +40,38 @@ type Server struct {
 //     import "webrocket"
 //     
 //     func main() {
-//         s := webrocket.NewServer("ws://localhost:8080")
-//         s.AddVhost("/echo")
-//         s.ListenAndServe()
+//         ctx := webrocket.NewContext()
+//         srv := ctx.NewWebsocketServer("localhost:8080")
+//         ctx.AddVhost("/echo")
+//         srv.ListenAndServe()
 //     }
 //
-func NewServer(addr string) *Server {
-	s := new(Server)
-	s.Addr, s.Handler = addr, NewServeMux()
-	s.vhosts = make(map[string]*Vhost)
-	s.Log = log.New(os.Stderr, "", log.LstdFlags)
+func (ctx *Context) NewWebsocketServer(addr string) *WebsocketServer {
+	s := &WebsocketServer{ctx: ctx}
+	s.Addr, s.Handler = addr, NewServeMux() 
+	s.Log = ctx.Log
+	ctx.wsServ = s
 	return s
-}
-
-// Registers new vhost within the server instance.
-// 
-//     s := webrocket.NewServer(":8080")
-//     s.AddVhost("/hello")
-//     s.AddVhost("/world")
-//     s.ListenAndServe()
-//
-func (s *Server) AddVhost(path string) (*Vhost, error) {
-	vhost := NewVhost(path)
-	vhost.Log = s.Log
-	s.vhosts[path] = vhost
-	s.Handler.(*ServeMux).AddHandler(path, vhost)
-	s.Log.Printf("server: ADD_VHOST path='%s'", path)
-	return vhost, nil
-}
-
-// Deletes specified vhost from the serve mux.
-func (s *Server) DeleteVhost(path string) error {
-	vhost, ok := s.vhosts[path]
-	if !ok {
-		return errors.New(fmt.Sprintf("Vhost `%s` doesn't exist.", path))
-	}
-	s.Handler.(*ServeMux).DeleteHandler(path)
-	vhost.Stop()
-	delete(s.vhosts, path)
-	s.Log.Printf("server: DELETE_VHOST path='%s'", path)
-	return nil
-}
-
-// Returns array with registered vhost paths.
-func (s *Server) Vhosts() (vhosts []string) {
-	vhosts, i := make([]string, len(s.vhosts)), 0
-	for path := range s.vhosts {
-		vhosts[i] = path
-		i += 1
-	}
-	return vhosts
-}
-
-// Binds control interface with specified address.
-func (s *Server) BindCtl(addr string) {
-	//s.httpCtl = newHttpCtl(addr)
-}
-
-// Binds MQ exchange with specified address.
-func (s *Server) BindMq(addr string) {
-	//s.mqServer = newMqServer(addr)
 }
 
 // Listens on the TCP network address srv.Addr and handles requests on incoming
 // websocket connections.
-func (s *Server) ListenAndServe() error {
-	s.Log.Printf("server: About to listen on %s\n", s.Addr)
+func (s *WebsocketServer) ListenAndServe() error {
+	s.Log.Printf("server[ws]: About to listen on %s\n", s.Addr)
 	err := s.Server.ListenAndServe()
 	if err != nil {
-		s.Log.Fatalf("server: Startup error: %s\n", err.Error())
+		s.Log.Fatalf("server[ws]: Startup error: %s\n", err.Error())
 	}
 	return err
 }
 
 // Listens on the TCP network address srv.Addr and handles requests on incoming TLS
 // websocket connections.
-func (s *Server) ListenAndServeTLS(certFile, keyFile string) error {
-	s.Log.Printf("server: About to listen on %s", s.Addr)
+func (s *WebsocketServer) ListenAndServeTLS(certFile, keyFile string) error {
+	s.Log.Printf("server[ws]: About to listen on %s", s.Addr)
 	err := s.Server.ListenAndServeTLS(certFile, keyFile)
 	if err != nil {
-		s.Log.Fatalf("server: Secured server startup error: %s\n", err.Error())
+		s.Log.Fatalf("server[ws]: Secured server startup error: %s\n", err.Error())
 	}
 	return err
 }

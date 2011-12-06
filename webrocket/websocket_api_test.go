@@ -28,15 +28,16 @@ import (
 var (
 	ws     *websocket.Conn
 	err    error
-	server *Server
+	server *WebsocketServer
 	vhost  *Vhost
 )
 
 func init() {
 	go func() {
-		server = NewServer(":9771")
-		server.Log = log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags)
-		vhost, _ = server.AddVhost("/echo")
+		ctx := NewContext()
+		ctx.Log = log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags)
+		server = ctx.NewWebsocketServer(":9771")
+		vhost, _ = ctx.AddVhost("/echo")
 		vhost.AddUser("front", "read-secret", PermRead)
 		vhost.AddUser("back", "read-write-secret", PermRead|PermWrite)
 		vhost.AddUser("no-secret", "", PermRead)
