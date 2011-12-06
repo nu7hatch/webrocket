@@ -15,7 +15,7 @@ should remember to clone *the head version* or the latest *weakly release*:
 
 To get head version of the compiler use following command:
 
-    hg clone https://go.googlecode.com/hg/ go
+	hg clone https://go.googlecode.com/hg/ go
 
 .Dependencies
 
@@ -35,7 +35,7 @@ work properly you have to register the installed docbook.
 On any other normal Linux/Unix distribution it's enough to just install deps
 with your favorite package manager:
 
-	 sudo apt-get install docbook asciidoc
+	sudo apt-get install docbook asciidoc
 
 .WebRocket
 
