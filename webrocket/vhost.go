@@ -80,12 +80,15 @@ func (v *Vhost) eventLoop(c *wsConn) {
 			if err == io.EOF {
 				return
 			}
-			// TODO: show INVALID_PAYLOAD error
+			v.frontAPI.Error(c, ErrInvalidDataReceived)
+			v.Log.Printf("ws[%s]: ERR_INVALID_DATA_RECEIVED", v.path)
 			continue
 		}
 		message, err := NewMessage(recv)
 		if err != nil {
-			// TODO: 
+			v.frontAPI.Error(c, ErrInvalidMessageFormat)
+			v.Log.Printf("ws[%s]: ERR_INVALID_MESSAGE_FORMAT", v.path)
+			continue
 		}
 		keepgoing, _ := v.frontAPI.Dispatch(c, message)
 		if !keepgoing {

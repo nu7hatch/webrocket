@@ -22,24 +22,6 @@ import (
 	"fmt"
 )
 
-// Creates new error payload.
-func newError(id string) map[string]interface{} {
-	return map[string]interface{}{"id": id}
-}
-
-// Predefined error payloads.
-var (
-	ErrInvalidPayload     = newError("INVALID_PAYLOAD")
-	ErrAccessDenied       = newError("ACCESS_DENIED")
-	ErrInvalidUserName    = newError("INVALID_USER_NAME")
-	ErrUserNotFound       = newError("USER_NOT_FOUND")
-	ErrInvalidCredentials = newError("INVALID_CREDENTIALS")
-	ErrInvalidChannelName = newError("INVALID_CHANNEL_NAME")
-	ErrChannelNotFound    = newError("CHANNEL_NOT_FOUND")
-	ErrInvalidEventName   = newError("INVALID_EVENT_NAME")
-	ErrUndefinedEvent     = newError("UNDEFINED_EVENT")
-)
-
 // Handles API calls via frontend WebSockets protocol.
 type websocketAPI struct{}
 
@@ -63,7 +45,7 @@ func (api *websocketAPI) Dispatch(c *wsConn, msg *Message) (bool, error) {
 }
 
 // A helper for quick handling error responses.
-func (api *websocketAPI) error(c *wsConn, payload map[string]interface{}) error {
+func (api *websocketAPI) Error(c *wsConn, payload map[string]interface{}) error {
 	err := errors.New(fmt.Sprintf("ERR_%s", payload["id"]))
 	c.vhost.Log.Printf("ws[%s]: %s", c.vhost.path, err.Error())
 	c.send(map[string]interface{}{"__error": payload})
@@ -75,12 +57,12 @@ func (api *websocketAPI) doAuthenticate(c *wsConn, data interface{}) error {
 	payload, ok := data.(map[string]interface{})
 	if !ok {
 		// INVALID_PAYLOAD
-		return api.error(c, ErrInvalidPayload)
+		return api.Error(c, ErrInvalidPayload)
 	}
 	username, ok := payload["user"].(string)
 	if !ok {
 		// AUTH_INVALID_USERNAME
-		return api.error(c, ErrInvalidUserName)
+		return api.Error(c, ErrInvalidUserName)
 	}
 	secret, ok := payload["secret"].(string)
 	if !ok {
@@ -89,13 +71,13 @@ func (api *websocketAPI) doAuthenticate(c *wsConn, data interface{}) error {
 	user, ok := c.vhost.GetUser(username)
 	if !ok {
 		// AUTH_USER_NOT_FOUND
-		return api.error(c, ErrUserNotFound)
+		return api.Error(c, ErrUserNotFound)
 	}
 	ok = user.Authenticate(secret)
 	if !ok {
 		// AUTH_INVALID_CREDENTIALS
 		c.session = nil
-		return api.error(c, ErrInvalidCredentials)
+		return api.Error(c, ErrInvalidCredentials)
 	}
 	c.session = user
 	err := c.send(map[string]interface{}{
@@ -117,17 +99,17 @@ func (api *websocketAPI) doSubscribe(c *wsConn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermRead) {
 		// ACCESS_DENIED
-		return api.error(c, ErrAccessDenied)
+		return api.Error(c, ErrAccessDenied)
 	}
 	payload, ok := data.(map[string]interface{})
 	if !ok {
 		// INVALID_PAYLOAD
-		return api.error(c, ErrInvalidPayload)
+		return api.Error(c, ErrInvalidPayload)
 	}
 	chanName, ok := payload["channel"].(string)
 	if !ok || len(chanName) == 0 {
 		// INVALID_CHANNEL_NAME
-		return api.error(c, ErrInvalidChannelName)
+		return api.Error(c, ErrInvalidChannelName)
 	}
 	ch := c.vhost.GetOrCreateChannel(chanName)
 	ch.subscribe <- subscription{c, true}
@@ -149,22 +131,22 @@ func (api *websocketAPI) doUnsubscribe(c *wsConn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermRead) {
 		// ACCESS_DENIED
-		return api.error(c, ErrAccessDenied)
+		return api.Error(c, ErrAccessDenied)
 	}
 	payload, ok := data.(map[string]interface{})
 	if !ok {
 		// INVALID_PAYLOAD
-		return api.error(c, ErrInvalidPayload)
+		return api.Error(c, ErrInvalidPayload)
 	}
 	chanName, ok := payload["channel"].(string)
 	if !ok || len(chanName) == 0 {
 		// INVALID_CHANNEL_NAME
-		return api.error(c, ErrInvalidChannelName)
+		return api.Error(c, ErrInvalidChannelName)
 	}
 	ch, ok := c.vhost.GetChannel(chanName)
 	if !ok {
 		// CHANNEL_NOT_FOUND
-		return api.error(c, ErrChannelNotFound)
+		return api.Error(c, ErrChannelNotFound)
 	}
 	ch.subscribe <- subscription{c, false}
 	c.vhost.Log.Printf("ws[%s]: UNSUBSCRIBED channel='%s'", c.vhost.path, chanName)
@@ -177,27 +159,27 @@ func (api *websocketAPI) doBroadcast(c *wsConn, data interface{}) error {
 	user := c.session
 	if user == nil || !user.IsAllowed(PermWrite) {
 		// ACCESS_DENIED
-		return api.error(c, ErrAccessDenied)
+		return api.Error(c, ErrAccessDenied)
 	}
 	payload, ok := data.(map[string]interface{})
 	if !ok {
 		// INVALID_PAYLOAD
-		return api.error(c, ErrInvalidPayload)
+		return api.Error(c, ErrInvalidPayload)
 	}
 	event, ok := payload["event"].(string)
 	if !ok || len(event) == 0 {
 		// INVALID_EVENT_NAME
-		return api.error(c, ErrInvalidEventName)
+		return api.Error(c, ErrInvalidEventName)
 	}
 	chanName, ok := payload["channel"].(string)
 	if !ok || len(chanName) == 0 {
 		// INVALID_CHANNEL_NAME
-		return api.error(c, ErrInvalidChannelName)
+		return api.Error(c, ErrInvalidChannelName)
 	}
 	ch, ok := c.vhost.GetChannel(chanName)
 	if !ok {
 		// CHANNEL_NOT_FOUND
-		return api.error(c, ErrChannelNotFound)
+		return api.Error(c, ErrChannelNotFound)
 	}
 	ch.broadcast <- data
 	c.vhost.Log.Printf("ws[%s]: BROADCASTED event='%s' channel='%s'", c.vhost.path, event, chanName)
@@ -219,5 +201,5 @@ func (api *websocketAPI) notFound(c *wsConn, event string) error {
 	payload := ErrUndefinedEvent
 	payload["event"] = event
 	c.vhost.Log.Printf("ws[%s]: NOT_FOUND event='%s'", c.vhost.path, event)
-	return api.error(c, payload)
+	return api.Error(c, payload)
 }

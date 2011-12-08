@@ -4,6 +4,7 @@ TARG = webrocket
 GOFILES = \
 	user.go \
 	context.go \
+	errors.go \
 	websocket_server.go \
 	mq_server.go \
 	channel.go \

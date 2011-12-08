@@ -76,6 +76,28 @@ func TestConnect(t *testing.T) {
 	}
 }
 
+func TestInvalidDataReceived(t *testing.T) {
+	_, err = ws.Write([]byte("foobar"))
+	if err != nil {
+		t.Error(err)
+	}
+	resp := wsReadResponse(t)
+	if extractErr(resp) != "INVALID_DATA_RECEIVED" {
+		t.Errorf("Expected invalid data received error response, given: %s", resp)
+	}
+}
+
+func TestInvalidMessageFormat(t *testing.T) {
+	_, err = ws.Write([]byte("{}"))
+	if err != nil {
+		t.Error(err)
+	}
+	resp := wsReadResponse(t)
+	if extractErr(resp) != "INVALID_MESSAGE_FORMAT" {
+		t.Errorf("Expected invalid message format error response, given: %s", resp)
+	}
+}
+
 func TestAuthInvalidCredentials(t *testing.T) {
 	data := map[string]interface{}{
 		"auth": map[string]string{

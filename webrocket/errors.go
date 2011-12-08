@@ -17,26 +17,22 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-import (
-	"crypto/sha1"
-	"fmt"
-	"os"
+// Creates new error payload.
+func newError(id string) map[string]interface{} {
+	return map[string]interface{}{"id": id}
+}
+
+// Predefined error payloads.
+var (
+	ErrInvalidDataReceived  = newError("INVALID_DATA_RECEIVED")
+	ErrInvalidMessageFormat = newError("INVALID_MESSAGE_FORMAT")
+	ErrInvalidPayload       = newError("INVALID_PAYLOAD")
+	ErrAccessDenied         = newError("ACCESS_DENIED")
+	ErrInvalidUserName      = newError("INVALID_USER_NAME")
+	ErrUserNotFound         = newError("USER_NOT_FOUND")
+	ErrInvalidCredentials   = newError("INVALID_CREDENTIALS")
+	ErrInvalidChannelName   = newError("INVALID_CHANNEL_NAME")
+	ErrChannelNotFound      = newError("CHANNEL_NOT_FOUND")
+	ErrInvalidEventName     = newError("INVALID_EVENT_NAME")
+	ErrUndefinedEvent       = newError("UNDEFINED_EVENT")
 )
-
-// generateUniqueToken creates unique token using system `/dev/urandom`.
-func generateUniqueToken() string {
-	f, _ := os.OpenFile("/dev/urandom", os.O_RDONLY, 0)
-	b := make([]byte, 16)
-	f.Read(b)
-	f.Close()
-	token := sha1.New()
-	token.Write(b)
-	return fmt.Sprintf("%x", token.Sum())
-}
-
-// Base connection wrapper.
-type conn struct {
-	session  *User
-	vhost    *Vhost
-}
-

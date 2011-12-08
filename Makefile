@@ -3,7 +3,7 @@ ASCIIDOC = asciidoc
 all: vendor-gozmq server man
 clean: clean-lib clean-server clean-man
 install: install-server install-man
-check: check-lib
+check: all check-lib
 
 lib:
 	@cd webrocket && $(MAKE)
@@ -30,7 +30,7 @@ install-man:
 
 vendor-gozmq:
 	-@cd vendor/gozmq && $(MAKE)
-	cp vendor/gozmq/_obj/github.com/alecthomas/*.a zmq.a
+	cp vendor/gozmq/_obj/github.com/alecthomas/*.a .
 
 papers:
 	-$(ASCIIDOC) -d article -o INSTALL.html INSTALL

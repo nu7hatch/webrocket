@@ -1,3 +1,12 @@
+2011-12-07  Krzysztof Kowalik  <chris@nu7hat.ch>
+
+	* webrocket/connection.go: websocket connection related stuff moved to webrocket/websocket_server.go
+	* webrocket/websocket_server.go: websocket connection related stuff moved from webrocket/connection.go
+	* webrocket/vhost.go: added error logs
+	* webrocket/websocket_api.go: errors moved to separate file
+	* webrocket/errors.go: errors extracted from webrocket/websocket_api.go
+	* webrocket/errors_test.go: created
+
 2011-12-06  Krzysztof Kowalik  <chris@nu7hat.ch>
 
 	* webrocket/channel.go: channel made public, added Name() and Subscriptions() funcs, updated conn refs

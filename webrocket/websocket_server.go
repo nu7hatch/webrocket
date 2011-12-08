@@ -21,7 +21,42 @@ import (
 	"log"
 	"net/http"
 	"path"
+	"websocket"
 )
+
+// Wrapper for standard websocket.Conn structure. Provides additional
+// information about connection and maintains sessions. 
+type wsConn struct {
+	*conn
+	*websocket.Conn
+	token    string
+	channels map[*Channel]bool
+}
+
+// wrapWsConn wraps standard websocket connection object into one
+// adjusted for webrocket server funcionalities.
+func wrapWsConn(ws *websocket.Conn, vhost *Vhost) *wsConn {
+	c := &wsConn{Conn: ws, token: generateUniqueToken()}
+	c.conn = &conn{vhost: vhost}
+	c.channels = make(map[*Channel]bool)
+	return c
+}
+
+// A helper for quick sending encoded payloads to the connected client.
+func (c *wsConn) send(data interface{}) error {
+	err := c.vhost.codec.Send(c.Conn, data)
+	if err != nil {
+		c.vhost.Log.Printf("ws[%s]: ERR_NOT_SEND %s", c.vhost.path, err.Error())
+	}
+	return err
+}
+
+// Unsubscribes this client from all channels.
+func (c *wsConn) unsubscribeAll() {
+	for ch := range c.channels {
+		ch.subscribe <- subscription{c, false}
+	}
+}
 
 // WebsocketServer defines parameters for running an WebSocket server.
 type WebsocketServer struct {
