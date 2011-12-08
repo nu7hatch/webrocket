@@ -18,17 +18,16 @@
 package webrocket
 
 import (
-	"fmt"
+//	"fmt"
 	"log"
-	zmq "../zmq"
+//	zmq "../gozmq"
 )
 
+// The MQ exchange server manages backend app connections.
 type MqServer struct {
 	Addr   string
 	Log    *log.Logger
 	ctx    *Context
-	zctx   zmq.Context
-	socket zmq.Socket
 }
 
 // Creates new MQ exchange bound to specified addr.
@@ -54,25 +53,19 @@ func (ctx *Context) NewMqServer(addr string) *MqServer {
 	return mq
 }
 
+// Server's event loop.
 func (mq *MqServer) eventLoop() {
-	for {
-		msg, _ := mq.socket.Recv(0)
-		fmt.Printf("%s", string(msg))
-	}
+	//for {
+		//msg, _ := mq.socket.Recv(0)
+		//fmt.Printf("%s", string(msg))
+	//}
 }
 
+// ListenAndServe configures the ZeroMQ DEALER socket and starts
+// server's event loop.
 func (mq *MqServer) ListenAndServe() error {
-	var err error
 	mq.Log.Printf("server[mq]: About to listen on %s\n", mq.Addr)
-	mq.zctx, err = zmq.NewContext()
-	if err == nil {
-		mq.socket, err = mq.zctx.NewSocket(zmq.DEALER)
-		if err == nil {
-			mq.socket.Bind(mq.Addr)
-			mq.eventLoop()
-			return nil
-		}
-	}
-	mq.Log.Fatalf("server[mq]: Server startup error: %s\n", err.Error())
-	return err
+	return nil
+	//mq.Log.Fatalf("server[mq]: Server startup error: %s\n", err.Error())
+	//return err
 }
