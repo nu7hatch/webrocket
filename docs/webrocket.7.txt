@@ -273,6 +273,7 @@ Format
 	    "broadcast": {
 	        "channel": "channel-name",
 	        "event": "event-name",
+			"trigger": "server-event-name",
 	        "data": {
 	            ...
 	        }
@@ -280,9 +281,10 @@ Format
 	}
 
 [horizontal]
-'channel' (String)::         channel have to exist
-'event' (String)::           name of the event which will be triggerred on the client side
-'data' (String) [optional]:: JSON-encoded string with broadcasted data
+'channel' (String)::            channel have to exist
+'event' (String)::              name of the event which will be triggerred on the client side
+'trigger' (String) [optional]:: name of the server event which will be triggered while processing the message
+'data' (String) [optional]::    broadcasted data
 
 Errors
 ^^^^^^

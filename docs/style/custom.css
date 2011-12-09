@@ -1,24 +1,16 @@
 @import url(http://fonts.googleapis.com/css?family=Rationale|Droid+Sans|Droid+Sans+Mono);
 
 body {
-   background: #28484F;
-   font: 16px "Droid Sans", Helvetica, Arial, sans-serif;
-   color: #FFF;
+   background: #FFF;
+   font: 18px "Droid Sans", Helvetica, Arial, sans-serif;
+   color: #233;
    overflow-x: hidden;
-}
-
-/* Title font. */
-h1, h2, h3, h4, h5, h6 {
-   font-family: "Rationale"
-}
-
-body {
    margin: 1em auto;
    width: 960px;
 }
 
 a {
-   color: #f7df9f;
+   color: #6C827C;
    text-decoration: underline;
 }
 a:visited {
@@ -26,36 +18,46 @@ a:visited {
 
 em {
    font-style: normal;
-   color: #f7df9f;
+   color: #28484F;
+   font-weight: bold;
 }
 
 strong {
    font-weight: bold;
-   color: #f7df9f;
+   color: #28484F;
 }
 
 h1, h2, h3, h4, h5, h6 {
-   color: #FFF;
-   margin-top: 1.2em;
+   font-family: "Rationale";
+   color: #233;
+   margin-top: 0.5em;
    margin-bottom: 0.5em;
    line-height: 1.3;
 }
 h1 {
-   font-size: 250%;
+   font-size: 270%;
+   background: #DB4D44;
+   color: #FFF;
+   padding: 10px 20px 15px 20px;
+   margin-top: 1.2em;
+   margin-bottom: 1.2em;
 }
 h2 {
-   color: #fbbdA4;
-   padding-top: 0.5em;
-   font-size: 210%;
+   color: #DB4D44;
+   margin-top: 0.7em;
+   padding-top: 0;
+   padding-bottom: 10px;
+   font-size: 240%;
+   border-bottom: 2px solid #ECF2EC;
 }
 h3 {
-   color: #FFF;
+   color: #344;
    float: left;
-   font-size: 190%;
+   font-size: 210%;
 }
 h4 {
-   color: #A8C8CF;
-   font-size: 150%;
+   color: #6C827C;
+   font-size: 170%;
 }
 h3 + * {
    clear: left;
@@ -80,9 +82,10 @@ p {
 
 ul, ol, li > p {
    margin-top: 0;
+   margin-bottom: 0;
 }
-ul > li     { color: #aaa; }
-ul > li > * { color: black; }
+ul > li     { color: #e8e8eF; }
+ul > li > * { color: #233; }
 
 pre {
    padding: 0;
@@ -138,11 +141,12 @@ div.content {
 }
 
 div.title, caption.title {
-   color: #527bbd;
+   color: #48484F;
    font-weight: bold;
    text-align: left;
    margin-top: 1.0em;
    margin-bottom: 0.5em;
+   font-size: 120%;
 }
 div.title + * {
    margin-top: 0;
@@ -227,6 +231,7 @@ dd > *:first-child {
 
 ul, ol {
    list-style-position: outside;
+   padding-left: 25px;
 }
 ol.arabic {
    list-style-type: decimal;
@@ -272,10 +277,11 @@ td.hdlist1 {
    vertical-align: top;
    font-style: normal;
    padding-right: 0.8em;
-   color: #f7df9f;
+   color: #6C827C;
 }
 td.hdlist1 em, td.hdlist1 .monospaced {
-   color: #f7df9f !important;
+   color: #6C827C !important;
+   font-size: 95%;
 }
 td.hdlist1 em {
    font-weight: bold;
@@ -487,10 +493,10 @@ body.manpage div.sectionbody {
 
 pre {
    font-family: "Droid Sans Mono", monospace;
-   background: #9b4d44;
-   color: #FFF;
-   padding: 6px 12px;
-   box-shadow: 8px 8px 0 rgba(255,255,255,0.1);
+   background: #F8F8FF;
+   color: #234;
+   padding: 6px 10px;
+   margin: 0 0 -10px 0;
 }
 
 table {

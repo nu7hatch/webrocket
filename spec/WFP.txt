@@ -1,0 +1,242 @@
+WFP - WebSockets Frontend Protocol
+==================================
+
+The *WebSockets Frontend Protocol* (*WFP*) is a transport layer protocol
+for exchanging messages between browsers and the frontend WebSockets
+server implemented by WebRocket.
+
+* Name: rfc.webrocket.io/spec/WFP.html
+* Version: 0.1
+* Editor: Krzysztof Kowalik <chris@nu7hat.ch>
+* State: Draft
+
+Language
+--------
+The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+"SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this
+document are to be interpreted as described in RFC 2119[<<rfc2119, 1>>].
+
+Goals
+-----
+The purpose of the protocol is to allow for bidirectional, evented
+communication between browsers and backend application instances
+via WebSockets server bridge and HTML5 WebSockets standard.
+
+Architecture
+------------
+The frontend server handles communication with the clients (browsers)
+over the HTML5's WebSockets protocol. Its endpoint is combined up of
+a number of parts:
+
+	[scheme]://[host]:[port]/[version]/[vhost]
+
+[horizontal]
+'scheme'::
+		Will be 'ws' for a normal connection and 'wss' for a secure.
+
+'host'::
+		There is bound the server.
+		
+'port'::
+		The port to connect to.
+		
+'version'::
+		The websockets protocol version.
+		
+'vhost'::
+		The virtual host to connect to.
+
+Events
+~~~~~~
+Implemented WebSockets protocol defines two kind of events, 'client' and
+'server' specific. Also, we can distinguish two groups of 'client' specific
+events:
+
+'System events'::
+		Events triggered automatically by the WebSockets server. System
+		event names MUST be prefixed with double underscore (eg. '__connected').
+
+'Custom events'::
+		User-defined events triggered by backend application or other
+		connected client.
+		
+Client Events
+-------------
+The format of all client event messages implements the following JSON-encoded
+payloads:
+
+	{
+	    "eventName": {
+	        ... parameters ...
+	    }
+	}
+
+Where the 'event-name' MUST be prefixed with double underscore for the system
+events, and SHALL NOT use such prefix for the user-defined events.
+
+Event names as well as data parameter keys SHOULD be defined as camel-cased
+strings, to keep compliance with the JavaScript coding style guidelines.
+
+Connection established
+~~~~~~~~~~~~~~~~~~~~~~
+When the connection is successfully established, the server sends an event
+to confirm that situation with the client. Message's payload MUST contain
+unique identifier of the current session.
+
+.Format
+
+	{
+	    "__connected": {
+	        "sid": "session-id"
+	    }
+	}
+
+.Parameters
+
+[horizontal]
+'sid' [`string`]::
+	an unique identifier of the current session.
+
+	
+Successfull authentication
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+When connected client has successfully authenticated on the current vhost,
+the server sends an event to confirm that situation. Message's payload MAY
+contain additional information about the authenticated session.
+
+.Format
+
+	{
+	    "__authenticated": {
+	        ...
+	    }
+	}
+
+
+Confirmed subscription
+~~~~~~~~~~~~~~~~~~~~~~
+When connected client has successfully subscribed to the specified channel,
+the server sends an event to confirm that situation. Message's payload MUST
+contain the name of the subscribed channel.
+
+.Format
+
+	{
+	    "__subscribed": {
+	        "channel": "channel-name"
+	    }
+	}
+
+.Parameters
+
+[horizontal]
+'channel' [`string`]::
+	The name of the subscribed channel.
+
+Private channel subscription
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+When the subscribed channel is a private one, then message's payload MAY
+additionaly contain an information about the client permissions.
+
+.Format
+
+	{
+	    "__subscribed": {
+	        "channel": "channel-name",
+	        "permission": 1
+	    }
+	}
+
+.Parameters
+
+[horizontal]
+'channel' [`string`]::
+	The name of the subscribed channel.
+
+'permission' [`int`]::
+	The numeric value of the client permissions.
+
+.Permissions
+Returned permissions code MUST have one or be a logical disjunction of the
+following possible values:
+
+[horizontal]
+*`1`* (READ)::
+	Read-only access.
+
+*`2`* (WRITE)::
+	Write-only access.
+
+*`4`* (OP)::
+	Special right, the channel operator.
+
+Presence channel subscription
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The 'Presence channel' is a special kind of channel, which keeps track of
+which clients are subscribing it, and shares that information across
+all subscribers. In that case, the message's payload MUST contain list
+of subscribers' records with session identifier. The subscribers' records
+MAY additionally contain custom data about related with particular subscriber.
+
+.Format
+
+	{
+	    "__subscribed": {
+	        "channel": "channel-name",
+	        "subscribers": [
+	            {
+	                "sid": "session-id",
+	                ... custom information ...
+	            },
+	            ...
+	        ]
+	    }
+	}
+
+.Parameters
+
+[horizontal]
+'channel' [`string`]::
+	The name of the subscribed channel.
+
+'subscribers' [`array`]::
+	List of active subscribers (clients present on this channel).
+
+'subscribers.sid' [`string`]::
+	Client's session identifier.
+
+Error notification
+~~~~~~~~~~~~~~~~~~
+When problem encountered, the server MUST send apropriate, explicit information
+to concerned client. The message's payload MUST contain the numeric error code
+and short human readable explanation.
+
+.Format
+
+	{
+	    "__error": {
+	        "code": 402,
+	        "status": "Unauthorized"
+	    }
+	}
+
+.Parameters
+
+[horizontal]
+'code' [`int`]::
+	The numeric error code.
+
+'status' [`string`]::
+	Error status explanation. 
+
+Server Events
+-------------
+
+TODO...
+
+References
+----------
+
+.Bibliography
+[[bibliography]]
+1. [[rfc2119]] "Key words for use in RFCs to Indicate Requirement Levels" - link:http://tools.ietf.org/html/rfc2119[ietf.org]

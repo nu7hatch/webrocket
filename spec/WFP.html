@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="generator" content="AsciiDoc 8.6.6">
+<title>WFP - WebSockets Frontend Protocol</title>
+<link rel="stylesheet" href="./asciidoc.css" type="text/css">
+<link rel="stylesheet" href="./../docs/style/custom.css" type="text/css">
+<script type="text/javascript" src="./asciidoc.js"></script>
+<script type="text/javascript">
+/*<![CDATA[*/
+asciidoc.install();
+/*]]>*/
+</script>
+</head>
+<body class="article">
+<div id="header">
+<h1>WFP - WebSockets Frontend Protocol</h1>
+</div>
+<div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div class="paragraph"><p>The <strong>WebSockets Frontend Protocol</strong> (<strong>WFP</strong>) is a transport layer protocol
+for exchanging messages between browsers and the frontend WebSockets
+server implemented by WebRocket.</p></div>
+<div class="ulist"><ul>
+<li>
+<p>
+Name: rfc.webrocket.io/spec/WFP.html
+</p>
+</li>
+<li>
+<p>
+Version: 0.1
+</p>
+</li>
+<li>
+<p>
+Editor: Krzysztof Kowalik &lt;<a href="mailto:chris@nu7hat.ch">chris@nu7hat.ch</a>&gt;
+</p>
+</li>
+<li>
+<p>
+State: Draft
+</p>
+</li>
+</ul></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_language">Language</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+"SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this
+document are to be interpreted as described in RFC 2119[<a href="#rfc2119">1</a>].</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_goals">Goals</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The purpose of the protocol is to allow for bidirectional, evented
+communication between browsers and backend application instances
+via WebSockets server bridge and HTML5 WebSockets standard.</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_architecture">Architecture</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The frontend server handles communication with the clients (browsers)
+over the HTML5&#8217;s WebSockets protocol. Its endpoint is combined up of
+a number of parts:</p></div>
+<div class="literalblock">
+<div class="content monospaced">
+<pre>[scheme]://[host]:[port]/[version]/[vhost]</pre>
+</div></div>
+<div class="hdlist"><table>
+<tr>
+<td class="hdlist1">
+<em>scheme</em>
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+                Will be <em>ws</em> for a normal connection and <em>wss</em> for a secure.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>host</em>
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+                There is bound the server.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>port</em>
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+                The port to connect to.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>version</em>
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+                The websockets protocol version.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>vhost</em>
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+                The virtual host to connect to.
+</p>
+</td>
+</tr>
+</table></div>
+<div class="sect2">
+<h3 id="_events">Events</h3>
+<div class="paragraph"><p>Implemented WebSockets protocol defines two kind of events, <em>client</em> and
+<em>server</em> specific. Also, we can distinguish two groups of <em>client</em> specific
+events:</p></div>
+<div class="dlist"><dl>
+<dt class="hdlist1">
+<em>System events</em>
+</dt>
+<dd>
+<p>
+                Events triggered automatically by the WebSockets server. System
+                event names MUST be prefixed with double underscore (eg. <em>__connected</em>).
+</p>
+</dd>
+<dt class="hdlist1">
+<em>Custom events</em>
+</dt>
+<dd>
+<p>
+                User-defined events triggered by backend application or other
+                connected client.
+</p>
+</dd>
+</dl></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_client_events">Client Events</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The format of all client event messages implements the following JSON-encoded
+payloads:</p></div>
+<div class="literalblock">
+<div class="content monospaced">
+<pre>{
+    "eventName": {
+        ... parameters ...
+    }
+}</pre>
+</div></div>
+<div class="paragraph"><p>Where the <em>event-name</em> MUST be prefixed with double underscore for the system
+events, and SHALL NOT use such prefix for the user-defined events.</p></div>
+<div class="paragraph"><p>Event names as well as data parameter keys SHOULD be defined as camel-cased
+strings, to keep compliance with the JavaScript coding style guidelines.</p></div>
+<div class="sect2">
+<h3 id="_connection_established">Connection established</h3>
+<div class="paragraph"><p>When the connection is successfully established, the server sends an event
+to confirm that situation with the client. Message&#8217;s payload MUST contain
+unique identifier of the current session.</p></div>
+<div class="literalblock">
+<div class="title">Format</div>
+<div class="content monospaced">
+<pre>{
+    "__connected": {
+        "sid": "session-id"
+    }
+}</pre>
+</div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>sid</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        an unique identifier of the current session.
+</p>
+</td>
+</tr>
+</table></div>
+</div>
+<div class="sect2">
+<h3 id="_successfull_authentication">Successfull authentication</h3>
+<div class="paragraph"><p>When connected client has successfully authenticated on the current vhost,
+the server sends an event to confirm that situation. Message&#8217;s payload MAY
+contain additional information about the authenticated session.</p></div>
+<div class="literalblock">
+<div class="title">Format</div>
+<div class="content monospaced">
+<pre>{
+    "__authenticated": {
+        ...
+    }
+}</pre>
+</div></div>
+</div>
+<div class="sect2">
+<h3 id="_confirmed_subscription">Confirmed subscription</h3>
+<div class="paragraph"><p>When connected client has successfully subscribed to the specified channel,
+the server sends an event to confirm that situation. Message&#8217;s payload MUST
+contain the name of the subscribed channel.</p></div>
+<div class="literalblock">
+<div class="title">Format</div>
+<div class="content monospaced">
+<pre>{
+    "__subscribed": {
+        "channel": "channel-name"
+    }
+}</pre>
+</div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>channel</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The name of the subscribed channel.
+</p>
+</td>
+</tr>
+</table></div>
+<div class="sect3">
+<h4 id="_private_channel_subscription">Private channel subscription</h4>
+<div class="paragraph"><p>When the subscribed channel is a private one, then message&#8217;s payload MAY
+additionaly contain an information about the client permissions.</p></div>
+<div class="literalblock">
+<div class="title">Format</div>
+<div class="content monospaced">
+<pre>{
+    "__subscribed": {
+        "channel": "channel-name",
+        "permission": 1
+    }
+}</pre>
+</div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>channel</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The name of the subscribed channel.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>permission</em> [<span class="monospaced">int</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The numeric value of the client permissions.
+</p>
+</td>
+</tr>
+</table></div>
+<div class="paragraph"><div class="title">Permissions</div><p>Returned permissions code MUST have one or be a logical disjunction of the
+following possible values:</p></div>
+<div class="hdlist"><table>
+<tr>
+<td class="hdlist1">
+<strong><span class="monospaced">1</span></strong> (READ)
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Read-only access.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<strong><span class="monospaced">2</span></strong> (WRITE)
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Write-only access.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<strong><span class="monospaced">4</span></strong> (OP)
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Special right, the channel operator.
+</p>
+</td>
+</tr>
+</table></div>
+</div>
+<div class="sect3">
+<h4 id="_presence_channel_subscription">Presence channel subscription</h4>
+<div class="paragraph"><p>The <em>Presence channel</em> is a special kind of channel, which keeps track of
+which clients are subscribing it, and shares that information across
+all subscribers. In that case, the message&#8217;s payload MUST contain list
+of subscribers' records with session identifier. The subscribers' records
+MAY additionally contain custom data about related with particular subscriber.</p></div>
+<div class="literalblock">
+<div class="title">Format</div>
+<div class="content monospaced">
+<pre>{
+    "__subscribed": {
+        "channel": "channel-name",
+        "subscribers": [
+            {
+                "sid": "session-id",
+                ... custom information ...
+            },
+            ...
+        ]
+    }
+}</pre>
+</div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>channel</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The name of the subscribed channel.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>subscribers</em> [<span class="monospaced">array</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        List of active subscribers (clients present on this channel).
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>subscribers.sid</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Client&#8217;s session identifier.
+</p>
+</td>
+</tr>
+</table></div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_error_notification">Error notification</h3>
+<div class="paragraph"><p>When problem encountered, the server MUST send apropriate, explicit information
+to concerned client. The message&#8217;s payload MUST contain the numeric error code
+and short human readable explanation.</p></div>
+<div class="literalblock">
+<div class="title">Format</div>
+<div class="content monospaced">
+<pre>{
+    "__error": {
+        "code": 402,
+        "status": "Unauthorized"
+    }
+}</pre>
+</div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>code</em> [<span class="monospaced">int</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The numeric error code.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>status</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Error status explanation.
+</p>
+</td>
+</tr>
+</table></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_server_events">Server Events</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>TODO&#8230;</p></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_references">References</h2>
+<div class="sectionbody">
+<div class="olist arabic" id="bibliography"><div class="title">Bibliography</div><ol class="arabic">
+<li>
+<p>
+<a id="rfc2119"></a> "Key words for use in RFCs to Indicate Requirement Levels" - <a href="http://tools.ietf.org/html/rfc2119">ietf.org</a>
+</p>
+</li>
+</ol></div>
+</div>
+</div>
+</div>
+<div id="footnotes"><hr></div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2011-12-09 07:13:43 UYST
+</div>
+</div>
+</body>
+</html>
