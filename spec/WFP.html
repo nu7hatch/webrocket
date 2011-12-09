@@ -4,8 +4,8 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta name="generator" content="AsciiDoc 8.6.6">
 <title>WFP - WebSockets Frontend Protocol</title>
-<link rel="stylesheet" href="./asciidoc.css" type="text/css">
-<link rel="stylesheet" href="./../docs/style/custom.css" type="text/css">
+<link rel="stylesheet" href="../docs/style//asciidoc.css" type="text/css">
+<link rel="stylesheet" href="../docs/style//pygments.css" type="text/css">
 <script type="text/javascript" src="./asciidoc.js"></script>
 <script type="text/javascript">
 /*<![CDATA[*/
@@ -64,7 +64,7 @@ via WebSockets server bridge and HTML5 WebSockets standard.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_architecture">Architecture</h2>
+<h2 id="_generalized_architecture">Generalized architecture</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The frontend server handles communication with the clients (browsers)
 over the HTML5&#8217;s WebSockets protocol. Its endpoint is combined up of
@@ -81,7 +81,7 @@ a number of parts:</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-                Will be <em>ws</em> for a normal connection and <em>wss</em> for a secure.
+        Will be <em>ws</em> for a normal connection and <em>wss</em> for a secure.
 </p>
 </td>
 </tr>
@@ -92,7 +92,7 @@ a number of parts:</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-                There is bound the server.
+        There is bound the server.
 </p>
 </td>
 </tr>
@@ -103,7 +103,7 @@ a number of parts:</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-                The port to connect to.
+        The port to connect to.
 </p>
 </td>
 </tr>
@@ -114,7 +114,7 @@ a number of parts:</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-                The websockets protocol version.
+        The websockets protocol version.
 </p>
 </td>
 </tr>
@@ -125,7 +125,7 @@ a number of parts:</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-                The virtual host to connect to.
+        The virtual host to connect to.
 </p>
 </td>
 </tr>
@@ -163,14 +163,13 @@ events:</p></div>
 <div class="sectionbody">
 <div class="paragraph"><p>The format of all client event messages implements the following JSON-encoded
 payloads:</p></div>
-<div class="literalblock">
-<div class="content monospaced">
-<pre>{
-    "eventName": {
-        ... parameters ...
-    }
-}</pre>
-</div></div>
+<div class="listingblock">
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;eventName&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="c1">// ... parameters ...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 <div class="paragraph"><p>Where the <em>event-name</em> MUST be prefixed with double underscore for the system
 events, and SHALL NOT use such prefix for the user-defined events.</p></div>
 <div class="paragraph"><p>Event names as well as data parameter keys SHOULD be defined as camel-cased
@@ -180,15 +179,14 @@ strings, to keep compliance with the JavaScript coding style guidelines.</p></di
 <div class="paragraph"><p>When the connection is successfully established, the server sends an event
 to confirm that situation with the client. Message&#8217;s payload MUST contain
 unique identifier of the current session.</p></div>
-<div class="literalblock">
+<div class="listingblock">
 <div class="title">Format</div>
-<div class="content monospaced">
-<pre>{
-    "__connected": {
-        "sid": "session-id"
-    }
-}</pre>
-</div></div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;__connected&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;sid&quot;</span><span class="o">:</span> <span class="s2">&quot;session-id&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 <div class="hdlist"><div class="title">Parameters</div><table>
 <tr>
 <td class="hdlist1">
@@ -197,7 +195,7 @@ unique identifier of the current session.</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-        an unique identifier of the current session.
+        An unique identifier of the current session.
 </p>
 </td>
 </tr>
@@ -206,32 +204,45 @@ unique identifier of the current session.</p></div>
 <div class="sect2">
 <h3 id="_successfull_authentication">Successfull authentication</h3>
 <div class="paragraph"><p>When connected client has successfully authenticated on the current vhost,
-the server sends an event to confirm that situation. Message&#8217;s payload MAY
-contain additional information about the authenticated session.</p></div>
-<div class="literalblock">
+the server sends an event to confirm that situation. Message&#8217;s payload
+MUST contain name of the authenticated user and MAY contain additional
+information about the authenticated session.</p></div>
+<div class="listingblock">
 <div class="title">Format</div>
-<div class="content monospaced">
-<pre>{
-    "__authenticated": {
-        ...
-    }
-}</pre>
-</div></div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;__authenticated&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;user&quot;</span><span class="o">:</span> <span class="s2">&quot;joe&quot;</span>
+        <span class="c1">// ...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>user</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Name of the authenticated user.
+</p>
+</td>
+</tr>
+</table></div>
 </div>
 <div class="sect2">
 <h3 id="_confirmed_subscription">Confirmed subscription</h3>
 <div class="paragraph"><p>When connected client has successfully subscribed to the specified channel,
 the server sends an event to confirm that situation. Message&#8217;s payload MUST
 contain the name of the subscribed channel.</p></div>
-<div class="literalblock">
+<div class="listingblock">
 <div class="title">Format</div>
-<div class="content monospaced">
-<pre>{
-    "__subscribed": {
-        "channel": "channel-name"
-    }
-}</pre>
-</div></div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;__subscribed&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;channel&quot;</span><span class="o">:</span> <span class="s2">&quot;chat&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 <div class="hdlist"><div class="title">Parameters</div><table>
 <tr>
 <td class="hdlist1">
@@ -249,16 +260,15 @@ contain the name of the subscribed channel.</p></div>
 <h4 id="_private_channel_subscription">Private channel subscription</h4>
 <div class="paragraph"><p>When the subscribed channel is a private one, then message&#8217;s payload MAY
 additionaly contain an information about the client permissions.</p></div>
-<div class="literalblock">
+<div class="listingblock">
 <div class="title">Format</div>
-<div class="content monospaced">
-<pre>{
-    "__subscribed": {
-        "channel": "channel-name",
-        "permission": 1
-    }
-}</pre>
-</div></div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;__subscribed&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;channel&quot;</span><span class="o">:</span> <span class="s2">&quot;chat&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;permission&quot;</span><span class="o">:</span> <span class="mi">1</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 <div class="hdlist"><div class="title">Parameters</div><table>
 <tr>
 <td class="hdlist1">
@@ -267,7 +277,7 @@ additionaly contain an information about the client permissions.</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-        The name of the subscribed channel.
+        Name of the subscribed channel.
 </p>
 </td>
 </tr>
@@ -320,6 +330,7 @@ following possible values:</p></div>
 </td>
 </tr>
 </table></div>
+<div class="paragraph"><p>TODO: reference to access control document</p></div>
 </div>
 <div class="sect3">
 <h4 id="_presence_channel_subscription">Presence channel subscription</h4>
@@ -328,22 +339,21 @@ which clients are subscribing it, and shares that information across
 all subscribers. In that case, the message&#8217;s payload MUST contain list
 of subscribers' records with session identifier. The subscribers' records
 MAY additionally contain custom data about related with particular subscriber.</p></div>
-<div class="literalblock">
+<div class="listingblock">
 <div class="title">Format</div>
-<div class="content monospaced">
-<pre>{
-    "__subscribed": {
-        "channel": "channel-name",
-        "subscribers": [
-            {
-                "sid": "session-id",
-                ... custom information ...
-            },
-            ...
-        ]
-    }
-}</pre>
-</div></div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;__subscribed&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;channel&quot;</span><span class="o">:</span> <span class="s2">&quot;chat&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;subscribers&quot;</span><span class="o">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;sid&quot;</span><span class="o">:</span> <span class="s2">&quot;session-id&quot;</span><span class="p">,</span>
+                <span class="c1">// ... custom information ...</span>
+            <span class="p">},</span>
+            <span class="c1">// ...</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 <div class="hdlist"><div class="title">Parameters</div><table>
 <tr>
 <td class="hdlist1">
@@ -352,7 +362,7 @@ MAY additionally contain custom data about related with particular subscriber.</
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-        The name of the subscribed channel.
+        Name of the subscribed channel.
 </p>
 </td>
 </tr>
@@ -374,28 +384,141 @@ MAY additionally contain custom data about related with particular subscriber.</
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-        Client&#8217;s session identifier.
+        The client&#8217;s session identifier.
+</p>
+</td>
+</tr>
+</table></div>
+</div>
+<div class="sect3">
+<h4 id="_presence_channel_8217_s_subscribers_acivity">Presence channel&#8217;s subscribers acivity</h4>
+<div class="paragraph"><p>Subscribers activity on the presence channel SHALL be populated across
+all other subscribers using special events triggered when client
+joined and left the channel.</p></div>
+<div class="sect4">
+<h5 id="_on_join">On join</h5>
+<div class="paragraph"><p>When new subscriber joined the presence channel the triggered event
+MUST contain the subscriber&#8217;s session identifier, and MAY contain
+additional, custom information related to the subscriber.</p></div>
+<div class="listingblock">
+<div class="title">Format</div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;__heJoined&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;sid&quot;</span><span class="o">:</span> <span class="s2">&quot;session-id&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;data&quot;</span><span class="o">:</span> <span class="p">{</span>
+           <span class="c1">// ... custom information ...</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>sid</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The client&#8217;s session identifier.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>data</em> [<span class="monospaced">object</span>] optional
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The data passed by the client while starting a subscription.
+</p>
+</td>
+</tr>
+</table></div>
+</div>
+<div class="sect4">
+<h5 id="_on_leave">On leave</h5>
+<div class="paragraph"><p>When connected subscriber left the presence channel the triggered
+event MUST contain the subscriber&#8217;s session identifier.</p></div>
+<div class="listingblock">
+<div class="title">Format</div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;__heLeft&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;sid&quot;</span><span class="o">:</span> <span class="s2">&quot;session-id&quot;</span>
+        <span class="s2">&quot;data&quot;</span><span class="o">:</span> <span class="p">{</span>
+           <span class="c1">// ... custom information ...</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>sid</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The client&#8217;s session identifier.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>data</em> [<span class="monospaced">object</span>] optional
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The data passsed by the client while terminating a subscription.
 </p>
 </td>
 </tr>
 </table></div>
 </div>
 </div>
+</div>
+<div class="sect2">
+<h3 id="_closed_connection_confirmation">Closed connection confirmation</h3>
+<div class="paragraph"><p>When the client safely closes connection the server sends an confirmation
+message to the client. The confirmation message SHALL contain the identifier
+of the closed session.</p></div>
+<div class="listingblock">
+<div class="title">Format</div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;__closed&quot;</span><span class="o">:</span> <span class="p">{</span>
+         <span class="s2">&quot;sid&quot;</span><span class="o">:</span> <span class="s2">&quot;session-id&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>sid</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The client&#8217;s session identifier.
+</p>
+</td>
+</tr>
+</table></div>
+</div>
 <div class="sect2">
 <h3 id="_error_notification">Error notification</h3>
-<div class="paragraph"><p>When problem encountered, the server MUST send apropriate, explicit information
-to concerned client. The message&#8217;s payload MUST contain the numeric error code
-and short human readable explanation.</p></div>
-<div class="literalblock">
+<div class="paragraph"><p>When problem encountered, the server MUST send apropriate, explicit
+information to concerned client. The message&#8217;s payload MUST contain
+the numeric error code and short human readable explanation.</p></div>
+<div class="listingblock">
 <div class="title">Format</div>
-<div class="content monospaced">
-<pre>{
-    "__error": {
-        "code": 402,
-        "status": "Unauthorized"
-    }
-}</pre>
-</div></div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;__error&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;code&quot;</span><span class="o">:</span> <span class="mi">402</span><span class="p">,</span>
+        <span class="s2">&quot;status&quot;</span><span class="o">:</span> <span class="s2">&quot;Unauthorized&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
 <div class="hdlist"><div class="title">Parameters</div><table>
 <tr>
 <td class="hdlist1">
@@ -404,7 +527,8 @@ and short human readable explanation.</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-        The numeric error code.
+        The numeric error code. Status codes are inspired by the HTTP
+        error codes.
 </p>
 </td>
 </tr>
@@ -426,7 +550,470 @@ and short human readable explanation.</p></div>
 <div class="sect1">
 <h2 id="_server_events">Server Events</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>TODO&#8230;</p></div>
+<div class="paragraph"><p>The format of all server events implements the same JSON-encoded
+protocol as is implemented by the client events.</p></div>
+<div class="listingblock">
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;eventName&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="c1">// ... data ...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="paragraph"><p>Parameters conventions and requirements are also the same as in
+the client events specification.</p></div>
+<div class="sect2">
+<h3 id="_authentication">Authentication</h3>
+<div class="paragraph"><p>When the client wants to authenticate as a specified user, MUST
+send an authentication message with credentials. When authentication
+operation succeed an <em>__authenticated</em> client event MUST be triggered.</p></div>
+<div class="listingblock">
+<div class="title">Format</div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;auth&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;user&quot;</span><span class="o">:</span> <span class="s2">&quot;joe&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;secret&quot;</span><span class="o">:</span> <span class="s2">&quot;secret&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>user</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Name of the user we want to be authenticated as.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>secret</em> [<span class="monospaced">string</span>], optional
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The user&#8217;s secret key.
+</p>
+</td>
+</tr>
+</table></div>
+<div class="dlist"><div class="title">Possible errors</div><dl>
+<dt class="hdlist1">
+<span class="monospaced">400</span>: <em>Bad request</em>
+</dt>
+<dd>
+<p>
+        The message sent by the client couldn&#8217;t be understood due to
+        malformed syntax. The client SHOULD NOT repeat the request
+        without the modifications.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">402</span>: <em>Unauthorized</em>
+</dt>
+<dd>
+<p>
+        Triggered when invalid credentials given - user doesn&#8217;t exist
+        in the system or secret key is not matching the specified user.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_subscribing_a_channel">Subscribing a channel</h3>
+<div class="paragraph"><p>When the client wants to subscribe to specified channel, MUST send
+an subscription request message.</p></div>
+<div class="listingblock">
+<div class="title">Format</div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;subscribe&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;channel&quot;</span><span class="o">:</span> <span class="s2">&quot;chat&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;data&quot;</span><span class="o">:</span> <span class="p">{</span>
+            <span class="c1">// ... user specific data ...</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>channel</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Name of the channel we want to subscribe to.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>data</em> [<span class="monospaced">object</span>] optional
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        User specific information, used only by the presence channels.
+</p>
+</td>
+</tr>
+</table></div>
+<div class="dlist"><div class="title">Possible errors</div><dl>
+<dt class="hdlist1">
+<span class="monospaced">400</span>: <em>Bad request</em>
+</dt>
+<dd>
+<p>
+        The message sent by the client couldn&#8217;t be understood due to
+        malformed syntax. The client SHOULD NOT repeat the request
+        without the modifications.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">403</span>: <em>Forbidden</em>
+</dt>
+<dd>
+<p>
+        The server understood the request, but is refusing to fulfill it
+        due to lack of user rights. The request SHOULD NOT be repeated
+        until authenticate for as a different user or grant current user
+        with required permissions.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">451</span>: <em>Invalid channel name</em>
+</dt>
+<dd>
+<p>
+        Name of the channel specified in the payload is empty or contains
+        invalid characters. The request SHOULD NOT be repeated without
+        the channel name modifications.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_unsubscribing_a_channel">Unsubscribing a channel</h3>
+<div class="paragraph"><p>When the client wants to unsubscribe specified channel, MUST send an
+unsubscription request message.</p></div>
+<div class="listingblock">
+<div class="title">Format</div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;unsubscribe&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;channel&quot;</span><span class="o">:</span> <span class="s2">&quot;chat&quot;</span>
+        <span class="s2">&quot;data&quot;</span><span class="o">:</span> <span class="p">{</span>
+            <span class="c1">// ... custom data ...</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>channel</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Name of the channel we want to subscribe to.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>data</em> [<span class="monospaced">object</span>] optional
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        User specific information, used only by the presence channels.
+</p>
+</td>
+</tr>
+</table></div>
+<div class="dlist"><div class="title">Possible errors</div><dl>
+<dt class="hdlist1">
+<span class="monospaced">400</span>: <em>Bad request</em>
+</dt>
+<dd>
+<p>
+        The message sent by the client couldn&#8217;t be understood due to
+        malformed syntax. The client SHOULD NOT repeat the request
+        without the modifications.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">403</span>: <em>Forbidden</em>
+</dt>
+<dd>
+<p>
+        The server understood the request, but is refusing to fulfill it
+        due to lack of user rights. The request SHOULD NOT be repeated
+        until authenticate for as a different user or grant current user
+        with required permissions.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">451</span>: <em>Invalid channel name</em>
+</dt>
+<dd>
+<p>
+        Name of the channel specified in the payload is empty or contains
+        invalid characters. The request SHOULD NOT be repeated without
+        the channel name modifications.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">453</span>: <em>Not subscribed</em>
+</dt>
+<dd>
+<p>
+        Channel is not subscribed by this client, so the operation on it
+        can not be finished. The request SHOULD NOT be repeated.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_broadcasting_to_the_channel">Broadcasting to the channel</h3>
+<div class="paragraph"><p>When the connected subscriber wants to broadcast information to all
+other subscribers of the specified channel, MUST send an broadcast
+request.</p></div>
+<div class="listingblock">
+<div class="title">Format</div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;broadcast&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;channel&quot;</span><span class="o">:</span> <span class="s2">&quot;chat&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;event&quot;</span><span class="o">:</span> <span class="s2">&quot;message&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;trigger&quot;</span><span class="o">:</span> <span class="s2">&quot;chat/save_to_history&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;data&quot;</span><span class="o">:</span> <span class="p">{</span>
+            <span class="c1">// ... broadcasted parameters ...</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>channel</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Name of the channel we want to subscribe to.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>event</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        This custom event will be triggered for all subscribers.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>trigger</em> [<span class="monospaced">string</span>] optional
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Name of the backend app&#8217;s event to be asynchronously triggered.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>data</em> [<span class="monospaced">object</span>] optional
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        The data to be passed to all subscribers.
+</p>
+</td>
+</tr>
+</table></div>
+<div class="dlist"><div class="title">Possible errors</div><dl>
+<dt class="hdlist1">
+<span class="monospaced">400</span>: <em>Bad request</em>
+</dt>
+<dd>
+<p>
+        The message sent by the client couldn&#8217;t be understood due to
+        malformed syntax. The client SHOULD NOT repeat the request
+        without the modifications.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">403</span>: <em>Forbidden</em>
+</dt>
+<dd>
+<p>
+        The server understood the request, but is refusing to fulfill it
+        due to lack of user rights. The request SHOULD NOT be repeated
+        until authenticate for as a different user or grant current user
+        with required permissions.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">451</span>: <em>Invalid channel name</em>
+</dt>
+<dd>
+<p>
+        Name of the channel specified in the payload is empty or contains
+        invalid characters. The request SHOULD NOT be repeated without
+        the channel name modifications.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">452</span>: <em>Invalid event name</em>
+</dt>
+<dd>
+<p>
+        Name of the triggered event specified in the payload contains
+        invalid characters. The request SHOULD NOT be repeated without
+        the triggered event name modifications.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">453</span>: <em>Not subscribed</em>
+</dt>
+<dd>
+<p>
+        Channel is not subscribed by this client, so the operation on it
+        can not be finished. The request SHOULD NOT be repeated until
+        the client will subscribe this specified channel.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">454</span>: <em>Channel not found</em>
+</dt>
+<dd>
+<p>
+        Specified channel does not exist, so the operation on it can not
+        be finished. The request SHOULD NOT be repeated until the channel
+        will be created.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_triggering_the_backend_app_8217_s_event">Triggering the backend app&#8217;s event</h3>
+<div class="paragraph"><p>When the connected client wants to trigger a backend application&#8217;s
+event, MUST send a trigger message.</p></div>
+<div class="listingblock">
+<div class="title">Format</div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;trigger&quot;</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">&quot;event&quot;</span><span class="o">:</span> <span class="s2">&quot;chat/save_and_broadcast&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;data&quot;</span><span class="o">:</span> <span class="p">{</span>
+            <span class="c1">// ... passed parameters ...</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="hdlist"><div class="title">Parameters</div><table>
+<tr>
+<td class="hdlist1">
+<em>event</em> [<span class="monospaced">string</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Name of the backend event we want to trigger.
+</p>
+</td>
+</tr>
+<tr>
+<td class="hdlist1">
+<em>data</em> [<span class="monospaced">object</span>]
+<br>
+</td>
+<td class="hdlist2">
+<p style="margin-top: 0;">
+        Hash with event parameters passed to the backend application.
+</p>
+</td>
+</tr>
+</table></div>
+<div class="dlist"><div class="title">Possible errors</div><dl>
+<dt class="hdlist1">
+<span class="monospaced">400</span>: <em>Bad request</em>
+</dt>
+<dd>
+<p>
+        The message sent by the client couldn&#8217;t be understood due to
+        malformed syntax. The client SHOULD NOT repeat the request
+        without the modifications.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">403</span>: <em>Forbidden</em>
+</dt>
+<dd>
+<p>
+        The server understood the request, but is refusing to fulfill it
+        due to lack of user rights. The request SHOULD NOT be repeated
+        until authenticate for as a different user or grant current user
+        with required permissions.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">452</span>: <em>Invalid event name</em>
+</dt>
+<dd>
+<p>
+        Name of the triggered event specified in the payload contains
+        invalid characters. The request SHOULD NOT be repeated without
+        the triggered event name modifications.
+</p>
+</dd>
+<dt class="hdlist1">
+<span class="monospaced">503</span>: <em>Service unavailable</em>
+</dt>
+<dd>
+<p>
+        The server is currently unable to handle the request due to
+        a temporary overloading or unpresence of the backend application
+        workers.
+</p>
+</dd>
+</dl></div>
+</div>
+<div class="sect2">
+<h3 id="_safely_closing_connection">Safely closing connection</h3>
+<div class="paragraph"><p>When the connected client wants to safely close the connection, MUST
+send a close message.</p></div>
+<div class="listingblock">
+<div class="title">Format</div>
+<div class="content"><div class="highlight"><pre><span class="p">{</span>
+    <span class="s2">&quot;close&quot;</span><span class="o">:</span> <span class="p">{</span>
+       <span class="c1">// ... custom parameters ...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div></div></div>
+<div class="paragraph"><p>The custom data parameters SHOULD be automatially passed to all
+unsubscribed presence channels before closing the connection.</p></div>
+<div class="dlist"><div class="title">Possible errors</div><dl>
+<dt class="hdlist1">
+<span class="monospaced">400</span>: <em>Bad request</em>
+</dt>
+<dd>
+<p>
+        The message sent by the client couldn&#8217;t be understood due to
+        malformed syntax. The client SHOULD NOT repeat the request
+        without the modifications.
+</p>
+</dd>
+</dl></div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -445,7 +1032,7 @@ and short human readable explanation.</p></div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2011-12-09 07:13:43 UYST
+Last updated 2011-12-09 19:58:16 UYST
 </div>
 </div>
 </body>

@@ -22,8 +22,8 @@ The purpose of the protocol is to allow for bidirectional, evented
 communication between browsers and backend application instances
 via WebSockets server bridge and HTML5 WebSockets standard.
 
-Architecture
-------------
+Generalized architecture
+------------------------
 The frontend server handles communication with the clients (browsers)
 over the HTML5's WebSockets protocol. Its endpoint is combined up of
 a number of parts:
@@ -32,19 +32,19 @@ a number of parts:
 
 [horizontal]
 'scheme'::
-		Will be 'ws' for a normal connection and 'wss' for a secure.
+	Will be 'ws' for a normal connection and 'wss' for a secure.
 
 'host'::
-		There is bound the server.
-		
+	There is bound the server.
+
 'port'::
-		The port to connect to.
-		
+	The port to connect to.
+
 'version'::
-		The websockets protocol version.
-		
+	The websockets protocol version.
+
 'vhost'::
-		The virtual host to connect to.
+	The virtual host to connect to.
 
 Events
 ~~~~~~
@@ -65,11 +65,14 @@ Client Events
 The format of all client event messages implements the following JSON-encoded
 payloads:
 
-	{
-	    "eventName": {
-	        ... parameters ...
-	    }
-	}
+[source,js]
+------
+{		
+    "eventName": {
+        // ... parameters ...
+    }
+}
+------
 
 Where the 'event-name' MUST be prefixed with double underscore for the system
 events, and SHALL NOT use such prefix for the user-defined events.
@@ -85,33 +88,46 @@ unique identifier of the current session.
 
 .Format
 
-	{
-	    "__connected": {
-	        "sid": "session-id"
-	    }
-	}
+[source,js]
+-----
+{
+    "__connected": {
+        "sid": "session-id"
+    }
+}
+-----
 
 .Parameters
 
 [horizontal]
 'sid' [`string`]::
-	an unique identifier of the current session.
+	An unique identifier of the current session.
 
 	
 Successfull authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 When connected client has successfully authenticated on the current vhost,
-the server sends an event to confirm that situation. Message's payload MAY
-contain additional information about the authenticated session.
+the server sends an event to confirm that situation. Message's payload
+MUST contain name of the authenticated user and MAY contain additional
+information about the authenticated session.
 
 .Format
 
-	{
-	    "__authenticated": {
-	        ...
-	    }
-	}
+[source,js]
+-----
+{
+    "__authenticated": {
+        "user": "joe"
+        // ...
+    }
+}
+-----
 
+.Parameters
+
+[horizontal]
+'user' [`string`]::
+	Name of the authenticated user.
 
 Confirmed subscription
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -121,11 +137,14 @@ contain the name of the subscribed channel.
 
 .Format
 
-	{
-	    "__subscribed": {
-	        "channel": "channel-name"
-	    }
-	}
+[source,js]
+-----
+{
+    "__subscribed": {
+        "channel": "chat"
+    }
+}
+-----
 
 .Parameters
 
@@ -140,18 +159,21 @@ additionaly contain an information about the client permissions.
 
 .Format
 
-	{
-	    "__subscribed": {
-	        "channel": "channel-name",
-	        "permission": 1
-	    }
-	}
+[source,js]
+-----
+{
+    "__subscribed": {
+        "channel": "chat",
+        "permission": 1
+    }
+}
+-----
 
 .Parameters
 
 [horizontal]
 'channel' [`string`]::
-	The name of the subscribed channel.
+	Name of the subscribed channel.
 
 'permission' [`int`]::
 	The numeric value of the client permissions.
@@ -170,6 +192,8 @@ following possible values:
 *`4`* (OP)::
 	Special right, the channel operator.
 
+TODO: reference to access control document
+	
 Presence channel subscription
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The 'Presence channel' is a special kind of channel, which keeps track of
@@ -180,59 +204,445 @@ MAY additionally contain custom data about related with particular subscriber.
 
 .Format
 
-	{
-	    "__subscribed": {
-	        "channel": "channel-name",
-	        "subscribers": [
-	            {
-	                "sid": "session-id",
-	                ... custom information ...
-	            },
-	            ...
-	        ]
-	    }
-	}
+[source,js]
+-----
+{
+    "__subscribed": {
+        "channel": "chat",
+        "subscribers": [
+            {
+                "sid": "session-id",
+                // ... custom information ...
+            },
+            // ...
+        ]
+    }
+}
+-----
 
 .Parameters
 
 [horizontal]
 'channel' [`string`]::
-	The name of the subscribed channel.
+	Name of the subscribed channel.
 
 'subscribers' [`array`]::
 	List of active subscribers (clients present on this channel).
 
 'subscribers.sid' [`string`]::
-	Client's session identifier.
+	The client's session identifier.
 
-Error notification
-~~~~~~~~~~~~~~~~~~
-When problem encountered, the server MUST send apropriate, explicit information
-to concerned client. The message's payload MUST contain the numeric error code
-and short human readable explanation.
+Presence channel's subscribers acivity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Subscribers activity on the presence channel SHALL be populated across
+all other subscribers using special events triggered when client
+joined and left the channel.
+
+On join
++++++++
+When new subscriber joined the presence channel the triggered event
+MUST contain the subscriber's session identifier, and MAY contain
+additional, custom information related to the subscriber. 
 
 .Format
 
-	{
-	    "__error": {
-	        "code": 402,
-	        "status": "Unauthorized"
-	    }
-	}
+[source,js]
+-----
+{
+    "__heJoined": {
+        "sid": "session-id",
+        "data": {
+           // ... custom information ...
+        }
+    }
+}
+-----
+
+.Parameters
+
+[horizontal]
+'sid' [`string`]::
+	The client's session identifier.
+
+'data' [`object`] optional::
+	The data passed by the client while starting a subscription.
+
+On leave
+++++++++
+When connected subscriber left the presence channel the triggered
+event MUST contain the subscriber's session identifier.
+
+.Format
+
+[source,js]
+-----
+{
+    "__heLeft": {
+        "sid": "session-id"
+        "data": {
+           // ... custom information ...
+        }
+    }
+}
+-----
+
+.Parameters
+
+[horizontal]
+'sid' [`string`]::
+	The client's session identifier.
+
+'data' [`object`] optional::
+	The data passsed by the client while terminating a subscription.
+
+Closed connection confirmation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When the client safely closes connection the server sends an confirmation
+message to the client. The confirmation message SHALL contain the identifier
+of the closed session.
+
+.Format
+
+[source,js]
+-----
+{
+    "__closed": {
+         "sid": "session-id"
+    }
+}
+-----
+
+.Parameters
+
+[horizontal]
+'sid' [`string`]::
+	The client's session identifier.
+
+Error notification
+~~~~~~~~~~~~~~~~~~
+When problem encountered, the server MUST send apropriate, explicit
+information to concerned client. The message's payload MUST contain
+the numeric error code and short human readable explanation.
+
+.Format
+
+[source,js]
+-----
+{
+    "__error": {
+        "code": 402,
+        "status": "Unauthorized"
+    }
+}
+-----
 
 .Parameters
 
 [horizontal]
 'code' [`int`]::
-	The numeric error code.
+	The numeric error code. Status codes are inspired by the HTTP
+	error codes.
 
 'status' [`string`]::
 	Error status explanation. 
 
 Server Events
 -------------
+The format of all server events implements the same JSON-encoded
+protocol as is implemented by the client events.
 
-TODO...
+[source,js]
+-----
+{
+    "eventName": {
+        // ... data ...
+    }
+}
+-----
+
+Parameters conventions and requirements are also the same as in
+the client events specification.
+
+Authentication
+~~~~~~~~~~~~~~
+When the client wants to authenticate as a specified user, MUST
+send an authentication message with credentials. When authentication
+operation succeed an '__authenticated' client event MUST be triggered.
+
+.Format
+
+[source,js]
+-----
+{
+    "auth": {
+        "user": "joe",
+        "secret": "secret",
+    }
+}
+-----
+
+.Parameters
+
+[horizontal]
+'user' [`string`]::
+	Name of the user we want to be authenticated as.
+
+'secret' [`string`], optional::
+	The user's secret key.
+
+.Possible errors
+
+`400`: 'Bad request'::
+	The message sent by the client couldn't be understood due to
+	malformed syntax. The client SHOULD NOT repeat the request
+	without the modifications.
+	
+`402`: 'Unauthorized'::
+	Triggered when invalid credentials given - user doesn't exist
+	in the system or secret key is not matching the specified user.
+
+Subscribing a channel
+~~~~~~~~~~~~~~~~~~~~~
+When the client wants to subscribe to specified channel, MUST send
+an subscription request message.
+
+.Format
+
+[source,js]
+-----
+{
+    "subscribe": {
+        "channel": "chat",
+        "data": {
+            // ... user specific data ...    
+        }
+    }
+}
+-----
+
+.Parameters
+
+[horizontal]
+'channel' [`string`]::
+	Name of the channel we want to subscribe to.
+
+'data' [`object`] optional::
+	User specific information, used only by the presence channels.
+
+.Possible errors
+
+`400`: 'Bad request'::
+	The message sent by the client couldn't be understood due to
+	malformed syntax. The client SHOULD NOT repeat the request
+	without the modifications.
+
+`403`: 'Forbidden'::
+	The server understood the request, but is refusing to fulfill it
+	due to lack of user rights. The request SHOULD NOT be repeated
+	until authenticate for as a different user or grant current user
+	with required permissions.
+
+`451`: 'Invalid channel name'::
+	Name of the channel specified in the payload is empty or contains
+	invalid characters. The request SHOULD NOT be repeated without
+	the channel name modifications.
+
+Unsubscribing a channel
+~~~~~~~~~~~~~~~~~~~~~~~
+When the client wants to unsubscribe specified channel, MUST send an
+unsubscription request message.
+
+.Format
+
+[source,js]
+-----
+{
+    "unsubscribe": {
+        "channel": "chat"
+        "data": {
+            // ... custom data ...
+        }
+    }
+}
+-----
+
+.Parameters
+
+[horizontal]
+'channel' [`string`]::
+	Name of the channel we want to subscribe to.
+
+'data' [`object`] optional::
+	User specific information, used only by the presence channels.
+	
+.Possible errors
+
+`400`: 'Bad request'::
+	The message sent by the client couldn't be understood due to
+	malformed syntax. The client SHOULD NOT repeat the request
+	without the modifications.
+
+`403`: 'Forbidden'::
+	The server understood the request, but is refusing to fulfill it
+	due to lack of user rights. The request SHOULD NOT be repeated
+	until authenticate for as a different user or grant current user
+	with required permissions.
+
+`451`: 'Invalid channel name'::
+	Name of the channel specified in the payload is empty or contains
+	invalid characters. The request SHOULD NOT be repeated without
+	the channel name modifications.
+
+`453`: 'Not subscribed'::
+	Channel is not subscribed by this client, so the operation on it
+	can not be finished. The request SHOULD NOT be repeated.
+
+Broadcasting to the channel
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When the connected subscriber wants to broadcast information to all
+other subscribers of the specified channel, MUST send an broadcast
+request.
+
+.Format
+
+[source,js]
+-----
+{
+    "broadcast": {
+        "channel": "chat",
+        "event": "message",
+        "trigger": "chat/save_to_history",
+        "data": {
+            // ... broadcasted parameters ...
+        }
+    }
+}
+-----
+
+.Parameters
+
+[horizontal]
+'channel' [`string`]::
+	Name of the channel we want to subscribe to.
+
+'event' [`string`]::
+	This custom event will be triggered for all subscribers.
+
+'trigger' [`string`] optional::
+	Name of the backend app's event to be asynchronously triggered.
+
+'data' [`object`] optional::
+	The data to be passed to all subscribers.
+	
+.Possible errors
+
+`400`: 'Bad request'::
+	The message sent by the client couldn't be understood due to
+	malformed syntax. The client SHOULD NOT repeat the request
+	without the modifications.
+
+`403`: 'Forbidden'::
+	The server understood the request, but is refusing to fulfill it
+	due to lack of user rights. The request SHOULD NOT be repeated
+	until authenticate for as a different user or grant current user
+	with required permissions.
+
+`451`: 'Invalid channel name'::
+	Name of the channel specified in the payload is empty or contains
+	invalid characters. The request SHOULD NOT be repeated without
+	the channel name modifications.
+
+`452`: 'Invalid event name'::
+	Name of the triggered event specified in the payload contains
+	invalid characters. The request SHOULD NOT be repeated without
+	the triggered event name modifications.
+	
+`453`: 'Not subscribed'::
+	Channel is not subscribed by this client, so the operation on it
+	can not be finished. The request SHOULD NOT be repeated until
+	the client will subscribe this specified channel. 
+
+`454`: 'Channel not found'::
+	Specified channel does not exist, so the operation on it can not
+	be finished. The request SHOULD NOT be repeated until the channel
+	will be created.
+
+Triggering the backend app's event
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When the connected client wants to trigger a backend application's
+event, MUST send a trigger message.
+
+.Format
+
+[source,js]
+-----
+{
+    "trigger": {
+        "event": "chat/save_and_broadcast",
+        "data": {
+            // ... passed parameters ...
+        }
+    }
+}
+-----
+
+.Parameters
+
+[horizontal]
+'event' [`string`]::
+	Name of the backend event we want to trigger.
+
+'data' [`object`]::
+	Hash with event parameters passed to the backend application.
+
+.Possible errors
+
+`400`: 'Bad request'::
+	The message sent by the client couldn't be understood due to
+	malformed syntax. The client SHOULD NOT repeat the request
+	without the modifications.
+
+`403`: 'Forbidden'::
+	The server understood the request, but is refusing to fulfill it
+	due to lack of user rights. The request SHOULD NOT be repeated
+	until authenticate for as a different user or grant current user
+	with required permissions.
+
+`452`: 'Invalid event name'::
+	Name of the triggered event specified in the payload contains
+	invalid characters. The request SHOULD NOT be repeated without
+	the triggered event name modifications.
+
+`503`: 'Service unavailable'::
+	The server is currently unable to handle the request due to
+	a temporary overloading or unpresence of the backend application
+	workers.
+
+Safely closing connection
+~~~~~~~~~~~~~~~~~~~~~~~~~
+When the connected client wants to safely close the connection, MUST
+send a close message.
+
+.Format
+
+[source,js]
+-----
+{
+    "close": {
+       // ... custom parameters ...
+    }
+}
+-----
+
+The custom data parameters SHOULD be automatially passed to all
+unsubscribed presence channels before closing the connection.
+
+.Possible errors
+
+`400`: 'Bad request'::
+	The message sent by the client couldn't be understood due to
+	malformed syntax. The client SHOULD NOT repeat the request
+	without the modifications.
 
 References
 ----------
