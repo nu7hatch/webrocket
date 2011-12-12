@@ -13,38 +13,37 @@ asciidoc.install();
 /*]]>*/
 </script>
 </head>
-<body class="article">
+<body class="book">
 <div id="header">
 <h1>WFP - WebSockets Frontend Protocol</h1>
+<span id="author">Krzysztof Kowalik</span><br>
+<span id="email" class="monospaced">&lt;<a href="mailto:chris@nu7hat.ch">chris@nu7hat.ch</a>&gt;</span><br>
+<span id="revnumber">version 0.1,</span>
+<span id="revdate">December 2011</span>
 </div>
 <div id="content">
 <div id="preamble">
 <div class="sectionbody">
-<div class="paragraph"><p>The <strong>WebSockets Frontend Protocol</strong> (<strong>WFP</strong>) is a transport layer protocol
-for exchanging messages between browsers and the frontend WebSockets
-server implemented by WebRocket.</p></div>
 <div class="ulist"><ul>
 <li>
 <p>
-Name: rfc.webrocket.io/spec/WFP.html
+Latest Editor&#8217;s Draft: <a href="http://rfc.webrocket.io/spec/WFP.html">http://rfc.webrocket.io/spec/WFP.html</a>
 </p>
 </li>
 <li>
 <p>
-Version: 0.1
-</p>
-</li>
-<li>
-<p>
-Editor: Krzysztof Kowalik &lt;<a href="mailto:chris@nu7hat.ch">chris@nu7hat.ch</a>&gt;
-</p>
-</li>
-<li>
-<p>
-State: Draft
+Status: Draft
 </p>
 </li>
 </ul></div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_abstract">Abstract</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The <strong>WebSockets Frontend Protocol</strong> (<strong>WFP</strong>) is a transport layer protocol
+for exchanging messages between Browsers and the Frontend WebSockets
+Server implemented by <a href="http://webrocket.io/">WebRocket</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
@@ -52,23 +51,23 @@ State: Draft
 <div class="sectionbody">
 <div class="paragraph"><p>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this
-document are to be interpreted as described in RFC 2119[<a href="#rfc2119">1</a>].</p></div>
+document are to be interpreted as described in <a href="#RFC2119">RFC 2119</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="_goals">Goals</h2>
 <div class="sectionbody">
 <div class="paragraph"><p>The purpose of the protocol is to allow for bidirectional, evented
-communication between browsers and backend application instances
-via WebSockets server bridge and HTML5 WebSockets standard.</p></div>
+communication between Browsers and Frontend WebSockets Server over
+the <a href="#WSP">WebSockets Protocol</a> using the <a href="#WSA">HTML5 WebSockets API</a>.</p></div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="_generalized_architecture">Generalized architecture</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>The frontend server handles communication with the clients (browsers)
-over the HTML5&#8217;s WebSockets protocol. Its endpoint is combined up of
-a number of parts:</p></div>
+<div class="paragraph"><p>The Frontend WebSockets Server handles communication with the Clients
+(Browsers) over the <a href="#WSP">HTML5&#8217;s WebSockets Protocol</a>. Its endpoint
+is combined up of a number of parts:</p></div>
 <div class="literalblock">
 <div class="content monospaced">
 <pre>[scheme]://[host]:[port]/[version]/[vhost]</pre>
@@ -114,7 +113,7 @@ a number of parts:</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-        The websockets protocol version.
+        The Frontend WebSockets Protocol version.
 </p>
 </td>
 </tr>
@@ -132,17 +131,24 @@ a number of parts:</p></div>
 </table></div>
 <div class="sect2">
 <h3 id="_events">Events</h3>
-<div class="paragraph"><p>Implemented WebSockets protocol defines two kind of events, <em>client</em> and
-<em>server</em> specific. Also, we can distinguish two groups of <em>client</em> specific
-events:</p></div>
+<div class="paragraph"><p>The protocol implemented by <a href="http://webrocket.io/">WebRocket</a> defines two kinds of events:
+<a href="#client-events"><em>client</em></a> and <a href="#server-events"><em>server</em></a> specific.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="client-events">Client Events</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>Two groups of <em>client</em> specific events can be distinguished:</p></div>
 <div class="dlist"><dl>
 <dt class="hdlist1">
 <em>System events</em>
 </dt>
 <dd>
 <p>
-                Events triggered automatically by the WebSockets server. System
-                event names MUST be prefixed with double underscore (eg. <em>__connected</em>).
+                Events triggered automatically by the Frontend WebSockets
+                Server. System event names MUST be prefixed with double
+                underscore (eg. <em>__connected</em>).
 </p>
 </dd>
 <dt class="hdlist1">
@@ -150,19 +156,13 @@ events:</p></div>
 </dt>
 <dd>
 <p>
-                User-defined events triggered by backend application or other
-                connected client.
+                User-defined events triggered by Backend Applications or other
+                connected Clients.
 </p>
 </dd>
 </dl></div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_client_events">Client Events</h2>
-<div class="sectionbody">
-<div class="paragraph"><p>The format of all client event messages implements the following JSON-encoded
-payloads:</p></div>
+<div class="paragraph"><p>All client event messages MUST have the following <a href="#JSON">JSON</a>-encoded
+payload format:</p></div>
 <div class="listingblock">
 <div class="content"><div class="highlight"><pre><span class="p">{</span>
     <span class="s2">&quot;eventName&quot;</span><span class="o">:</span> <span class="p">{</span>
@@ -170,14 +170,22 @@ payloads:</p></div>
     <span class="p">}</span>
 <span class="p">}</span>
 </pre></div></div></div>
-<div class="paragraph"><p>Where the <em>event-name</em> MUST be prefixed with double underscore for the system
-events, and SHALL NOT use such prefix for the user-defined events.</p></div>
-<div class="paragraph"><p>Event names as well as data parameter keys SHOULD be defined as camel-cased
+<div class="paragraph"><p>Event names as well as parameter keys SHOULD be defined as camel-cased
 strings, to keep compliance with the JavaScript coding style guidelines.</p></div>
+<div class="admonitionblock">
+<table><tr>
+<td class="icon">
+<img src="./images/icons/important.png" alt="Important">
+</td>
+<td class="content">The <em>event-name</em> MUST be prefixed with double underscore for
+        the <em>system</em> events, and SHALL NOT use such prefix for the <em>custom</em>
+        user-defined events.</td>
+</tr></table>
+</div>
 <div class="sect2">
 <h3 id="_connection_established">Connection established</h3>
-<div class="paragraph"><p>When the connection is successfully established, the server sends an event
-to confirm that situation with the client. Message&#8217;s payload MUST contain
+<div class="paragraph"><p>When the connection is successfully established the Server sends an event
+to confirm that situation with the Client. Message&#8217;s payload MUST contain
 unique identifier of the current session.</p></div>
 <div class="listingblock">
 <div class="title">Format</div>
@@ -202,9 +210,9 @@ unique identifier of the current session.</p></div>
 </table></div>
 </div>
 <div class="sect2">
-<h3 id="_successfull_authentication">Successfull authentication</h3>
-<div class="paragraph"><p>When connected client has successfully authenticated on the current vhost,
-the server sends an event to confirm that situation. Message&#8217;s payload
+<h3 id="client-succ-auth">Successfull authentication</h3>
+<div class="paragraph"><p>When connected Client has been successfully <a href="#server-auth">authenticated</a>
+the Server sends an event to confirm that situation. Message&#8217;s payload
 MUST contain name of the authenticated user and MAY contain additional
 information about the authenticated session.</p></div>
 <div class="listingblock">
@@ -231,10 +239,11 @@ information about the authenticated session.</p></div>
 </table></div>
 </div>
 <div class="sect2">
-<h3 id="_confirmed_subscription">Confirmed subscription</h3>
-<div class="paragraph"><p>When connected client has successfully subscribed to the specified channel,
-the server sends an event to confirm that situation. Message&#8217;s payload MUST
-contain the name of the subscribed channel.</p></div>
+<h3 id="client-confirm-sub">Confirmed subscription</h3>
+<div class="paragraph"><p>When connected Client has successfully <a href="#server-subscribe">subscribed</a>
+to the specified channel the Server sends an event to confirm that
+situation. Message&#8217;s payload MUST contain the name of the subscribed
+channel.</p></div>
 <div class="listingblock">
 <div class="title">Format</div>
 <div class="content"><div class="highlight"><pre><span class="p">{</span>
@@ -257,9 +266,9 @@ contain the name of the subscribed channel.</p></div>
 </tr>
 </table></div>
 <div class="sect3">
-<h4 id="_private_channel_subscription">Private channel subscription</h4>
-<div class="paragraph"><p>When the subscribed channel is a private one, then message&#8217;s payload MAY
-additionaly contain an information about the client permissions.</p></div>
+<h4 id="client-confirm-priv-sub">Private channel subscription</h4>
+<div class="paragraph"><p>If subscribed channel is a <em>Private Channel</em> then message&#8217;s payload MAY
+additionaly contain information about the Client permissions.</p></div>
 <div class="listingblock">
 <div class="title">Format</div>
 <div class="content"><div class="highlight"><pre><span class="p">{</span>
@@ -293,8 +302,8 @@ additionaly contain an information about the client permissions.</p></div>
 </td>
 </tr>
 </table></div>
-<div class="paragraph"><div class="title">Permissions</div><p>Returned permissions code MUST have one or be a logical disjunction of the
-following possible values:</p></div>
+<div class="paragraph"><div class="title">Permissions</div><p>Returned permission code MUST be logical disjunction of one or more
+possible values:</p></div>
 <div class="hdlist"><table>
 <tr>
 <td class="hdlist1">
@@ -333,12 +342,13 @@ following possible values:</p></div>
 <div class="paragraph"><p>TODO: reference to access control document</p></div>
 </div>
 <div class="sect3">
-<h4 id="_presence_channel_subscription">Presence channel subscription</h4>
+<h4 id="client-confirm-presence-sub">Presence channel subscription</h4>
 <div class="paragraph"><p>The <em>Presence channel</em> is a special kind of channel, which keeps track of
-which clients are subscribing it, and shares that information across
-all subscribers. In that case, the message&#8217;s payload MUST contain list
-of subscribers' records with session identifier. The subscribers' records
-MAY additionally contain custom data about related with particular subscriber.</p></div>
+all Clients subscribed on it and shares that information across all other
+subscribers. In that case, the message&#8217;s payload MUST contain list of
+subscribers' records with session identifier. The subscribers' records
+MAY additionally contain custom data about related with particular
+subscriber.</p></div>
 <div class="listingblock">
 <div class="title">Format</div>
 <div class="content"><div class="highlight"><pre><span class="p">{</span>
@@ -347,7 +357,9 @@ MAY additionally contain custom data about related with particular subscriber.</
         <span class="s2">&quot;subscribers&quot;</span><span class="o">:</span> <span class="p">[</span>
             <span class="p">{</span>
                 <span class="s2">&quot;sid&quot;</span><span class="o">:</span> <span class="s2">&quot;session-id&quot;</span><span class="p">,</span>
-                <span class="c1">// ... custom information ...</span>
+                <span class="s2">&quot;data&quot;</span><span class="o">:</span> <span class="p">{</span>
+                    <span class="c1">// ... custom information ...</span>
+                <span class="p">}</span>
             <span class="p">},</span>
             <span class="c1">// ...</span>
         <span class="p">]</span>
@@ -391,9 +403,9 @@ MAY additionally contain custom data about related with particular subscriber.</
 </table></div>
 </div>
 <div class="sect3">
-<h4 id="_presence_channel_8217_s_subscribers_acivity">Presence channel&#8217;s subscribers acivity</h4>
+<h4 id="client-presence-activity">Presence channel&#8217;s subscribers acivity</h4>
 <div class="paragraph"><p>Subscribers activity on the presence channel SHALL be populated across
-all other subscribers using special events triggered when client
+all other subscribers using special events triggered when the Client
 joined and left the channel.</p></div>
 <div class="sect4">
 <h5 id="_on_join">On join</h5>
@@ -419,7 +431,7 @@ additional, custom information related to the subscriber.</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-        The client&#8217;s session identifier.
+        The Client&#8217;s session identifier.
 </p>
 </td>
 </tr>
@@ -438,8 +450,8 @@ additional, custom information related to the subscriber.</p></div>
 </div>
 <div class="sect4">
 <h5 id="_on_leave">On leave</h5>
-<div class="paragraph"><p>When connected subscriber left the presence channel the triggered
-event MUST contain the subscriber&#8217;s session identifier.</p></div>
+<div class="paragraph"><p>When connected subscriber left a channel, the triggered event
+MUST contain the subscriber&#8217;s session identifier.</p></div>
 <div class="listingblock">
 <div class="title">Format</div>
 <div class="content"><div class="highlight"><pre><span class="p">{</span>
@@ -459,7 +471,7 @@ event MUST contain the subscriber&#8217;s session identifier.</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-        The client&#8217;s session identifier.
+        The Client&#8217;s session identifier.
 </p>
 </td>
 </tr>
@@ -470,7 +482,7 @@ event MUST contain the subscriber&#8217;s session identifier.</p></div>
 </td>
 <td class="hdlist2">
 <p style="margin-top: 0;">
-        The data passsed by the client while terminating a subscription.
+        The data passsed by the Client while terminating a subscription.
 </p>
 </td>
 </tr>
@@ -479,10 +491,10 @@ event MUST contain the subscriber&#8217;s session identifier.</p></div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_closed_connection_confirmation">Closed connection confirmation</h3>
-<div class="paragraph"><p>When the client safely closes connection the server sends an confirmation
-message to the client. The confirmation message SHALL contain the identifier
-of the closed session.</p></div>
+<h3 id="client-closed">Closed connection confirmation</h3>
+<div class="paragraph"><p>When the Client <a href="#server-close">safely closes connection</a> the Server
+MUST sends an confirmation message to the client. The confirmation
+message SHALL contain the identifier of the closed session.</p></div>
 <div class="listingblock">
 <div class="title">Format</div>
 <div class="content"><div class="highlight"><pre><span class="p">{</span>
@@ -506,8 +518,8 @@ of the closed session.</p></div>
 </table></div>
 </div>
 <div class="sect2">
-<h3 id="_error_notification">Error notification</h3>
-<div class="paragraph"><p>When problem encountered, the server MUST send apropriate, explicit
+<h3 id="client-error">Error notification</h3>
+<div class="paragraph"><p>When problem encountered the Server MUST send apropriate, explicit
 information to concerned client. The message&#8217;s payload MUST contain
 the numeric error code and short human readable explanation.</p></div>
 <div class="listingblock">
@@ -548,10 +560,10 @@ the numeric error code and short human readable explanation.</p></div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_server_events">Server Events</h2>
+<h2 id="server-events">Server Events</h2>
 <div class="sectionbody">
-<div class="paragraph"><p>The format of all server events implements the same JSON-encoded
-protocol as is implemented by the client events.</p></div>
+<div class="paragraph"><p>The format of all server events implements the same <a href="#JSON">JSON</a>-encoded
+protocol as is implemented by the <a href="#client-events">client events</a>.</p></div>
 <div class="listingblock">
 <div class="content"><div class="highlight"><pre><span class="p">{</span>
     <span class="s2">&quot;eventName&quot;</span><span class="o">:</span> <span class="p">{</span>
@@ -560,12 +572,12 @@ protocol as is implemented by the client events.</p></div>
 <span class="p">}</span>
 </pre></div></div></div>
 <div class="paragraph"><p>Parameters conventions and requirements are also the same as in
-the client events specification.</p></div>
+the <a href="#client-events">client events</a> specification.</p></div>
 <div class="sect2">
-<h3 id="_authentication">Authentication</h3>
-<div class="paragraph"><p>When the client wants to authenticate as a specified user, MUST
-send an authentication message with credentials. When authentication
-operation succeed an <em>__authenticated</em> client event MUST be triggered.</p></div>
+<h3 id="server-auth">Authentication</h3>
+<div class="paragraph"><p>When the Client wants to authenticate as a specified user, MUST send
+an authentication message with credentials. When authentication
+operation succeed an <a href="#client-succ-auth">authentication confirmation event</a> MUST be triggered for the Client.</p></div>
 <div class="listingblock">
 <div class="title">Format</div>
 <div class="content"><div class="highlight"><pre><span class="p">{</span>
@@ -599,30 +611,10 @@ operation succeed an <em>__authenticated</em> client event MUST be triggered.</p
 </td>
 </tr>
 </table></div>
-<div class="dlist"><div class="title">Possible errors</div><dl>
-<dt class="hdlist1">
-<span class="monospaced">400</span>: <em>Bad request</em>
-</dt>
-<dd>
-<p>
-        The message sent by the client couldn&#8217;t be understood due to
-        malformed syntax. The client SHOULD NOT repeat the request
-        without the modifications.
-</p>
-</dd>
-<dt class="hdlist1">
-<span class="monospaced">402</span>: <em>Unauthorized</em>
-</dt>
-<dd>
-<p>
-        Triggered when invalid credentials given - user doesn&#8217;t exist
-        in the system or secret key is not matching the specified user.
-</p>
-</dd>
-</dl></div>
+<div class="paragraph"><div class="title">Possible errors</div><p><a href="#err-bad-request"><em>Bad request</em></a>, <a href="#err-unauth"><em>Unauthorized</em></a></p></div>
 </div>
 <div class="sect2">
-<h3 id="_subscribing_a_channel">Subscribing a channel</h3>
+<h3 id="server-subscribe">Subscribing a channel</h3>
 <div class="paragraph"><p>When the client wants to subscribe to specified channel, MUST send
 an subscription request message.</p></div>
 <div class="listingblock">
@@ -695,7 +687,7 @@ an subscription request message.</p></div>
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_unsubscribing_a_channel">Unsubscribing a channel</h3>
+<h3 id="server-unsubscribe">Unsubscribing a channel</h3>
 <div class="paragraph"><p>When the client wants to unsubscribe specified channel, MUST send an
 unsubscription request message.</p></div>
 <div class="listingblock">
@@ -777,7 +769,7 @@ unsubscription request message.</p></div>
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_broadcasting_to_the_channel">Broadcasting to the channel</h3>
+<h3 id="server-broadcast">Broadcasting to the channel</h3>
 <div class="paragraph"><p>When the connected subscriber wants to broadcast information to all
 other subscribers of the specified channel, MUST send an broadcast
 request.</p></div>
@@ -840,6 +832,12 @@ request.</p></div>
 </td>
 </tr>
 </table></div>
+<div class="paragraph"><div class="title">Sequence</div><p>Client sends the <em>broadcast</em> message, server SHALL validate it and
+MUST resend it to all subscribers of the specified channel. Message
+MUST be re-composed to match the custom event message format. If
+the <em>trigger</em> option is specified, server should trigger apropriate
+event on the backend worker.</p></div>
+<div class="paragraph"><p>TODO: graph</p></div>
 <div class="dlist"><div class="title">Possible errors</div><dl>
 <dt class="hdlist1">
 <span class="monospaced">400</span>: <em>Bad request</em>
@@ -905,7 +903,7 @@ request.</p></div>
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_triggering_the_backend_app_8217_s_event">Triggering the backend app&#8217;s event</h3>
+<h3 id="server-trigger">Triggering the backend app&#8217;s event</h3>
 <div class="paragraph"><p>When the connected client wants to trigger a backend application&#8217;s
 event, MUST send a trigger message.</p></div>
 <div class="listingblock">
@@ -919,6 +917,16 @@ event, MUST send a trigger message.</p></div>
     <span class="p">}</span>
 <span class="p">}</span>
 </pre></div></div></div>
+<div class="paragraph"><div class="title">Sequence</div><p>Client sends the <em>trigger</em> message, server SHALL find free worker
+(backend connection) using load ballance algorightm and send the
+event message. The event message MUST be contain the data passed
+by the <em>trigger</em> payload.</p></div>
+<div class="paragraph"><p>TODO: add link to backend worker protocol here&#8230;
+TODO: graph</p></div>
+<div class="paragraph"><p>If all connected workers are overloaded or there is no worker connected,
+server SHALL notify the client with the <em>Service unavailable</em> error
+message.</p></div>
+<div class="paragraph"><p>TODO: graph</p></div>
 <div class="hdlist"><div class="title">Parameters</div><table>
 <tr>
 <td class="hdlist1">
@@ -982,13 +990,13 @@ event, MUST send a trigger message.</p></div>
 <p>
         The server is currently unable to handle the request due to
         a temporary overloading or unpresence of the backend application
-        workers.
+        workers. The request MAY be repeated after short time.
 </p>
 </dd>
 </dl></div>
 </div>
 <div class="sect2">
-<h3 id="_safely_closing_connection">Safely closing connection</h3>
+<h3 id="server-close">Safe closing connection</h3>
 <div class="paragraph"><p>When the connected client wants to safely close the connection, MUST
 send a close message.</p></div>
 <div class="listingblock">
@@ -1001,6 +1009,10 @@ send a close message.</p></div>
 </pre></div></div></div>
 <div class="paragraph"><p>The custom data parameters SHOULD be automatially passed to all
 unsubscribed presence channels before closing the connection.</p></div>
+<div class="paragraph"><div class="title">Sequence</div><p>Client sends the <em>close</em> message, server MUST answer with the
+<em>__closed</em> message and terminate event loop for this particular
+connection.</p></div>
+<div class="paragraph"><p>TODO: graph</p></div>
 <div class="dlist"><div class="title">Possible errors</div><dl>
 <dt class="hdlist1">
 <span class="monospaced">400</span>: <em>Bad request</em>
@@ -1017,22 +1029,66 @@ unsubscribed presence channels before closing the connection.</p></div>
 </div>
 </div>
 <div class="sect1">
+<h2 id="_errors">Errors</h2>
+<div class="sectionbody">
+<div class="paragraph"><p>The <a href="http://webrocket.io/">WebRocket</a> error messages and codes are inspired by the
+<a href="#HTTPCODES">HTTP status codes</a>. Here&#8217;s the full list of possible errors:</p></div>
+<div class="sect2">
+<h3 id="err-bad-request"><span class="monospaced">400</span>: <em>Bad request</em></h3>
+<div class="paragraph"><p>The message sent by the client couldn&#8217;t be understood due to
+malformed syntax. The client SHOULD NOT repeat the request
+without the modifications.</p></div>
+</div>
+<div class="sect2">
+<h3 id="err-unauth"><span class="monospaced">402</span>: <em>Unauthorized</em></h3>
+<div class="paragraph"><p>Returned when invalid credentials given - user doesn&#8217;t exist
+in the system or secret key is not matching the specified user.</p></div>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="_references">References</h2>
 <div class="sectionbody">
-<div class="olist arabic" id="bibliography"><div class="title">Bibliography</div><ol class="arabic">
+<div class="ulist bibliography"><div class="title">Bibliography</div><ul>
 <li>
 <p>
-<a id="rfc2119"></a> "Key words for use in RFCs to Indicate Requirement Levels" - <a href="http://tools.ietf.org/html/rfc2119">ietf.org</a>
+<a id="RFC2119"></a>[RFC2119] <a href="http://tools.ietf.org/html/rfc2119">Key words
+  for use in RFCs to Indicate Requirement</a> - S. Bradner, IETF
 </p>
 </li>
-</ol></div>
+<li>
+<p>
+<a id="WSP"></a>[WSP] <a href="http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol">
+  The WebSockets Protocol</a> - I. Fette, IETF
+</p>
+</li>
+<li>
+<p>
+<a id="WSA"></a>[WSA] <a href="http://dev.w3.org/html5/websockets/">The WebSockets
+  API</a> - I. Hickson, W3C
+</p>
+</li>
+<li>
+<p>
+<a id="JSON"></a>[JSON] <a href="http://www.ietf.org/rfc/rfc4627">JavaScript Object
+  Notation (JSON)</a> - D. Crockford, JSON.org
+</p>
+</li>
+<li>
+<p>
+<a id="HTTPCODES"></a>[HTTPCODES] <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html">
+  HTTP Status Code Definitions</a> - W3.org
+</p>
+</li>
+</ul></div>
 </div>
 </div>
 </div>
 <div id="footnotes"><hr></div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2011-12-09 19:58:16 UYST
+Version 0.1<br>
+Last updated 2011-12-10 18:10:48 UYST
 </div>
 </div>
 </body>

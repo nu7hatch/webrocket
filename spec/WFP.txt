@@ -1,32 +1,43 @@
 WFP - WebSockets Frontend Protocol
 ==================================
+:author: Krzysztof Kowalik
+:email: chris@nu7hat.ch
+:revdate: December 2011
+:revnumber: 0.1
+:thisver:
+:latestpub:
+:latestdraft: http://rfc.webrocket.io/spec/WFP.html
+:status: Draft
+:homepage: http://webrocket.io/
+:webrocket: link:{homepage}[WebRocket]
 
+* Latest Editor's Draft: {latestdraft}
+* Status: {status}
+
+[abstract]
+Abstract
+--------
 The *WebSockets Frontend Protocol* (*WFP*) is a transport layer protocol
-for exchanging messages between browsers and the frontend WebSockets
-server implemented by WebRocket.
-
-* Name: rfc.webrocket.io/spec/WFP.html
-* Version: 0.1
-* Editor: Krzysztof Kowalik <chris@nu7hat.ch>
-* State: Draft
+for exchanging messages between Browsers and the Frontend WebSockets
+Server implemented by {webrocket}.
 
 Language
 --------
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
 "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this
-document are to be interpreted as described in RFC 2119[<<rfc2119, 1>>].
+document are to be interpreted as described in <<RFC2119, RFC 2119>>.
 
 Goals
 -----
 The purpose of the protocol is to allow for bidirectional, evented
-communication between browsers and backend application instances
-via WebSockets server bridge and HTML5 WebSockets standard.
+communication between Browsers and Frontend WebSockets Server over
+the <<WSP, WebSockets Protocol>> using the <<WSA, HTML5 WebSockets API>>.
 
 Generalized architecture
 ------------------------
-The frontend server handles communication with the clients (browsers)
-over the HTML5's WebSockets protocol. Its endpoint is combined up of
-a number of parts:
+The Frontend WebSockets Server handles communication with the Clients
+(Browsers) over the <<WSP, HTML5's WebSockets Protocol>>. Its endpoint
+is combined up of a number of parts:
 
 	[scheme]://[host]:[port]/[version]/[vhost]
 
@@ -41,29 +52,32 @@ a number of parts:
 	The port to connect to.
 
 'version'::
-	The websockets protocol version.
+	The Frontend WebSockets Protocol version.
 
 'vhost'::
 	The virtual host to connect to.
 
 Events
 ~~~~~~
-Implemented WebSockets protocol defines two kind of events, 'client' and
-'server' specific. Also, we can distinguish two groups of 'client' specific
-events:
+The protocol implemented by {webrocket} defines two kinds of events: 
+<<client-events, 'client'>> and <<server-events, 'server'>> specific.
 
-'System events'::
-		Events triggered automatically by the WebSockets server. System
-		event names MUST be prefixed with double underscore (eg. '__connected').
-
-'Custom events'::
-		User-defined events triggered by backend application or other
-		connected client.
-		
+[[client-events]]
 Client Events
 -------------
-The format of all client event messages implements the following JSON-encoded
-payloads:
+Two groups of 'client' specific events can be distinguished:
+
+'System events'::
+		Events triggered automatically by the Frontend WebSockets
+		Server. System event names MUST be prefixed with double
+		underscore (eg. '__connected').
+
+'Custom events'::
+		User-defined events triggered by Backend Applications or other
+		connected Clients.
+
+All client event messages MUST have the following <<JSON, JSON>>-encoded
+payload format:
 
 [source,js]
 ------
@@ -74,16 +88,17 @@ payloads:
 }
 ------
 
-Where the 'event-name' MUST be prefixed with double underscore for the system
-events, and SHALL NOT use such prefix for the user-defined events.
-
-Event names as well as data parameter keys SHOULD be defined as camel-cased
+Event names as well as parameter keys SHOULD be defined as camel-cased
 strings, to keep compliance with the JavaScript coding style guidelines.
+
+IMPORTANT: The 'event-name' MUST be prefixed with double underscore for
+	the 'system' events, and SHALL NOT use such prefix for the 'custom'
+	user-defined events.
 
 Connection established
 ~~~~~~~~~~~~~~~~~~~~~~
-When the connection is successfully established, the server sends an event
-to confirm that situation with the client. Message's payload MUST contain
+When the connection is successfully established the Server sends an event
+to confirm that situation with the Client. Message's payload MUST contain
 unique identifier of the current session.
 
 .Format
@@ -103,11 +118,11 @@ unique identifier of the current session.
 'sid' [`string`]::
 	An unique identifier of the current session.
 
-	
+[[client-succ-auth]]
 Successfull authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-When connected client has successfully authenticated on the current vhost,
-the server sends an event to confirm that situation. Message's payload
+When connected Client has been successfully <<server-auth,authenticated>>
+the Server sends an event to confirm that situation. Message's payload
 MUST contain name of the authenticated user and MAY contain additional
 information about the authenticated session.
 
@@ -129,11 +144,13 @@ information about the authenticated session.
 'user' [`string`]::
 	Name of the authenticated user.
 
+[[client-confirm-sub]]
 Confirmed subscription
 ~~~~~~~~~~~~~~~~~~~~~~
-When connected client has successfully subscribed to the specified channel,
-the server sends an event to confirm that situation. Message's payload MUST
-contain the name of the subscribed channel.
+When connected Client has successfully <<server-subscribe,subscribed>>
+to the specified channel the Server sends an event to confirm that
+situation. Message's payload MUST contain the name of the subscribed
+channel.
 
 .Format
 
@@ -152,10 +169,11 @@ contain the name of the subscribed channel.
 'channel' [`string`]::
 	The name of the subscribed channel.
 
+[[client-confirm-priv-sub]]
 Private channel subscription
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-When the subscribed channel is a private one, then message's payload MAY
-additionaly contain an information about the client permissions.
+If subscribed channel is a 'Private Channel' then message's payload MAY
+additionaly contain information about the Client permissions.
 
 .Format
 
@@ -179,8 +197,8 @@ additionaly contain an information about the client permissions.
 	The numeric value of the client permissions.
 
 .Permissions
-Returned permissions code MUST have one or be a logical disjunction of the
-following possible values:
+Returned permission code MUST be logical disjunction of one or more
+possible values:
 
 [horizontal]
 *`1`* (READ)::
@@ -193,14 +211,16 @@ following possible values:
 	Special right, the channel operator.
 
 TODO: reference to access control document
-	
+
+[[client-confirm-presence-sub]]
 Presence channel subscription
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The 'Presence channel' is a special kind of channel, which keeps track of
-which clients are subscribing it, and shares that information across
-all subscribers. In that case, the message's payload MUST contain list
-of subscribers' records with session identifier. The subscribers' records
-MAY additionally contain custom data about related with particular subscriber.
+all Clients subscribed on it and shares that information across all other
+subscribers. In that case, the message's payload MUST contain list of
+subscribers' records with session identifier. The subscribers' records
+MAY additionally contain custom data about related with particular
+subscriber.
 
 .Format
 
@@ -212,7 +232,9 @@ MAY additionally contain custom data about related with particular subscriber.
         "subscribers": [
             {
                 "sid": "session-id",
-                // ... custom information ...
+                "data": {
+                    // ... custom information ...
+                }
             },
             // ...
         ]
@@ -232,10 +254,11 @@ MAY additionally contain custom data about related with particular subscriber.
 'subscribers.sid' [`string`]::
 	The client's session identifier.
 
+[[client-presence-activity]]
 Presence channel's subscribers acivity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Subscribers activity on the presence channel SHALL be populated across
-all other subscribers using special events triggered when client
+all other subscribers using special events triggered when the Client
 joined and left the channel.
 
 On join
@@ -262,15 +285,15 @@ additional, custom information related to the subscriber.
 
 [horizontal]
 'sid' [`string`]::
-	The client's session identifier.
+	The Client's session identifier.
 
 'data' [`object`] optional::
 	The data passed by the client while starting a subscription.
 
 On leave
 ++++++++
-When connected subscriber left the presence channel the triggered
-event MUST contain the subscriber's session identifier.
+When connected subscriber left a channel, the triggered event
+MUST contain the subscriber's session identifier.
 
 .Format
 
@@ -290,16 +313,17 @@ event MUST contain the subscriber's session identifier.
 
 [horizontal]
 'sid' [`string`]::
-	The client's session identifier.
+	The Client's session identifier.
 
 'data' [`object`] optional::
-	The data passsed by the client while terminating a subscription.
+	The data passsed by the Client while terminating a subscription.
 
+[[client-closed]]
 Closed connection confirmation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-When the client safely closes connection the server sends an confirmation
-message to the client. The confirmation message SHALL contain the identifier
-of the closed session.
+When the Client <<server-close,safely closes connection>> the Server
+MUST sends an confirmation message to the client. The confirmation
+message SHALL contain the identifier of the closed session.
 
 .Format
 
@@ -318,9 +342,10 @@ of the closed session.
 'sid' [`string`]::
 	The client's session identifier.
 
+[[client-error]]
 Error notification
 ~~~~~~~~~~~~~~~~~~
-When problem encountered, the server MUST send apropriate, explicit
+When problem encountered the Server MUST send apropriate, explicit
 information to concerned client. The message's payload MUST contain
 the numeric error code and short human readable explanation.
 
@@ -346,10 +371,11 @@ the numeric error code and short human readable explanation.
 'status' [`string`]::
 	Error status explanation. 
 
+[[server-events]]
 Server Events
 -------------
-The format of all server events implements the same JSON-encoded
-protocol as is implemented by the client events.
+The format of all server events implements the same <<JSON,JSON>>-encoded
+protocol as is implemented by the <<client-events,client events>>.
 
 [source,js]
 -----
@@ -361,13 +387,15 @@ protocol as is implemented by the client events.
 -----
 
 Parameters conventions and requirements are also the same as in
-the client events specification.
+the <<client-events,client events>> specification.
 
+[[server-auth]]
 Authentication
 ~~~~~~~~~~~~~~
-When the client wants to authenticate as a specified user, MUST
-send an authentication message with credentials. When authentication
-operation succeed an '__authenticated' client event MUST be triggered.
+When the Client wants to authenticate as a specified user, MUST send
+an authentication message with credentials. When authentication
+operation succeed an <<client-succ-auth,authentication confirmation
+event>> MUST be triggered for the Client.
 
 .Format
 
@@ -392,15 +420,9 @@ operation succeed an '__authenticated' client event MUST be triggered.
 
 .Possible errors
 
-`400`: 'Bad request'::
-	The message sent by the client couldn't be understood due to
-	malformed syntax. The client SHOULD NOT repeat the request
-	without the modifications.
-	
-`402`: 'Unauthorized'::
-	Triggered when invalid credentials given - user doesn't exist
-	in the system or secret key is not matching the specified user.
+<<err-bad-request,'Bad request'>>, <<err-unauth,'Unauthorized'>>
 
+[[server-subscribe]]
 Subscribing a channel
 ~~~~~~~~~~~~~~~~~~~~~
 When the client wants to subscribe to specified channel, MUST send
@@ -447,6 +469,7 @@ an subscription request message.
 	invalid characters. The request SHOULD NOT be repeated without
 	the channel name modifications.
 
+[[server-unsubscribe]]
 Unsubscribing a channel
 ~~~~~~~~~~~~~~~~~~~~~~~
 When the client wants to unsubscribe specified channel, MUST send an
@@ -497,6 +520,7 @@ unsubscription request message.
 	Channel is not subscribed by this client, so the operation on it
 	can not be finished. The request SHOULD NOT be repeated.
 
+[[server-broadcast]]
 Broadcasting to the channel
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 When the connected subscriber wants to broadcast information to all
@@ -533,7 +557,17 @@ request.
 
 'data' [`object`] optional::
 	The data to be passed to all subscribers.
-	
+
+.Sequence
+
+Client sends the 'broadcast' message, server SHALL validate it and
+MUST resend it to all subscribers of the specified channel. Message
+MUST be re-composed to match the custom event message format. If
+the 'trigger' option is specified, server should trigger apropriate
+event on the backend worker.
+
+TODO: graph
+
 .Possible errors
 
 `400`: 'Bad request'::
@@ -567,6 +601,7 @@ request.
 	be finished. The request SHOULD NOT be repeated until the channel
 	will be created.
 
+[[server-trigger]]
 Triggering the backend app's event
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 When the connected client wants to trigger a backend application's
@@ -585,6 +620,22 @@ event, MUST send a trigger message.
     }
 }
 -----
+
+.Sequence
+
+Client sends the 'trigger' message, server SHALL find free worker
+(backend connection) using load ballance algorightm and send the
+event message. The event message MUST be contain the data passed
+by the 'trigger' payload. 
+
+TODO: add link to backend worker protocol here...
+TODO: graph
+
+If all connected workers are overloaded or there is no worker connected,
+server SHALL notify the client with the 'Service unavailable' error
+message.
+
+TODO: graph
 
 .Parameters
 
@@ -616,10 +667,11 @@ event, MUST send a trigger message.
 `503`: 'Service unavailable'::
 	The server is currently unable to handle the request due to
 	a temporary overloading or unpresence of the backend application
-	workers.
+	workers. The request MAY be repeated after short time.
 
-Safely closing connection
-~~~~~~~~~~~~~~~~~~~~~~~~~
+[[server-close]]
+Safe closing connection
+~~~~~~~~~~~~~~~~~~~~~~~
 When the connected client wants to safely close the connection, MUST
 send a close message.
 
@@ -637,6 +689,14 @@ send a close message.
 The custom data parameters SHOULD be automatially passed to all
 unsubscribed presence channels before closing the connection.
 
+.Sequence
+
+Client sends the 'close' message, server MUST answer with the
+'__closed' message and terminate event loop for this particular
+connection.
+
+TODO: graph
+
 .Possible errors
 
 `400`: 'Bad request'::
@@ -644,9 +704,36 @@ unsubscribed presence channels before closing the connection.
 	malformed syntax. The client SHOULD NOT repeat the request
 	without the modifications.
 
+Errors
+------
+The {webrocket} error messages and codes are inspired by the
+<<HTTPCODES,HTTP status codes>>. Here's the full list of possible errors:
+
+[[err-bad-request]]
+`400`: 'Bad request'
+~~~~~~~~~~~~~~~~~~~~
+The message sent by the client couldn't be understood due to
+malformed syntax. The client SHOULD NOT repeat the request
+without the modifications.
+
+[[err-unauth]]
+`402`: 'Unauthorized'
+~~~~~~~~~~~~~~~~~~~~~
+Returned when invalid credentials given - user doesn't exist
+in the system or secret key is not matching the specified user.
+	
 References
 ----------
 
+[bibliography]
 .Bibliography
-[[bibliography]]
-1. [[rfc2119]] "Key words for use in RFCs to Indicate Requirement Levels" - link:http://tools.ietf.org/html/rfc2119[ietf.org]
+- [[[RFC2119]]] link:http://tools.ietf.org/html/rfc2119[Key words
+  for use in RFCs to Indicate Requirement] - S. Bradner, IETF
+- [[[WSP]]] link:http://tools.ietf.org/html/draft-ietf-hybi-thewebsocketprotocol[
+  The WebSockets Protocol] - I. Fette, IETF
+- [[[WSA]]] link:http://dev.w3.org/html5/websockets/[The WebSockets
+  API] - I. Hickson, W3C
+- [[[JSON]]] link:http://www.ietf.org/rfc/rfc4627[JavaScript Object
+  Notation (JSON)] - D. Crockford, JSON.org
+- [[[HTTPCODES]]] link:http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html[
+  HTTP Status Code Definitions] - W3.org

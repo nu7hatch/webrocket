@@ -6,9 +6,10 @@ body {
    color: #233;
    overflow-x: hidden;
    margin: 1em auto;
-   width: 960px;
+   width: 760px;
 }
 
+/*
 a {
    color: #6C827C;
    text-decoration: underline;
@@ -506,8 +507,15 @@ pre {
    color: #234;
    padding: 6px 10px;
    margin: 0 0 -10px 0;
+   font-size: 80%;
 }
 
 table {
    border-spacing: 0;
 }
+
+.graphviz {
+   background: #F8F8FF;
+   text-align: center;
+}
+*/
