@@ -34,29 +34,25 @@ var conf Config
 
 func init() {
 	flag.StringVar(&conf.WsAddr, "wsaddr", ":9772", "bind server with given address")
-	flag.StringVar(&conf.MqAddr, "mqaddr", "localhost:9773", "bind MQ echange with given address")
-	flag.StringVar(&conf.CtlAddr, "ctladdr", "localhost:9774", "bind control interface with given address")
+	flag.StringVar(&conf.MqAddr, "mqaddr", "tcp://*:9773", "bind MQ echange with given address")
+	flag.StringVar(&conf.CtlAddr, "ctladdr", "127.0.0.1:9774", "bind control interface with given address")
 	flag.StringVar(&conf.CertFile, "cert", "", "path to server certificate")
 	flag.StringVar(&conf.KeyFile, "key", "", "private key")
 	flag.Parse()
 }
 
-func serveWebSockets(ctx *webrocket.Context) {
-	server := ctx.NewWebsocketServer(conf.WsAddr)
-	if conf.CertFile != "" && conf.KeyFile != "" {
-		server.ListenAndServeTLS(conf.CertFile, conf.KeyFile)
-	} else {
-		server.ListenAndServe()
-	}
-}
-
-func serveMq(ctx *webrocket.Context) {
-	mq := ctx.NewMqServer(conf.MqAddr)
-	mq.ListenAndServe()
-}
-
 func main() {
 	ctx := webrocket.NewContext()
-	go serveMq(ctx)
-	serveWebSockets(ctx)
+	ws := ctx.NewWebsocketServer(conf.WsAddr)
+	vhost, _ := ctx.AddVhost("/yoda")
+	vhost.AddUser("yoda", "pass", webrocket.PermRead|webrocket.PermWrite)
+
+	mq := ctx.NewMqServer(conf.MqAddr)
+	go mq.ListenAndServe()
+	
+	if conf.CertFile != "" && conf.KeyFile != "" {
+		ws.ListenAndServeTLS(conf.CertFile, conf.KeyFile)
+	} else {
+		ws.ListenAndServe()
+	}
 }

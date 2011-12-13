@@ -30,33 +30,33 @@ import (
 // connections. Each vhost has it's own users and permission
 // management setting, independent channels, etc.
 type Vhost struct {
-	Log         *log.Logger
-	path        string
-	isRunning   bool
-	handler     websocket.Handler
-	users       map[string]*User
-	connections map[string]*wsConn
-	channels    map[string]*Channel
-	codec       websocket.Codec
-	frontAPI    websocketAPI
+	Log       *log.Logger
+	path      string
+	isRunning bool
+	handler   websocket.Handler
+	users     map[string]*User
+	channels  map[string]*Channel
+	exchange  *exchange   
+	codec     websocket.Codec
+	frontAPI  websocketAPI
 }
 
 // Returns new vhost configured to handle websocket connections.
 func NewVhost(path string) *Vhost {
 	v := &Vhost{path: path, isRunning: true}
-	v.handler = websocket.Handler(func(ws *websocket.Conn) { v.handle(ws) })
+	v.Log = log.New(os.Stderr, "", log.LstdFlags)
 	v.users = make(map[string]*User)
-	v.connections = make(map[string]*wsConn)
 	v.channels = make(map[string]*Channel)
 	v.codec = websocket.JSON
-	v.Log = log.New(os.Stderr, "", log.LstdFlags)
+	v.exchange = newExchange(v)
+	v.handler = websocket.Handler(func(ws *websocket.Conn) { v.handle(ws) })
 	return v
 }
 
 // Prepares new connection to enter in the event loop.
 func (v *Vhost) handle(ws *websocket.Conn) {
 	c := wrapWsConn(ws, v)
-	v.connections[c.token] = c
+	v.exchange.clients[c.token] = c
 	v.eventLoop(c)
 	v.cleanup(c)
 }
@@ -65,7 +65,7 @@ func (v *Vhost) handle(ws *websocket.Conn) {
 // between closed connection and the system.
 func (v *Vhost) cleanup(c *wsConn) {
 	c.unsubscribeAll()
-	delete(v.connections, c.token)
+	delete(v.exchange.clients, c.token)
 }
 
 // eventLoop maintains main loop for handled connection.
@@ -110,7 +110,7 @@ func (v *Vhost) IsRunning() bool {
 
 // Returns list of active connections.
 func (v *Vhost) Connections() map[string]*wsConn {
-	return v.connections
+	return v.exchange.clients
 }
 
 // Returns path name.

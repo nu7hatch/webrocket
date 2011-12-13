@@ -24,13 +24,16 @@ import (
 	"fmt"
 )
 
+// Context is a placeholder for all server configuration and
+// shared data.
 type Context struct {
-	vhosts map[string]*Vhost
-	wsServ *WebsocketServer
-	mqServ *MqServer
-	Log    *log.Logger
+	vhosts   map[string]*Vhost
+	wsServ   *WebsocketServer
+	mqServ   *MqServer
+	Log      *log.Logger
 }
 
+// Creates new context.
 func NewContext() *Context {
 	ctx := new(Context)
 	ctx.vhosts = make(map[string]*Vhost)
@@ -75,4 +78,10 @@ func (ctx *Context) Vhosts() (vhosts []string) {
 		i += 1
 	}
 	return vhosts
+}
+
+// Returns specified vhost.
+func (ctx *Context) GetVhost(name string) (*Vhost, bool) {
+	vhost, ok := ctx.vhosts[name]
+	return vhost, ok
 }

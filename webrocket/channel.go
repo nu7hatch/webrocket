@@ -57,6 +57,7 @@ func (ch *Channel) hub() {
 		case payload := <-ch.broadcast:
 			for conn := range ch.subscribers {
 				conn.send(payload)
+				println("sent to", conn.token)
 			}
 		}
 	}

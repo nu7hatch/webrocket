@@ -32,6 +32,8 @@ func (api *websocketAPI) Dispatch(c *wsConn, msg *Message) (bool, error) {
 	switch msg.Event {
 	case "broadcast":
 		return true, api.doBroadcast(c, msg.Data)
+	case "trigger":
+		return true, api.doTrigger(c, msg.Data)
 	case "subscribe":
 		return true, api.doSubscribe(c, msg.Data)
 	case "unsubscribe":
@@ -181,8 +183,41 @@ func (api *websocketAPI) doBroadcast(c *wsConn, data interface{}) error {
 		// CHANNEL_NOT_FOUND
 		return api.Error(c, ErrChannelNotFound)
 	}
-	ch.broadcast <- data
+	passedPayload, ok := payload["data"].(map[string]interface{})
+	if !ok {
+		passedPayload = make(map[string]interface{})
+	}
+	passedPayload["sid"] = c.token
+	composedMsg := map[string]interface{}{event: passedPayload}
+	ch.broadcast <- composedMsg
 	c.vhost.Log.Printf("ws[%s]: BROADCASTED event='%s' channel='%s'", c.vhost.path, event, chanName)
+	return nil
+}
+
+func (api *websocketAPI) doTrigger(c *wsConn, data interface{}) error {
+	user := c.session
+	if user == nil || !user.IsAllowed(PermWrite) {
+		// ACCESS_DENIED
+		return api.Error(c, ErrAccessDenied)
+	}
+	payload, ok := data.(map[string]interface{})
+	if !ok {
+		// INVALID_PAYLOAD
+		return api.Error(c, ErrInvalidPayload)
+	}
+	event, ok := payload["event"].(string)
+	if !ok || len(event) == 0 {
+		// INVALID_EVENT_NAME
+		return api.Error(c, ErrInvalidEventName)
+	}
+	passedPayload, ok := payload["data"].(map[string]interface{})
+	if !ok {
+		passedPayload = make(map[string]interface{})
+	}
+	passedPayload["sid"] = c.token
+	composedMsg := map[string]interface{}{event: passedPayload}
+	c.vhost.exchange.workersQueue <- composedMsg // TODO: make it preetier...
+	c.vhost.Log.Printf("ws[%s]: TRIGGERED event='%s'", c.vhost.path, event)
 	return nil
 }
 

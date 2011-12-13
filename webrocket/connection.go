@@ -36,7 +36,6 @@ func generateUniqueToken() string {
 
 // Base connection wrapper.
 type conn struct {
-	session  *User
-	vhost    *Vhost
+	session *User
+	vhost   *Vhost
 }
-
