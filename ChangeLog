@@ -1,3 +1,11 @@
+2011-12-18  Krzysztof Kowalik  <chris@nu7hat.ch>
+
+	* Makefile: less verbose output
+	* docs/webrocket.7.txt: removed, protocol spec moved to rfc docs
+	* docs/webrocket-server.1.txt: removed references to webrocket(7), some tweaks
+	* docs/asciidoc.conf: added global configs
+	* docs/Makefile: targets adjusted to global configs
+
 2011-12-07  Krzysztof Kowalik  <chris@nu7hat.ch>
 
 	* webrocket/connection.go: websocket connection related stuff moved to webrocket/websocket_server.go

@@ -1,3 +1,7 @@
+ifndef VERBOSE
+MAKEFLAGS += --no-print-directory
+endif
+
 ASCIIDOC = asciidoc
 
 all: vendor-gozmq server man
@@ -6,6 +10,7 @@ install: install-server install-man
 check: all check-lib
 
 lib:
+	@echo -e "\e[35mbuilding \e[1;32m./webrocket\e[0m"
 	@cd webrocket && $(MAKE)
 	cp webrocket/_obj/*.a .
 clean-lib:
@@ -15,6 +20,7 @@ check-lib:
 	@cd webrocket && $(MAKE) test
 
 server: lib
+	@echo -e "\e[35mbuilding \e[1;32m./webrocket-server\e[0m"
 	@cd webrocket-server && $(MAKE)
 clean-server:
 	@cd webrocket-server && $(MAKE) clean
@@ -22,6 +28,7 @@ install-server:
 	@cd webrocket-server && $(MAKE) install
 
 man:
+	@echo -e "\e[35mbuilding \e[1;32m./docs\e[0m"
 	-@cd docs && $(MAKE)
 clean-man:
 	-@cd docs && $(MAKE) clean
@@ -29,7 +36,8 @@ install-man:
 	-@cd docs && $(MAKE) install
 
 vendor-gozmq:
-	-@cd vendor/gozmq && $(MAKE)
+	@echo -e "\e[35mbuilding \e[1;32m./vendor/gozmq\e[0m"
+	@cd vendor/gozmq && $(MAKE)
 	cp vendor/gozmq/_obj/github.com/alecthomas/*.a .
 
 papers:
