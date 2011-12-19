@@ -17,32 +17,25 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-const (
-	PermRead   = 1
-	PermWrite  = 2
-	PermManage = 4
-)
+import "testing"
 
-// User keeps information about single configured user. 
-type User struct {
-	Name       string
-	Secret     string
-	Permission int
+func TestNewPermission(t *testing.T) {
+	p := NewPermission(".*")
+	if len(p.Token()) != 128 {
+		t.Errorf("Expected to generate single access token for the permission")
+	}
 }
 
-// Returns new, configured user.
-func NewUser(name, secret string, permission int) *User {
-	return &User{name, secret, permission}
-}
-
-// Authenticate matches given secret with current user credentials.
-// If user's secret is empty, or given secret matches the defined one
-// then returns true, otherwise returns false.
-func (u *User) Authenticate(secret string) bool {
-	return (u.Secret == "" || u.Secret == secret)
-}
-
-// IsAllowed checks if the user is permitted to do given operation.
-func (u *User) IsAllowed(permission int) bool {
-	return (u.Permission&permission == permission)
+func TestPermissionIsMatching(t *testing.T) {
+	p := NewPermission(".*foo|bar.*")
+	for _, ch := range []string{"lefoo","barle"} {
+		if !p.IsMatching(ch) {
+			t.Errorf("Expected permission to match the '%s' channel", ch)
+		}
+	}
+	for _, ch := range []string{"lefoobar", "lebar"} {
+		if p.IsMatching(ch) {
+			t.Errorf("Expected permission to not match the '%s' channel", ch)
+		}
+	}
 }

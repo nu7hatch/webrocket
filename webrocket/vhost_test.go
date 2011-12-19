@@ -17,155 +17,109 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-import (
-	"bytes"
-	"log"
-	"testing"
-)
+import "testing"
 
-func NewTestVhost() *Vhost {
-	vhost := NewVhost("/foo")
-	vhost.Log = log.New(bytes.NewBuffer([]byte{}), "a", log.LstdFlags)
-	return vhost
+func newTestVhost() (v *Vhost, err error) {
+	ctx := NewContext()
+	v, err = newVhost(ctx, "/hello")
+	return
 }
 
 func TestNewVhost(t *testing.T) {
-	vhost := NewTestVhost()
-	if vhost == nil {
-		t.Errorf("Expected vhost to be ok, nil given")
-	}
-	if !vhost.IsRunning() {
-		t.Errorf("Expected vhost to be running")
-	}
-}
-
-func TestStopping(t *testing.T) {
-	vhost := NewTestVhost()
-	vhost.Stop()
-	if vhost.IsRunning() {
-		t.Errorf("Expected vhost to not be running")
-	}
-}
-
-func TestAddUser(t *testing.T) {
-	vhost := NewTestVhost()
-	err := vhost.AddUser("foo", "bar", PermRead)
+	v, err := newTestVhost()
 	if err != nil {
-		t.Errorf("Expected to create new user")
+		t.Errorf("Expected to create a vhost, error encountered: %s", err.Error())
 	}
-	user, ok := vhost.Users()["foo"]
-	if !ok {
-		t.Errorf("Expected to create new user")
-	}
-	if user.Name != "foo" {
-		t.Errorf("Expected to create valid user")
+	if v.Path() != "/hello" {
+		t.Errorf("Expected vhost path to be '/hello', '%' given", v.Path())
 	}
 }
 
-func TestAddUserWithInvalidName(t *testing.T) {
-	vhost := NewTestVhost()
-	err := vhost.AddUser("", "bar", PermRead)
-	if err == nil {
-		t.Errorf("Expected to not create the invalid user")
+func TestNewVhostWithInvalidPath(t *testing.T) {
+	ctx := NewContext()
+	for _, path := range []string{"foo", "/", "/hello/", "/hello/foobar//"} {
+		_, err := newVhost(ctx, path)
+		if err == nil || err.Error() != "Invalid path" {
+			t.Errorf("Expected to throw 'Invalid path' error while creating a vhost for '%s'", path)
+		}
 	}
 }
 
-func TestAddUserWithInvalidPermission(t *testing.T) {
-	vhost := NewTestVhost()
-	err := vhost.AddUser("foo", "bar", 0)
-	if err == nil {
-		t.Errorf("Expected to not create the invalid user")
+func TestVhostGenerateSingleAccessToken(t *testing.T) {
+	v, _ := newTestVhost()
+	v.GenerateSingleAccessToken(".*")
+	if len(v.permissions) != 1 {
+		t.Errorf("Expected to generate single access token")
 	}
 }
 
-func TestAddDuplicatedUser(t *testing.T) {
-	vhost := NewTestVhost()
-	vhost.AddUser("foo", "bar", PermRead)
-	err := vhost.AddUser("foo", "bar", PermRead)
-	if err == nil {
-		t.Errorf("Expected to not create the duplicated user")
+func TestVhostValidateSingleAccessToken(t *testing.T) {
+	v, _ := newTestVhost()
+	token := v.GenerateSingleAccessToken(".*")
+	pv, ok := v.ValidateSingleAccessToken(token)
+	if !ok || pv.Token() != token {
+		t.Errorf("Expected successfull validation of existing access token")
 	}
-}
-
-func TestDeleteUser(t *testing.T) {
-	vhost := NewTestVhost()
-	vhost.AddUser("foo", "bar", PermRead)
-	err := vhost.DeleteUser("foo")
-	if err != nil {
-		t.Errorf("Expected to delete user")
-	}
-	_, ok := vhost.Users()["foo"]
+	_, ok = v.ValidateSingleAccessToken(token)
 	if ok {
-		t.Errorf("Expected to delete user")
+		t.Errorf("Expected failure on double validation of the same access token")
 	}
-}
-
-func TestDeleteNotExistingUser(t *testing.T) {
-	vhost := NewTestVhost()
-	err := vhost.DeleteUser("foo")
-	if err == nil {
-		t.Errorf("Expected to not delete not existing user")
-	}
-}
-
-func TestSetUserPermissions(t *testing.T) {
-	vhost := NewTestVhost()
-	vhost.AddUser("foo", "bar", PermRead)
-	user := vhost.Users()["foo"]
-	if user.Permission != PermRead {
-		t.Errorf("Expected to have only read permission")
-	}
-	err := vhost.SetUserPermissions("foo", PermRead|PermWrite)
-	if err != nil {
-		t.Errorf("Expected to set permissions without errors")
-	}
-	if user.Permission != PermRead|PermWrite {
-		t.Errorf("Expected to have read and write permissions")
-	}
-}
-
-func TestSetUserPermissionsWhenPermissionInvalid(t *testing.T) {
-	vhost := NewTestVhost()
-	vhost.AddUser("foo", "bar", PermRead)
-	err := vhost.SetUserPermissions("foo", 0)
-	if err == nil {
-		t.Errorf("Expected to not set invalid permissions")
-	}
-}
-
-func TestCreateChannel(t *testing.T) {
-	vhost := NewTestVhost()
-	ch := vhost.CreateChannel("bar")
-	chans := vhost.Channels()
-	_, ok := chans["bar"]
-	if !ok {
-		t.Errorf("Expected to open new channel")
-	}
-	if chans["bar"] != ch {
-		t.Errorf("Expected to open new channel")
-	}
-}
-
-func TestGetChannel(t *testing.T) {
-	vhost := NewTestVhost()
-	ch := vhost.CreateChannel("bar")
-	cmp, _ := vhost.GetChannel("bar")
-	if cmp != ch {
-		t.Errorf("Expected to get proper channel")
-	}
-}
-
-func TestGetChannelWhenNotExist(t *testing.T) {
-	vhost := NewTestVhost()
-	_, ok := vhost.GetChannel("bar")
+	_, ok = v.ValidateSingleAccessToken("foo")
 	if ok {
-		t.Errorf("Expected channel to not exist")
+		t.Errorf("Expected failed validation of not existing access token")
 	}
 }
 
-func TestGetOrCreateChannel(t *testing.T) {
-	vhost := NewTestVhost()
-	if vhost.GetOrCreateChannel("bar") == nil {
-		t.Errorf("Expected to autocreate channel")
+func TestVhostOpenChannel(t *testing.T) {
+	v, err := newTestVhost()
+	ch, err := v.OpenChannel("hello")
+	if err != nil || ch == nil {
+		t.Errorf("Expected to create channel without errors")
+	}
+	vch, ok := v.channels["hello"]
+	if !ok || vch == nil || vch.Name() != ch.Name() {
+		t.Errorf("Expected to add channel to vhost's channels list")
+	}
+	_, err = v.OpenChannel("hello")
+	if err == nil || err.Error() != "The 'hello' channel already exists" {
+		t.Errorf("Expected error while creating duplicated channel")
+	}
+}
+
+func TestVhostDeleteChannel(t *testing.T) {
+	v, err := newTestVhost()
+	v.OpenChannel("hello")
+	err = v.DeleteChannel("hello")
+	if err != nil {
+		t.Errorf("Expected to delete channel without errors")
+	}
+	_, ok := v.channels["hello"]
+	if ok {
+		t.Errorf("Expected to unregister channel from vhost's channels list")
+	}
+	err = v.DeleteChannel("hello")
+	if err == nil || err.Error() != "The 'hello' channel doesn't exist" {
+		t.Errorf("Expected error while deleting non existing channel")
+	}
+}
+
+func TestVhostGetChannel(t *testing.T) {
+	v, err := newTestVhost()
+	ch, _ := v.OpenChannel("hello")
+	vch, err := v.Channel("hello")
+	if err != nil || vch == nil || vch.Name() != ch.Name() {
+		t.Errorf("Expected to get channel without errors")
+	}
+	_, err = v.Channel("john")
+	if err == nil || err.Error() != "The 'john' channel doesn't exist" {
+		t.Errorf("Expected to throw error while getting not existent channel")
+	}
+}
+
+func TestVhostChannelsList(t *testing.T) {
+	v, _ := newTestVhost()
+	v.OpenChannel("hello")
+	if len(v.Channels()) != 1 {
+		t.Errorf("Expected the vhost's channels list to contain registered channel")
 	}
 }

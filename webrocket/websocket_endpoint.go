@@ -18,56 +18,22 @@
 package webrocket
 
 import (
-	"log"
 	"net/http"
 	"path"
-	"websocket"
+	"fmt"
+	"sync"
 )
 
-// Wrapper for standard websocket.Conn structure. Provides additional
-// information about connection and maintains sessions. 
-type wsConn struct {
-	*conn
-	*websocket.Conn
-	token    string
-	channels map[*Channel]bool
-}
-
-// wrapWsConn wraps standard websocket connection object into one
-// adjusted for webrocket server funcionalities.
-func wrapWsConn(ws *websocket.Conn, vhost *Vhost) *wsConn {
-	c := &wsConn{Conn: ws, token: generateUniqueToken()}
-	c.conn = &conn{vhost: vhost}
-	c.channels = make(map[*Channel]bool)
-	return c
-}
-
-// A helper for quick sending encoded payloads to the connected client.
-func (c *wsConn) send(data interface{}) error {
-	err := c.vhost.codec.Send(c.Conn, data)
-	if err != nil {
-		c.vhost.Log.Printf("ws[%s]: ERR_NOT_SEND %s", c.vhost.path, err.Error())
-	}
-	return err
-}
-
-// Unsubscribes this client from all channels.
-func (c *wsConn) unsubscribeAll() {
-	for ch := range c.channels {
-		ch.subscribe <- subscription{c, false}
-	}
-}
-
-// WebsocketServer defines parameters for running an WebSocket server.
-type WebsocketServer struct {
+// WebsocketEndpoint defines parameters for running an WebSocket server.
+type WebsocketEndpoint struct {
 	http.Server
-	Log      *log.Logger
-	ctx      *Context
-	certFile string
-	keyFile  string
+	BaseEndpoint
+	handlers map[string]*websocketHandler
 }
 
-// Creates new websockets server bound to specified addr.
+// Creates new websockets endpoint bound to specified host and port.
+// Leave host blank if you want to bind to all interfaces.
+//
 // A Trivial example server:
 // 
 //     package main
@@ -76,39 +42,66 @@ type WebsocketServer struct {
 //     
 //     func main() {
 //         ctx := webrocket.NewContext()
-//         srv := ctx.NewWebsocketServer("localhost:8080")
-//         ctx.AddVhost("/echo")
-//         srv.ListenAndServe()
+//         ws := ctx.NewWebsocketEndpoint("localhost", 8080)
+//         // ... configure vhosts and users
+//         ws.ListenAndServe()
 //     }
 //
-func (ctx *Context) NewWebsocketServer(addr string) *WebsocketServer {
-	s := &WebsocketServer{ctx: ctx}
-	s.Addr, s.Handler = addr, NewServeMux() 
-	s.Log = ctx.Log
-	ctx.wsServ = s
-	return s
+func (ctx *Context) NewWebsocketEndpoint(host string, port uint) Endpoint {
+	e := &WebsocketEndpoint{}
+	e.ctx = ctx
+	e.handlers = make(map[string]*websocketHandler)
+	e.Server.Addr = fmt.Sprintf("%s:%d", host, port)
+	e.Handler = NewServeMux()
+	ctx.websocket = e
+	for _, vhost := range ctx.vhosts {
+		e.registerVhost(vhost)
+	}
+	return e
 }
 
-// Listens on the TCP network address srv.Addr and handles requests on incoming
-// websocket connections.
-func (s *WebsocketServer) ListenAndServe() error {
-	s.Log.Printf("server[ws]: About to listen on %s\n", s.Addr)
-	err := s.Server.ListenAndServe()
-	if err != nil {
-		s.Log.Fatalf("server[ws]: Startup error: %s\n", err.Error())
-	}
-	return err
+// Registers a websockets handler for specified vhost. 
+func (w *WebsocketEndpoint) registerVhost(vhost *Vhost) {
+	h := newWebsocketHandler(vhost)
+	w.Handler.(*ServeMux).AddHandler(vhost.Path(), h)
+	w.handlers[vhost.Path()] = h
+	h.start()
 }
 
-// Listens on the TCP network address srv.Addr and handles requests on incoming TLS
-// websocket connections.
-func (s *WebsocketServer) ListenAndServeTLS(certFile, keyFile string) error {
-	s.Log.Printf("server[ws]: About to listen on %s", s.Addr)
-	err := s.Server.ListenAndServeTLS(certFile, keyFile)
-	if err != nil {
-		s.Log.Fatalf("server[ws]: Secured server startup error: %s\n", err.Error())
+// Removes websockets handler for specified vhost. 
+func (w *WebsocketEndpoint) unregisterVhost(vhost *Vhost) {
+	h, ok := w.handlers[vhost.Path()]
+	if !ok {
+		return
 	}
-	return err
+	h.stop()
+	delete(w.handlers, vhost.Path())
+	w.Handler.(*ServeMux).DeleteHandler(vhost.Path())
+}
+
+// Returns address to which this endpoint is bound.
+func (w *WebsocketEndpoint) Addr() string {
+	return w.Server.Addr
+}
+
+// Extendended http.Server.ListenAndServe funcion.
+func (w *WebsocketEndpoint) ListenAndServe() error {
+	w.alive()
+	return w.Server.ListenAndServe()
+}
+
+// Extendended http.Server.ListenAndServeTLS funcion.
+func (w *WebsocketEndpoint) ListenAndServeTLS(certFile, certKey string) error {
+	w.alive()
+	return w.Server.ListenAndServeTLS(certFile, certKey)
+}
+
+// Extended version of the kill func. Stops all alive handlers.
+func (w *WebsocketEndpoint) kill() {
+	for _, h := range w.handlers {
+		h.stop()
+	} 
+	w.BaseEndpoint.kill()
 }
 
 // ServeMux is an HTTP request multiplexer. Basically works the same as
@@ -116,11 +109,12 @@ func (s *WebsocketServer) ListenAndServeTLS(certFile, keyFile string) error {
 // and removing handlers.
 type ServeMux struct {
 	m map[string]http.Handler
+	mtx sync.Mutex
 }
 
 // NewServeMux allocates and returns a new ServeMux.
 func NewServeMux() *ServeMux {
-	return &ServeMux{make(map[string]http.Handler)}
+	return &ServeMux{m: make(map[string]http.Handler)}
 }
 
 // Does path match pattern?
@@ -195,6 +189,8 @@ func (mux *ServeMux) AddHandler(pattern string, handler http.Handler) {
 	if pattern == "" {
 		panic("http: invalid pattern " + pattern)
 	}
+	mux.mtx.Lock()
+	defer mux.mtx.Unlock()
 	mux.m[pattern] = handler
 	// Helpful behavior:
 	// If pattern is /tree/, insert permanent redirect for /tree.
@@ -210,6 +206,8 @@ func (mux *ServeMux) DeleteHandler(pattern string) bool {
 	if pattern == "" {
 		panic("http: invalid pattern " + pattern)
 	}
+	mux.mtx.Lock()
+	defer mux.mtx.Unlock()
 	_, ok := mux.m[pattern]
 	if !ok {
 		return false

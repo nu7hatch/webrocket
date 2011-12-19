@@ -1,5 +1,9 @@
 TODO list
 =========
 
+* Presence channels
+* Private channels
+* The ctl tool
+* Persistance for vhosts and channels
 * clustering support
 * add direct message action (but first investigate if really needed)

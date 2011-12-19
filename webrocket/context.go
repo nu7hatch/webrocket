@@ -18,70 +18,95 @@
 package webrocket
 
 import (
-	"errors"
 	"log"
 	"os"
+	"errors"
 	"fmt"
 )
 
-// Context is a placeholder for all server configuration and
-// shared data.
+// Context is a placeholder for general WebRocket's configuration
+// and shared data. It's not possible to create any component
+// without providing a context.
 type Context struct {
-	vhosts   map[string]*Vhost
-	wsServ   *WebsocketServer
-	mqServ   *MqServer
-	Log      *log.Logger
+	Ready     chan bool
+	log       *log.Logger
+	websocket *WebsocketEndpoint
+	backend   *BackendEndpoint
+	vhosts    map[string]*Vhost
 }
 
 // Creates new context.
-func NewContext() *Context {
-	ctx := new(Context)
+func NewContext() (ctx *Context) {
+	ctx = &Context{}
+	ctx.log = log.New(os.Stderr, "", log.LstdFlags)
 	ctx.vhosts = make(map[string]*Vhost)
-	ctx.Log = log.New(os.Stderr, "", log.LstdFlags)
 	return ctx
 }
 
-// Registers new vhost within the context.
-func (ctx *Context) AddVhost(path string) (*Vhost, error) {
-	if ctx.wsServ == nil {
-		return nil, errors.New("WebSockets server is not configured")
-	}
-	vhost := NewVhost(path)
-	vhost.Log = ctx.Log
-	ctx.vhosts[path] = vhost
-	ctx.wsServ.Handler.(*ServeMux).AddHandler(path, vhost)
-	ctx.Log.Printf("context: ADD_VHOST path='%s'", path)
-	return vhost, nil
+// Returns configured logger.
+func (ctx *Context) Log() *log.Logger {
+	return ctx.log
 }
 
-// Deletes specified vhost from the serve mux.
-func (ctx *Context) DeleteVhost(path string) error {
-	if ctx.wsServ == nil {
-		return errors.New("WebSockets server is not configured")
+// SetLog can be used to configure custom logger.
+func (ctx *Context) SetLog(newLog *log.Logger) {
+	ctx.log = newLog
+}
+
+// Registers new vhost under the specified path.
+func (ctx *Context) AddVhost(path string) (v *Vhost, err error) {
+	var exists bool
+	
+	_, exists = ctx.vhosts[path]
+	if exists {
+		err = errors.New(fmt.Sprintf("The '%s' vhost already exists", path))
+		return
 	}
-	vhost, ok := ctx.vhosts[path]
-	if !ok {
-		return errors.New(fmt.Sprintf("Vhost `%s` doesn't exist.", path))
+	v, err = newVhost(ctx, path)
+	if err == nil {
+		ctx.vhosts[path] = v
+		if ctx.websocket != nil {
+			ctx.websocket.registerVhost(v)
+		}
 	}
-	ctx.wsServ.Handler.(*ServeMux).DeleteHandler(path)
-	vhost.Stop()
+	return
+}
+
+// Removes and unregisters specified vhost.
+func (ctx *Context) DeleteVhost(path string) (err error) {
+	var vhost *Vhost
+	
+	vhost, err = ctx.Vhost(path)
+	if err != nil {
+		return
+	}
 	delete(ctx.vhosts, path)
-	ctx.Log.Printf("context: DELETE_VHOST path='%s'", path)
-	return nil
+	if ctx.websocket != nil {
+		ctx.websocket.unregisterVhost(vhost)
+	}
+	return
 }
 
-// Returns array with registered vhost paths.
-func (ctx *Context) Vhosts() (vhosts []string) {
-	vhosts, i := make([]string, len(ctx.vhosts)), 0
-	for path := range ctx.vhosts {
-		vhosts[i] = path
+// Returns vhost from specified path if registered.
+func (ctx *Context) Vhost(path string) (vhost *Vhost, err error) {
+	var ok bool
+	
+	vhost, ok = ctx.vhosts[path]
+	if !ok {
+		err = errors.New(fmt.Sprintf("The '%s' vhost doesn't exist", path))
+	}
+	return
+}
+
+// Returns list of registered vhosts.
+func (ctx *Context) Vhosts() (vhosts []*Vhost) {
+	var i = 0
+	var vhost *Vhost
+	
+	vhosts = make([]*Vhost, len(ctx.vhosts))
+	for _, vhost = range ctx.vhosts {
+		vhosts[i] = vhost
 		i += 1
 	}
-	return vhosts
-}
-
-// Returns specified vhost.
-func (ctx *Context) GetVhost(name string) (*Vhost, bool) {
-	vhost, ok := ctx.vhosts[name]
-	return vhost, ok
+	return
 }

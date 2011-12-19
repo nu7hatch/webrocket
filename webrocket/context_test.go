@@ -17,51 +17,96 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-import (
-	"bytes"
-	"log"
-	"testing"
-)
+import "testing"
 
-func NewTestContext() *Context {
+func TestNewContext(t *testing.T) {
 	ctx := NewContext()
-	ctx.NewWebsocketServer(":9772")
-	ctx.Log = log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags)
-	return ctx
-}
-
-func TestAddVhost(t *testing.T) {
-	ctx := NewTestContext()
-	_, err := ctx.AddVhost("/echo")
-	if err != nil {
-		t.Errorf("Expected to add new vhosts, error encountered: %s", err.Error())
+	if ctx.Log() == nil {
+		t.Errorf("Expected context logger to be initialized")
 	}
 }
 
-func TestDeleteVhost(t *testing.T) {
-	ctx := NewTestContext()
-	ctx.AddVhost("/echo")
-	ctx.DeleteVhost("/echo")
-	if len(ctx.Vhosts()) != 0 {
+func TestContextSetLog(t *testing.T) {
+	ctx := NewContext()
+	ctx.SetLog(nil)
+	if ctx.Log() != nil {
+		t.Errorf("Expected to set other logger")
+	}
+}
+
+func TestContextAddVhost(t *testing.T) {
+	ctx := NewContext()
+	v, err := ctx.AddVhost("/foo")
+	if err != nil || v == nil {
+		t.Errorf("Expected to add vhost")
+	}
+	_, err = ctx.AddVhost("/foo")
+	if err == nil || err.Error() != "The '/foo' vhost already exists" {
+		t.Errorf("Expected error while adding duplicated vhost")
+	}
+	_, ok := ctx.vhosts["/foo"]
+	if !ok {
+		t.Errorf("Expected to add vhost")
+	}
+}
+
+func TestContextAddVhostWhenWebsocketEndpointPresent(t *testing.T) {
+	ctx := NewContext()
+	e := ctx.NewWebsocketEndpoint("localhost", 3000)
+	w := e.(*WebsocketEndpoint)
+	v, _ := ctx.AddVhost("/foo")
+	h, ok := w.handlers["/foo"]
+	if !ok || h == nil || h.vhost.Path() != v.Path() {
+		t.Errorf("Expected to register vhost in websocket endpoint")
+	}
+}
+
+func TestContextDeleteVhost(t *testing.T) {
+	ctx := NewContext()
+	ctx.AddVhost("/foo")
+	err := ctx.DeleteVhost("/foo")
+	if err != nil {
+		t.Errorf("Expected to delete vhost without errors")
+	}
+	_, ok := ctx.vhosts["/foo"]
+	if ok {
 		t.Errorf("Expected to delete vhost")
 	}
+	err = ctx.DeleteVhost("/foo")
+	if err == nil || err.Error() != "The '/foo' vhost doesn't exist" {
+		t.Errorf("Expected an error while deleting non existent vhost")
+	}
 }
 
-func TestVhosts(t *testing.T) {
-	ctx := NewTestContext()
+func TestContextDeleteVhostWhenWebsocketEndpointPresent(t *testing.T) {
+	ctx := NewContext()
+	e := ctx.NewWebsocketEndpoint("localhost", 3000)
+	w := e.(*WebsocketEndpoint)
 	ctx.AddVhost("/foo")
-	ctx.AddVhost("/bar")
-	vhosts := ctx.Vhosts()
-	for _, ivhost := range []string{"/foo", "/bar"} {
-		ok := false
-		for _, jvhost := range vhosts {
-			if ivhost == jvhost {
-				ok = true
-				break
-			}
-		}
-		if !ok {
-			t.Errorf("Expected to have [/foo /bar] vhosts registered, given %s", vhosts)
-		}
+	ctx.DeleteVhost("/foo")
+	_, ok := w.handlers["/foo"]
+	if ok {
+		t.Errorf("Expected to unregister vhost from websocket endpoint")
+	}
+}
+
+func TestContextGetVhost(t *testing.T) {
+	ctx := NewContext()
+	ctx.AddVhost("/foo")
+	v, err := ctx.Vhost("/foo")
+	if err != nil || v == nil || v.Path() != "/foo" {
+		t.Errorf("Expected to get vhost")
+	}
+	_, err = ctx.Vhost("/bar")
+	if err == nil || err.Error() != "The '/bar' vhost doesn't exist" {
+		t.Errorf("Expected an error getting non existent vhost")
+	}
+}
+
+func TestContextVhostsList(t *testing.T) {
+	ctx := NewContext()
+	ctx.AddVhost("/foo")
+	if len(ctx.Vhosts()) != 1 {
+		t.Errorf("Expected vhosts list to contain one element")
 	}
 }

@@ -17,4 +17,58 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-// So far other suites covers tests for `channel`.
+import "testing"
+
+func TestNewChannel(t *testing.T) {
+	ch, err := newChannel("hello")
+	if err != nil {
+		t.Errorf("Expected to create channel without errors")
+	}
+	if ch.Name() != "hello" {
+		t.Errorf("Expected channel name to be 'hello', given '%s'", ch.Name())
+	}
+}
+
+func TestNewChannelWithInvalidName(t *testing.T) {
+	for _, name := range []string{".foo", "", "foo%", "-foo"} {
+		_, err := newChannel(name)
+		if err == nil || err.Error() != "Invalid name" {
+			t.Errorf("Expected to throw 'Invalid name' error while creating a '%s' channel", name)
+		}
+	}
+}
+
+func TestChannelAddingAndRemovingSubscribers(t *testing.T) {
+	ch, _ := newChannel("hello")
+	c := newTestWebsocketClient()
+	ch.addSubscriber(c)
+	_, ok := ch.subscribers[c.Id()]
+	if !ok {
+		t.Errorf("Expected to add subscriber to the channel")
+	}
+	_, ok = c.subscriptions[ch.Name()]
+	if !ok {
+		t.Errorf("Expected to add subscription to the client")
+	}
+	ch.deleteSubscriber(c)
+	_, ok = ch.subscribers[c.Id()]
+	if ok {
+		t.Errorf("Expected to remove subscriber from the channel")
+	}
+	_, ok = c.subscriptions[ch.Name()]
+	if ok {
+		t.Errorf("Expected to remove subscription from the client")
+	}
+}
+
+func TestChannelSubscribersList(t *testing.T) {
+	ch, _ := newChannel("hello")
+	c := newTestWebsocketClient()
+	ch.addSubscriber(c)
+	if len(ch.Subscribers()) != 1 {
+		t.Errorf("Expected subscribers list to contain one element")
+	}
+	if ch.Subscribers()[0].Id() != c.Id() {
+		t.Errorf("Expected subscribers list to contain proper client")
+	}
+}

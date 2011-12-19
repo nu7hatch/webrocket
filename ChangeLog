@@ -1,3 +1,7 @@
+2011-12-19  Krzysztof Kowalk   <chris@nu7hat.ch>
+
+	* webrocket/: started the big refactoring - adjusting implementation to released specs
+
 2011-12-18  Krzysztof Kowalik  <chris@nu7hat.ch>
 
 	* Makefile: less verbose output

@@ -19,191 +19,136 @@ package webrocket
 
 import (
 	"errors"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"websocket"
+	"regexp"
+	"fmt"
+	"sync"
+	"crypto/sha1"
+	uuid "../uuid"
 )
 
-// Vhost is an namespaced, standalone handler for websocket
-// connections. Each vhost has it's own users and permission
-// management setting, independent channels, etc.
+// Vhost name will be validated using this pattern.
+const vhostNamePattern = "^/[\\w\\d\\-\\_]+(/[\\w\\d\\-\\_]+)*$"
+
+// Vhost is a standalone, independent component of the WebRocket
+// server which contains it's own users with permissions, channels,
+// and other related settings.
 type Vhost struct {
-	Log       *log.Logger
-	path      string
-	isRunning bool
-	handler   websocket.Handler
-	users     map[string]*User
-	channels  map[string]*Channel
-	exchange  *exchange   
-	codec     websocket.Codec
-	frontAPI  websocketAPI
+	path        string
+	channels    map[string]*Channel
+	ctx         *Context
+	usersMtx    sync.Mutex
+	chansMtx    sync.Mutex
+	accessToken string
+	permissions map[string]*Permission
 }
 
-// Returns new vhost configured to handle websocket connections.
-func NewVhost(path string) *Vhost {
-	v := &Vhost{path: path, isRunning: true}
-	v.Log = log.New(os.Stderr, "", log.LstdFlags)
-	v.users = make(map[string]*User)
-	v.channels = make(map[string]*Channel)
-	v.codec = websocket.JSON
-	v.exchange = newExchange(v)
-	v.handler = websocket.Handler(func(ws *websocket.Conn) { v.handle(ws) })
-	return v
-}
-
-// Prepares new connection to enter in the event loop.
-func (v *Vhost) handle(ws *websocket.Conn) {
-	c := wrapWsConn(ws, v)
-	v.exchange.clients[c.token] = c
-	v.eventLoop(c)
-	v.cleanup(c)
-}
-
-// cleanup removes all subscprionts and other relations
-// between closed connection and the system.
-func (v *Vhost) cleanup(c *wsConn) {
-	c.unsubscribeAll()
-	delete(v.exchange.clients, c.token)
-}
-
-// eventLoop maintains main loop for handled connection.
-func (v *Vhost) eventLoop(c *wsConn) {
-	for {
-		if !v.IsRunning() {
-			return
-		}
-		var recv map[string]interface{}
-		err := v.codec.Receive(c.Conn, &recv)
-		if err != nil {
-			if err == io.EOF {
-				return
-			}
-			v.frontAPI.Error(c, ErrInvalidDataReceived)
-			v.Log.Printf("ws[%s]: ERR_INVALID_DATA_RECEIVED", v.path)
-			continue
-		}
-		message, err := NewMessage(recv)
-		if err != nil {
-			v.frontAPI.Error(c, ErrInvalidMessageFormat)
-			v.Log.Printf("ws[%s]: ERR_INVALID_MESSAGE_FORMAT", v.path)
-			continue
-		}
-		keepgoing, _ := v.frontAPI.Dispatch(c, message)
-		if !keepgoing {
-			return
-		}
+// Creates new vhost for specified path. Path format allows you
+// to use only letters, numbers, dashes and underscores. Also your
+// path elemets can be separated with backslash.
+func newVhost(ctx *Context, path string) (v *Vhost, err error) {
+	re, err := regexp.Compile(vhostNamePattern)
+	if !re.MatchString(path) {
+		err = errors.New("Invalid path")
+		return
 	}
+	v = &Vhost{path: path, ctx: ctx}
+	v.GenerateAccessToken()
+	v.channels = make(map[string]*Channel)
+	return
 }
 
-// Stop closes all connection handled by this vhost and stops
-// its eventLoop.
-func (v *Vhost) Stop() {
-	v.isRunning = false
+// Generates access token for the backend connections. 
+func (v *Vhost) GenerateAccessToken() string {
+	var hash = sha1.New()
+	var uuid = uuid.GenerateTime()
+	hash.Write([]byte(uuid))
+	v.accessToken = fmt.Sprintf("%x", hash.Sum())
+	v.permissions = make(map[string]*Permission)
+	return v.accessToken
 }
 
-// Is this vhost running?
-func (v *Vhost) IsRunning() bool {
-	return v.isRunning
+// Generates single access token within this vhost.
+func (v *Vhost) GenerateSingleAccessToken(pattern string) string {
+	var p = NewPermission(pattern)
+	v.permissions[p.Token()] = p
+	return p.Token()
 }
 
-// Returns list of active connections.
-func (v *Vhost) Connections() map[string]*wsConn {
-	return v.exchange.clients
+// Checks if specified token allows to access this vhost,
+// and if so then returns associated permission.
+func (v *Vhost) ValidateSingleAccessToken(token string) (p *Permission, ok bool) {
+	p, ok = v.permissions[token]
+	if ok {
+		delete(v.permissions, token)
+	}
+	return
 }
 
-// Returns path name.
-func (v *Vhost) Path() string {
+// Returns configured path of this vhost.
+func (v* Vhost) Path() string {
 	return v.path
 }
 
-// AddUser configures new user account within this vhost.
-func (v *Vhost) AddUser(name, secret string, permission int) error {
-	if len(name) == 0 {
-		return errors.New("User name can't be blank")
+// Opens new channel and registers it for this vhost.
+func (v *Vhost) OpenChannel(name string) (ch *Channel, err error) {
+	var exists bool
+	
+	_, exists = v.channels[name]
+	if exists {
+		err = errors.New(fmt.Sprintf("The '%s' channel already exists", name))
+		return
 	}
-	_, ok := v.users[name]
-	if ok {
-		return errors.New("User already exists")
+	ch, err = newChannel(name)
+	if err != nil {
+		return
 	}
-	if permission == 0 {
-		return errors.New("Invalid permissions")
-	}
-	v.users[name] = NewUser(name, secret, permission)
-	v.Log.Printf("vhost[%s]: ADD_USER name='%s' permission=%d", v.path, name, permission)
-	return nil
+	v.chansMtx.Lock()
+	defer v.chansMtx.Unlock()
+	v.channels[name] = ch
+	return
 }
 
-// DeleteUser deletes user account with given name.
-func (v *Vhost) DeleteUser(name string) error {
-	_, ok := v.users[name]
+// Removes specified channel from this vhost.
+func (v *Vhost) DeleteChannel(name string) (err error) {
+	var ch *Channel
+	
+	ch, err = v.Channel(name)
+	if err != nil {
+		return
+	}
+	v.chansMtx.Lock()
+	delete(v.channels, name)
+	v.chansMtx.Unlock()
+	ch.kill()
+	// XXX: No idea what should we assume here? I think we should
+	// assume that deleting the channel is only admin operation,
+	// which shouldn't be done on live application (while channels
+	// are automatically created when someone is subscribing it).
+	// FIXME: We could send here unsubscribe message to all subscribers
+	// to be sure that everything's fine.
+	return
+}
+
+// Returns specified channel if exists.
+func (v *Vhost) Channel(name string) (ch *Channel, err error) {
+	var ok bool
+	
+	ch, ok = v.channels[name]
 	if !ok {
-		return errors.New("User doesn't exist")
+		err = errors.New(fmt.Sprintf("The '%s' channel doesn't exist", name))
 	}
-	delete(v.users, name)
-	v.Log.Printf("vhost[%s]: DELETE_USER name='%s'", v.path, name)
-	return nil
+	return
 }
 
-// SetUserPermissions configures user access.
-func (v *Vhost) SetUserPermissions(name string, permission int) error {
-	user, ok := v.users[name]
-	if !ok {
-		return errors.New("User doesn't exist")
+// Returns list of channels opened in this vhost.
+func (v *Vhost) Channels() (channels []*Channel) {
+	var i = 0
+	var channel *Channel
+	
+	channels = make([]*Channel, len(v.channels))
+	for _, channel = range v.channels {
+		channels[i] = channel
+		i += 1
 	}
-	if permission == 0 {
-		return errors.New("Invalid permissions")
-	}
-	user.Permission = permission
-	v.Log.Printf("vhost[%s]: SET_USER_PERMISSION name='%s' permission=%d", v.path, name, permission)
-	return nil
-}
-
-// Returns list of configured user accounts.
-func (v *Vhost) Users() map[string]*User {
-	return v.users
-}
-
-// OpenChannel creates new channel ready to subscribe.
-func (v *Vhost) CreateChannel(name string) *Channel {
-	channel := NewChannel(v, name)
-	v.channels[name] = channel
-	v.Log.Printf("vhost[%s]: CREATE_CHANNEL name='%s'", v.path, name)
-	return channel
-}
-
-// Returns specified channel.
-func (v *Vhost) GetChannel(name string) (*Channel, bool) {
-	channel, ok := v.channels[name]
-	return channel, ok
-}
-
-// Returns specified channel. If channel doesn't exist, then will be
-// created automatically.
-func (v *Vhost) GetOrCreateChannel(name string) *Channel {
-	channel, ok := v.channels[name]
-	if !ok {
-		return v.CreateChannel(name)
-	}
-	return channel
-}
-
-// Returns list of used channels.
-func (v *Vhost) Channels() map[string]*Channel {
-	return v.channels
-}
-
-// Returns specified user.
-func (v *Vhost) GetUser(name string) (*User, bool) {
-	user, ok := v.users[name]
-	return user, ok
-}
-
-// ServeHTTP extends standard websocket.Handler implementation
-// of http.Handler interface.
-func (v *Vhost) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if v.isRunning {
-		v.handler.ServeHTTP(w, req)
-	}
+	return
 }

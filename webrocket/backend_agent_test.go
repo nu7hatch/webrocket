@@ -17,4 +17,25 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-// Covered in other test suites...
+import (
+	"testing"
+	uuid "../uuid"
+)
+
+func newTestBackendAgent() *BackendAgent {
+	ctx := NewContext()
+	b := ctx.NewBackendEndpoint("", 9772)
+	v, _ := newVhost(ctx, "/foo")
+	a := newBackendAgent(b.(*BackendEndpoint), v, []byte(uuid.GenerateTime()))
+	return a
+}
+
+func TestNewBackendAgent(t *testing.T) {
+	a := newTestBackendAgent()
+	if !a.IsAlive() {
+		t.Errorf("Expected new agent to be alive")
+	}
+	if string(a.id) == "" {
+		t.Errorf("Expected new agent to have proper id")
+	}
+}

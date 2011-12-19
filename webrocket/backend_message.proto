@@ -1,0 +1,20 @@
+package webrocket;
+
+message BackendMessage {
+	enum Command {
+		OK        = 1; // Server -> REQ
+		ERROR     = 2; // Server -> REQ
+		HEARTBEAT = 3; // DEALER -> Server & Server -> DEALER
+		BROADCAST = 4; // REQ -> Server & Server -> DEALER
+		SAT       = 5; // REQ -> Server & Server -> REQ
+		OPENCHAN  = 6; // REQ -> Server
+		CLOSECHAN = 7; // REQ -> Server
+		QUIT      = 8; // DEALER -> Server, Server -> DEALER
+	}
+	
+	required Command cmd = 1;
+	
+	optional string channel = 2;
+	optional string event = 3;
+	optional string data = 4;
+}

@@ -17,22 +17,39 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-// Creates new error payload.
-func newError(id string) map[string]interface{} {
-	return map[string]interface{}{"id": id}
+import "sync"
+
+// Endpoint is an interface representing all endpoints installed
+// on the context's rack.
+type Endpoint interface {
+	ListenAndServe() error
+	ListenAndServeTLS(certFile, certKey string) error
+	Addr() string
+	IsRunning() bool
 }
 
-// Predefined error payloads.
-var (
-	ErrInvalidDataReceived  = newError("INVALID_DATA_RECEIVED")
-	ErrInvalidMessageFormat = newError("INVALID_MESSAGE_FORMAT")
-	ErrInvalidPayload       = newError("INVALID_PAYLOAD")
-	ErrAccessDenied         = newError("ACCESS_DENIED")
-	ErrInvalidUserName      = newError("INVALID_USER_NAME")
-	ErrUserNotFound         = newError("USER_NOT_FOUND")
-	ErrInvalidCredentials   = newError("INVALID_CREDENTIALS")
-	ErrInvalidChannelName   = newError("INVALID_CHANNEL_NAME")
-	ErrChannelNotFound      = newError("CHANNEL_NOT_FOUND")
-	ErrInvalidEventName     = newError("INVALID_EVENT_NAME")
-	ErrUndefinedEvent       = newError("UNDEFINED_EVENT")
-)
+// Base structure for all endpoints.
+type BaseEndpoint struct {
+	ctx       *Context
+	isRunning bool
+	mtx       sync.Mutex
+}
+
+// Terminates endpoint execution.
+func (e *BaseEndpoint) kill() {
+	e.mtx.Lock()
+	defer e.mtx.Unlock()
+	e.isRunning = false
+}
+
+// Marks this endpoint as running.
+func (e *BaseEndpoint) alive() {
+	e.mtx.Lock()
+	defer e.mtx.Unlock()
+	e.isRunning = true
+}
+
+// Returns true if this endpoint is activated.
+func (e *BaseEndpoint) IsRunning() bool {
+	return e.isRunning
+}

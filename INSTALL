@@ -15,7 +15,7 @@ should remember to clone *the head version* or the latest *weakly release*:
 
 To get head version of the compiler use following command:
 
-	hg clone https://go.googlecode.com/hg/ go
+	$ hg clone https://go.googlecode.com/hg/ go
 
 .Dependencies
 
@@ -23,19 +23,19 @@ Now you have to install all external dependencies. Here's the list
 of requried deps:
 
 'asciidoc'::
-		documentation and man pages generator
+	documentation and man pages generator
 		
 
 TIP: If you're happy user of shitty OSX, in case to make the 'asciidoc'
 work properly you have to register the installed docbook.
 
-	 brew install docbook asciidoc
-	 sudo docbook-register
+	$ brew install docbook asciidoc
+	$ sudo docbook-register
 
 On any other normal Linux/Unix distribution it's enough to just install deps
 with your favorite package manager:
 
-	sudo apt-get install docbook asciidoc
+	$ sudo apt-get install docbook asciidoc
 
 .WebRocket
 
@@ -44,9 +44,11 @@ to building our WebRocket installation. Building WebRocket is very easy and
 shouldn't cause too much problems. After you will clone the repository, just
 use standard `make` targets to build and install:
 
-	git clone git://github.com/nu7hatch/webrocket.git
-	cd webrocket
-	make install
+	$ git clone git://github.com/nu7hatch/webrocket.git
+	$ cd webrocket
+	$ git submodule init && git submodule update
+	$ make
+	$ make check # it's a good idea to run tests
 
 Usage
 -----

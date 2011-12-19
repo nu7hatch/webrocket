@@ -17,37 +17,34 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-import (
-	"sync"
-	"log"
-)
-
-// Base connection wrapper.
-type connection struct {
-	vhost   *Vhost
-	ctx     *Context
-	log     *log.Logger
-	mtx     sync.Mutex
-	isAlive bool
+// BackendAgent represents single Backend Application client connection.
+type BackendAgent struct {
+	*connection
+	id       []byte
+	endpoint *BackendEndpoint
 }
 
-// newConnection creates and initializes new connection.
-func newConnection(vhost *Vhost) (c *connection) {
-	c = &connection{isAlive: true}
-	c.vhost = vhost
-	c.ctx = vhost.ctx
-	c.log = c.ctx.log
+// newBackendAgent creates reference to specified backend application's client
+// connection. Each client uses separate goroutine to deal with the
+// outgoing messages.
+func newBackendAgent(endpoint *BackendEndpoint, v *Vhost, id []byte) (a *BackendAgent) {
+	a = &BackendAgent{id: id}
+	a.connection = newConnection(v)
+	a.endpoint = endpoint
 	return
 }
 
-// Returns true if this connection is alive.
-func (c *connection) IsAlive() bool {
-	return c.isAlive
+// Returns identifier of this agent.
+func (a *BackendAgent) Id() string {
+	return string(a.id)
 }
 
-// Turns off the connection's alive state.
-func (c *connection) kill() {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-	c.isAlive = false
+// Sends given payload to the client.
+func (a *BackendAgent) Send(payload interface{}) {
+	if a.IsAlive() {
+		// XXX: need to check if this mutex here is really needed...
+		a.mtx.Lock()
+		defer a.mtx.Unlock()
+		a.endpoint.SendTo(a.id, payload)
+	}
 }
