@@ -9,8 +9,8 @@ Basic installation
 WebRocket is written in Go language. If you don't have Go compiler
 installed yet, follow this installation guide: http://golang.org/doc/install.html
 
-IMPORTANT: So far, WebRocket is using bunch of unreleased features
-and want to catch up with the Go's development, that's why you
+IMPORTANT: So far, WebRocket is using a bunch of unreleased features
+and want to catch up with Go's development, that's why you
 should remember to clone *the head version* or the latest *weakly release*:
 
 To get head version of the compiler use following command:
@@ -26,7 +26,7 @@ of requried deps:
 		documentation and man pages generator
 		
 
-TIP: If you're happy user of shitty OSX, in case to make the 'asciidoc'
+TIP: If you're a happy user of shitty OSX, in case to make the 'asciidoc'
 work properly you have to register the installed docbook.
 
 	 brew install docbook asciidoc
@@ -41,7 +41,7 @@ with your favorite package manager:
 
 Once you have the Go compiler and all dependencies installed, we can move
 to building our WebRocket installation. Building WebRocket is very easy and
-shouldn't cause too much problems. After you will clone the repository, just
+shouldn't cause too many problems. After you will clone the repository, just
 use standard `make` targets to build and install:
 
 	git clone git://github.com/nu7hatch/webrocket.git
