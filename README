@@ -3,7 +3,7 @@ WEBROCKET - Distributed WebSockets/MQ server
 
 WebRocket is a hybrid of MQ and WebSockets server with great support for 
 horizontal scalability. WebRocket is very fast and easy to use from both
-sides: backend (via MQ conneciton) and frontend (via WebSockets). 
+sides: backend (via MQ connection) and frontend (via WebSockets). 
 This combination will lead you to new quality of web development and
 will finally make bidirectional Web easy for everyone. 
 
