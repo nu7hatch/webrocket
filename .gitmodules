@@ -1,3 +1,6 @@
-[submodule "vendor/gozmq"]
-	path = vendor/gozmq
+[submodule "deps/gozmq"]
+	path = deps/gozmq
 	url = https://github.com/alecthomas/gozmq.git
+[submodule "deps/gouuid"]
+	path = deps/gouuid
+	url = https://github.com/nu7hatch/gouuid.git

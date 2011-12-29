@@ -1,11 +1,14 @@
 _obj
 _test
+_pb
 *.6
 *.out
 _testmain.go
 \#*
 .\#*
 *.log
+_cgo*
+*.o
 INSTALL.html
 NEWS.html
 CONTRIBUTE.html
