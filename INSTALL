@@ -1,11 +1,8 @@
 Installation
 ============
 
-Basic installation
-------------------
-
-.Go compiler
-
+Go compiler
+-----------
 WebRocket is written in Go language. If you don't have Go compiler
 installed yet, follow this installation guide: http://golang.org/doc/install.html
 
@@ -17,14 +14,14 @@ To get head version of the compiler use following command:
 
 	$ hg clone https://go.googlecode.com/hg/ go
 
-.Dependencies
+Development dependencies
+------------------------
+If you want to work on WebRocket development, you need to install
+few additional dependencies.
 
-Now you have to install all external dependencies. Here's the list
-of requried deps:
+.asciidoc
 
-'asciidoc'::
-	documentation and man pages generator
-		
+Documentation and man pages generator.		
 
 TIP: If you're a happy user of shitty OSX, in case to make the 'asciidoc'
 work properly you have to register the installed docbook.
@@ -37,12 +34,12 @@ with your favorite package manager:
 
 	$ sudo apt-get install docbook asciidoc
 
-.WebRocket
-
+WebRocket
+---------
 Once you have the Go compiler and all dependencies installed, we can move
 to building our WebRocket installation. Building WebRocket is very easy and
 shouldn't cause too many problems. After you will clone the repository, just
-use standard `make` targets to build and install:
+use standard 'make' targets to build and install:
 
 	$ git clone git://github.com/nu7hatch/webrocket.git
 	$ cd webrocket
@@ -50,13 +47,25 @@ use standard `make` targets to build and install:
 	$ make
 	$ make check # it's a good idea to run tests
 
+Documentation and Manual pages
+------------------------------
+If you work on the documentation or want to simply generate man pages
+and other docs, use the following 'make' targets
+
+	$ make man
+	
+... generates man pages and its html versions in the 'docs/' directory.
+
+	$ make papers
+
+... generates html versions of all other documents (README, INSTALL, etc.).
+
 Usage
 -----
 Now all WebRocket tools should be available in your system. Check
 the manual entries for each of them to get information about how do
 they work. List of available manual entries:
 
-* *webrocket*(7)
 * *webrocket-server*(1)
 * *webrocket-ctl*(1)
 * *webrocket-monitor*(1)
