@@ -17,24 +17,61 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+)
 
-// message is a simple structure which keeps the incoming events
+// Message is a simple structure which keeps the incoming events
 // information and data.
 type Message struct {
-	Event string
-	Data  interface{}
+	event string
+	data  map[string]interface{}
 }
 
-// extractMessage converts received map into message structure. 
-func NewMessage(data map[string]interface{}) (*Message, error) {
-	if len(data) != 1 {
-		return nil, errors.New("Invalid message format")
+// newMessageFromJSON decoded JSON stream and generates message
+// from it. 
+func newMessageFromJSON(payload []byte) (msg *Message, err error) {
+	var decoded map[string]interface{}
+	err = json.Unmarshal(payload, &decoded)
+	if err != nil {
+		return
 	}
-	msg := &Message{}
-	for k := range data {
-		msg.Event = k
+	msg, err = newMessage(decoded)
+	return msg, err
+}
+
+// newMessage converts received map into message structure.
+func newMessage(payload map[string]interface{}) (msg *Message, err error) {
+	if len(payload) != 1 {
+		err = errors.New("Invalid message format")
+		return
 	}
-	msg.Data = data[msg.Event]
-	return msg, nil
+	msg = &Message{}
+	for k := range payload {
+		msg.event = k
+	}
+	var ok bool
+	msg.data, ok = payload[msg.event].(map[string]interface{})
+	if !ok {
+		err = errors.New("Invalid message data type")
+	}
+	return
+}
+
+// Event returns the message's event name.
+func (m *Message) Event() string {
+	return m.event
+}
+
+// Data returns the message event's data. 
+func (m *Message) Data() map[string]interface{} {
+	return m.data
+}
+
+// Returns value from the specified data field. If the key
+// is not defined then returning nil.
+func (m *Message) Get(key string) (value interface{}) {
+	value, _ = m.data[key]
+	return
 }

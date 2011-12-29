@@ -17,22 +17,19 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-import (
-	"bytes"
-	"log"
-	"testing"
-)
+import "testing"
 
-func NewWsTestServer() *WebsocketServer {
+func TestNewBackendEndpoint(t *testing.T) {
 	ctx := NewContext()
-	ctx.Log = log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags)
-	server := ctx.NewWebsocketServer(":9771")
-	return server
-}
-
-func TestNewWsServer(t *testing.T) {
-	server := NewWsTestServer()
-	if server.Addr != ":9771" {
-		t.Errorf("Expected server addr to be `:9771`, given %s", server.Addr)
+	e := ctx.NewBackendEndpoint("localhost", 9000)
+	if e.Addr() != "tcp://localhost:9000" {
+		t.Errorf("Expected to bing backends endpoint to tcp://localhost:9000")
+	}
+	if ctx.backend == nil || ctx.backend.Addr() != e.Addr() {
+		t.Errorf("Expected to register backends endpoint in the context")
+	}
+	e = ctx.NewBackendEndpoint("", 9000)
+	if e.Addr() != "tcp://*:9000" {
+		t.Errorf("Expected to bing backends endpoint to tcp://*:9000")
 	}
 }

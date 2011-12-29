@@ -17,4 +17,23 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-// Covered in other test suites...
+import (
+	"testing"
+)
+
+func TestMakeConnection(t *testing.T) {
+	v, _ := newTestVhost()
+	c := newConnection(v)
+	if !c.IsAlive() {
+		t.Errorf("Expected connection to be alive by default")
+	}
+}
+
+func TestConnectionKill(t *testing.T) {
+	v, _ := newTestVhost()
+	c := newConnection(v)
+	c.kill()
+	if c.IsAlive() {
+		t.Errorf("Expected connection to be dead")
+	}
+}

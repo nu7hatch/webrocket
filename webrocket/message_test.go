@@ -17,26 +17,44 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-import (
-	"testing"
-)
+import "testing"
 
-func TestNewMessageWithValidData(t *testing.T) {
-	msg, err := NewMessage(map[string]interface{}{"hello": "world"})
-	if err != nil {
-		t.Errorf("Expected message to be ok, error found: %s", err.Error())
+func ValidateMessagePayload(msg *Message, t *testing.T) {
+	if msg.Event() != "hello" {
+		t.Errorf("Expected message event to be 'hello', given '%s'", msg.Event())
 	}
-	if msg.Event != "hello" {
-		t.Errorf("Expected event to be `hello`, given %s", msg.Event)
-	}
-	if msg.Data.(string) != "world" {
-		t.Errorf("Expected data to be `world`, given %s", msg.Data)
+	foo, ok := msg.Data()["foo"]
+	if !ok || foo != "bar" {
+		t.Errorf("Expected message data to contain {'foo': 'bar'}")
 	}
 }
 
-func TestNewMessageWithInvalidData(t *testing.T) {
-	_, err := NewMessage(map[string]interface{}{})
+func TestNewMessageFromJSON(t *testing.T) {
+	_, err := newMessageFromJSON([]byte("invalid{"))
 	if err == nil {
-		t.Errorf("Expected message to be invalid")
+		t.Errorf("Expected error while parsing JSON")
 	}
+	msg, err := newMessageFromJSON([]byte("{\"hello\": {\"foo\": \"bar\"}}"))
+	if err != nil {
+		t.Errorf("Expected no error while creating message from JSON")
+		return
+	}
+	ValidateMessagePayload(msg, t)
+}
+
+func TestNewMessage(t *testing.T) {
+	_, err := newMessage(map[string]interface{}{})
+	if err == nil || err.Error() != "Invalid message format" {
+		t.Errorf("Expected error 'Invalid message format'")
+	}
+	_, err = newMessage(map[string]interface{}{"foo": "bar"})
+	if err == nil || err.Error() != "Invalid message data type" {
+		t.Errorf("Expected error 'Invalid message data type")
+	}
+	msg, err := newMessage(map[string]interface{}{"hello": map[string]interface{}{"foo": "bar"}})
+	if err != nil {
+		t.Errorf("Expected message to be created successfully")
+		return
+	}
+	ValidateMessagePayload(msg, t)
 }

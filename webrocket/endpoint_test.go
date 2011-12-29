@@ -17,37 +17,4 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-import (
-	"log"
-	"sync"
-)
-
-// Base connection wrapper.
-type connection struct {
-	vhost   *Vhost
-	ctx     *Context
-	log     *log.Logger
-	mtx     sync.Mutex
-	isAlive bool
-}
-
-// newConnection creates and initializes new connection.
-func newConnection(vhost *Vhost) (c *connection) {
-	c = &connection{isAlive: true}
-	c.vhost = vhost
-	c.ctx = vhost.ctx
-	c.log = c.ctx.log
-	return
-}
-
-// Returns true if this connection is alive.
-func (c *connection) IsAlive() bool {
-	return c.isAlive
-}
-
-// Turns off the connection's alive state.
-func (c *connection) kill() {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-	c.isAlive = false
-}
+// ...

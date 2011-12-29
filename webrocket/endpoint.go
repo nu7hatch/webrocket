@@ -17,4 +17,39 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-// Covered in other test suites...
+import "sync"
+
+// Endpoint is an interface representing all endpoints installed
+// on the context's rack.
+type Endpoint interface {
+	ListenAndServe() error
+	ListenAndServeTLS(certFile, certKey string) error
+	Addr() string
+	IsRunning() bool
+}
+
+// Base structure for all endpoints.
+type BaseEndpoint struct {
+	ctx       *Context
+	isRunning bool
+	mtx       sync.Mutex
+}
+
+// Terminates endpoint execution.
+func (e *BaseEndpoint) kill() {
+	e.mtx.Lock()
+	defer e.mtx.Unlock()
+	e.isRunning = false
+}
+
+// Marks this endpoint as running.
+func (e *BaseEndpoint) alive() {
+	e.mtx.Lock()
+	defer e.mtx.Unlock()
+	e.isRunning = true
+}
+
+// Returns true if this endpoint is activated.
+func (e *BaseEndpoint) IsRunning() bool {
+	return e.isRunning
+}

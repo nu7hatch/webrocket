@@ -17,50 +17,81 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-// subscription struct is used to modify channel subscription state
-// from within the handler.
-type subscription struct {
-	conn   *wsConn
-	active bool
-}
+import (
+	"errors"
+	"regexp"
+	"sync"
+)
 
-// channel keeps information about specified channel and it's subscriptions.
+// Pattern used to validate channel name.
+const channelNamePattern = "^[\\w\\d\\_][\\w\\d\\-\\_\\.]*$"
+
+// Channel keeps information about specified channel and it's subscriptions.
 // It's hub is used to broadcast messages.
 type Channel struct {
 	name        string
-	vhost       *Vhost
-	subscribers map[*wsConn]bool
-	subscribe   chan subscription
-	broadcast   chan interface{}
+	subscribers map[string]*WebsocketClient
+	mtx         sync.Mutex
+	isRunning   bool
 }
 
 // NewChannel creates and configures new channel in specified vhost.
-func NewChannel(v *Vhost, name string) *Channel {
-	ch := &Channel{name: name, vhost: v, subscribers: make(map[*wsConn]bool)}
-	ch.subscribe, ch.broadcast = make(chan subscription), make(chan interface{})
-	go ch.hub()
-	return ch
+// The channel name limitations are the same as in case of user names,
+// can be composed with letters, numbers, dashes, underscores and dots.
+func newChannel(name string) (ch *Channel, err error) {
+	re, _ := regexp.Compile(channelNamePattern)
+	if !re.MatchString(name) {
+		err = errors.New("Invalid name")
+		return
+	}
+	ch = &Channel{name: name, isRunning: true}
+	ch.subscribers = make(map[string]*WebsocketClient)
+	return
 }
 
-// Channel's hub manages subscriptions and broacdasts messages to all subscribers.
-func (ch *Channel) hub() {
-	for {
-		select {
-		case s := <-ch.subscribe:
-			if s.active {
-				ch.subscribers[s.conn] = true
-				s.conn.channels[ch] = true
-			} else {
-				delete(ch.subscribers, s.conn)
-				delete(s.conn.channels, ch)
-			}
-		case payload := <-ch.broadcast:
-			for conn := range ch.subscribers {
-				conn.send(payload)
-				println("sent to", conn.token)
+// hasSubscriber checks if specified client is subscribing to
+// this channel.
+func (ch *Channel) hasSubscriber(client *WebsocketClient) bool {
+	if client != nil {
+		_, ok := ch.subscribers[client.Id()]
+		return ok
+	}
+	return false
+}
+
+// addSubscriber adds given subscription to this channel.
+func (ch *Channel) addSubscriber(client *WebsocketClient) {
+	if client != nil {
+		ch.mtx.Lock()
+		defer ch.mtx.Unlock()
+		ch.subscribers[client.Id()] = client
+		client.subscriptions[ch.Name()] = ch
+	}
+}
+
+// deleteSubscriber removes given subscription from this channel.
+func (ch *Channel) deleteSubscriber(client *WebsocketClient) {
+	if client != nil {
+		ch.mtx.Lock()
+		defer ch.mtx.Unlock()
+		delete(ch.subscribers, client.Id())
+		delete(client.subscriptions, ch.Name())
+	}
+}
+
+// Broadcast sends specified payload to all active subscribers
+// of this channel.
+func (ch *Channel) Broadcast(payload interface{}) {
+	if !ch.isRunning {
+		return
+	}
+	go func() {
+		for _, client := range ch.subscribers {
+			if client != nil {
+				client.Send(payload)
 			}
 		}
-	}
+	}()
 }
 
 // Returns name of the channel. 
@@ -68,12 +99,20 @@ func (ch *Channel) Name() string {
 	return ch.name
 }
 
-// Returns list of subscribers.
-func (ch *Channel) Subscribers() []*wsConn {
-	conns, i := make([]*wsConn, len(ch.subscribers)), 0
-	for conn, _ := range ch.subscribers {
-		conns[i] = conn
+// Returns list of clients subsribing to this channel.
+func (ch *Channel) Subscribers() (clients []*WebsocketClient) {
+	i := 0
+	clients = make([]*WebsocketClient, len(ch.subscribers))
+	for _, client := range ch.subscribers {
+		clients[i] = client
 		i += 1
 	}
-	return conns
+	return
+}
+
+// Stops execution of the channel.
+func (ch *Channel) kill() {
+	ch.mtx.Lock()
+	defer ch.mtx.Unlock()
+	ch.isRunning = false
 }

@@ -17,22 +17,25 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
-// Creates new error payload.
-func newError(id string) map[string]interface{} {
-	return map[string]interface{}{"id": id}
+import (
+	uuid "../uuid"
+	"testing"
+)
+
+func newTestBackendAgent() *BackendAgent {
+	ctx := NewContext()
+	b := ctx.NewBackendEndpoint("", 9772)
+	v, _ := newVhost(ctx, "/foo")
+	a := newBackendAgent(b.(*BackendEndpoint), v, []byte(uuid.GenerateTime()))
+	return a
 }
 
-// Predefined error payloads.
-var (
-	ErrInvalidDataReceived  = newError("INVALID_DATA_RECEIVED")
-	ErrInvalidMessageFormat = newError("INVALID_MESSAGE_FORMAT")
-	ErrInvalidPayload       = newError("INVALID_PAYLOAD")
-	ErrAccessDenied         = newError("ACCESS_DENIED")
-	ErrInvalidUserName      = newError("INVALID_USER_NAME")
-	ErrUserNotFound         = newError("USER_NOT_FOUND")
-	ErrInvalidCredentials   = newError("INVALID_CREDENTIALS")
-	ErrInvalidChannelName   = newError("INVALID_CHANNEL_NAME")
-	ErrChannelNotFound      = newError("CHANNEL_NOT_FOUND")
-	ErrInvalidEventName     = newError("INVALID_EVENT_NAME")
-	ErrUndefinedEvent       = newError("UNDEFINED_EVENT")
-)
+func TestNewBackendAgent(t *testing.T) {
+	a := newTestBackendAgent()
+	if !a.IsAlive() {
+		t.Errorf("Expected new agent to be alive")
+	}
+	if string(a.id) == "" {
+		t.Errorf("Expected new agent to have proper id")
+	}
+}
