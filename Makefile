@@ -12,7 +12,7 @@ endif
 
 ASCIIDOC = asciidoc
 
-all: gozmq gouuid server man
+all: gozmq gouuid server
 clean: clean-lib clean-server clean-man
 install: install-server install-man
 check: all check-lib

@@ -4,6 +4,7 @@
 	* webrocket-server/: adjusted to webrocket implementation
 	* INSTALL: improved description
 	* README: additional info, credis for cubox
+	* Makefile: the 'man' target removed from the 'all' deps
 
 2011-12-27  Pablo Astigarraga  <pote@cuboxsa.com>
 
