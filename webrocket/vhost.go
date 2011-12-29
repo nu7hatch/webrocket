@@ -62,7 +62,7 @@ func (v *Vhost) GenerateAccessToken() string {
 	var hash = sha1.New()
 	var uuid = uuid.GenerateTime()
 	hash.Write([]byte(uuid))
-	v.accessToken = fmt.Sprintf("%x", hash.Sum())
+	v.accessToken = fmt.Sprintf("%x", hash.Sum([]byte{}))
 	v.permissions = make(map[string]*Permission)
 	return v.accessToken
 }

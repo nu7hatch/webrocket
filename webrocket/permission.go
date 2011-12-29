@@ -29,7 +29,7 @@ func generateSingleAccessToken() string {
 	var hash = sha512.New()
 	var uuid = uuid.GenerateTime()
 	hash.Write([]byte(uuid))
-	return fmt.Sprintf("%x", hash.Sum())
+	return fmt.Sprintf("%x", hash.Sum([]byte{}))
 }
 
 // Permission is represents single access token and permission

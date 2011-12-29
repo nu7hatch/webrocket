@@ -25,7 +25,7 @@ import (
 
 const (
 	backendLobbyDefaultMaxRetries = 3
-	backendLobbyDefaultRetryDelay = 2e6
+	backendLobbyDefaultRetryDelay = time.Duration(2e6)
 )
 
 // backendLobby coordinates messages flow between the WebRocket and all
@@ -35,7 +35,7 @@ type backendLobby struct {
 	queue      chan interface{}
 	robin      *ring.Ring
 	maxRetries int
-	retryDelay int64
+	retryDelay time.Duration
 	isRunning  bool
 	mtx        sync.Mutex
 }
