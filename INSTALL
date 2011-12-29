@@ -49,8 +49,8 @@ few additional dependencies.
 
 Documentation and man pages generator.		
 
-TIP: If you're a happy user of shitty OSX, in case to make the 'asciidoc'
-work properly you have to register the installed docbook.
+TIP: If you're an OSX user, in order to make the 'asciidoc' work
+properly you have to register the installed docbook.
 
 	$ brew install docbook asciidoc
 	$ sudo docbook-register
