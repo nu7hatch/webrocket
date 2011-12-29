@@ -1,3 +1,7 @@
+2011-12-29  Pablo Dejuan   <pablo@cuboxsa.com>
+
+	* INSTALL: clarifies INSTALL Go dependencies
+
 2011-12-29  Krzysztof Kowalik   <chris@nu7hat.ch>
 
 	* webrocket/: finished big refactoring
