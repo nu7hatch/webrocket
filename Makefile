@@ -13,7 +13,8 @@ endif
 ASCIIDOC = asciidoc
 
 all: gozmq gouuid server
-clean: clean-lib clean-server clean-man
+clean: clean-lib clean-server clean-deps
+clean-deps: clean-gozmq clean-gouuid
 install: install-server install-man
 check: all check-lib
 
@@ -47,11 +48,15 @@ gozmq:
 	@$(ECHO) "\033[35mbuilding \033[1;32m./deps/gozmq\033[0m"
 	@cd deps/gozmq && $(MAKE)
 	cp deps/gozmq/_obj/github.com/alecthomas/*.a .
+clean-gozmq:
+	$(MAKE) -C deps/gozmq clean
 
 gouuid:
 	@$(ECHO) "\033[35mbuilding \033[1;32m./deps/gouuid\033[0m"
 	@cd deps/gouuid && $(MAKE)
 	cp deps/gouuid/_obj/github.com/nu7hatch/*.a .
+clean-gouuid:
+	$(MAKE) -C deps/gouuid clean
 
 papers:
 	-$(ASCIIDOC) -d article -o INSTALL.html INSTALL

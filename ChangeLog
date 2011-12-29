@@ -4,7 +4,7 @@
 	* webrocket-server/: adjusted to webrocket implementation
 	* INSTALL: improved description, added zeromq description
 	* README: additional info, credis for cubox
-	* Makefile: the 'man' target removed from the 'all' deps
+	* Makefile: the 'man' target removed from the 'all' deps, added cleaning up deps
 
 2011-12-27  Pablo Astigarraga  <pote@cuboxsa.com>
 
