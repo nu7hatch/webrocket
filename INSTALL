@@ -26,7 +26,7 @@ manager's repository in most of operating systems.
 
 Debian:
 
-	$ apt-get install zeromq
+	$ apt-get install libzmq-dev
 
 Arch Linux:
 
