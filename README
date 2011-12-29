@@ -42,6 +42,9 @@ explanation what you can find in there.
 'docs'::
 		Documentation and man pages
 
+'deps'::
+		External dependencies bundled with the project
+		
 'webrocket'::
 		WebRocket core library
 
@@ -55,7 +58,7 @@ explanation what you can find in there.
 
 'webrocket-monitor'::
 		Tool for WebRocket server nodes and clusters monitoring. 
-
+		
 Copyright
 ---------
 Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>

@@ -2,6 +2,12 @@
 
 	* webrocket/: finished big refactoring
 	* webrocket-server/: adjusted to webrocket implementation
+	* INSTALL: improved description
+	* README: additional info
+
+2011-12-27  Pablo Astigarraga  <pote@cuboxsa.com>
+
+	* INSTALL: fixed typos and language
 
 2011-12-19  Krzysztof Kowalik   <chris@nu7hat.ch>
 
