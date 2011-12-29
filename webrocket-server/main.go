@@ -78,7 +78,7 @@ func main() {
 
 	// Configuring...
 	fmt.Printf("... Loading configuration\n")
-	vhost, _ := ctx.AddVhost("/yoda")
+	vhost, _ := ctx.AddVhost("/test")
 	vhost.OpenChannel("test")
 
 	// Setting up a Backend Workers endpoint
