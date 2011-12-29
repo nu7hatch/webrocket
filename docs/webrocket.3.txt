@@ -1,0 +1,71 @@
+webrocket(3)
+============
+
+NAME
+----
+webrocket - The core library for webrocket tools
+
+SYNOPSIS
+--------
+	import "webrocket"
+	
+DESCRIPTION
+-----------
+The *webrocket*(3) is a base library for all other webrocket tools.
+It provides functionality to build full stack application listening
+on WebSocket and Backend endpoints. Check its documentation to get
+more information and knowledge.
+
+EXAMPLES
+--------
+A trivial example app:
+
+-----
+package main
+
+import (
+    "webrocket"
+    "os/signal"
+)
+	
+func main() {
+    ctx := webrocket.NewContext()
+    v, _ := ctx.AddVhost("/example")
+    v.OpenChannel("example")	
+	
+    websocket := ctx.NewWebsocketEndpoint("", 8080)
+    go websocket.ListenAndServe()
+	
+    backend := ctx.NewBackendEndpoint("", 8081)
+    go backend.ListenAndServe()
+	
+    <-signal.Incoming
+}
+-----
+
+SEE ALSO
+--------
+link:webrocket-server.1.html[*webrocket-server*(1)],
+link:webrocket-ctl.1.html[*webrocket-ctl*(1)],
+link:webrocket-monitor.1.html[*webrocket-monitor*(1)]
+
+AUTHOR
+------
+Chris Kowalik <chris@nu7hat.ch>
+
+COPYRIGHT
+---------
+Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.

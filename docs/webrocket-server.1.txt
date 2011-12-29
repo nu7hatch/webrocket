@@ -7,41 +7,45 @@ webrocket-server - Start and preconfigure server node instance
 
 SYNOPSIS
 --------
-*webrocket-server* [-wsaddr '<addr>'] [-ctladdr '<addr>']
-				   [-mqaddr '<addr>'] [-cert '<path>'] [-key '<path>']
+*webrocket-server* [-websocket-host '<host>'] [-websocket-port '<port>']
+				   [-backend-host '<host>'] [-backend-port '<port>']
+				   [-cert '<path>'] [-key '<path>']
 
 DESCRIPTION
 -----------
 The *webrocket-server*(1) tool is used to start and initially configure single
-node instance. To further configure your node, use the *rocket-ctl*(1) tool.
+node instance. To further configure your node, use the *webrocket-ctl*(1) tool.
 
 OPTIONS
 -------
-*-wsaddr*='<addr>'::
-		WebSocket server will be bound with the specified interface.
-		The '<addr>' can be either full host name with port, eg. 'myhost.com:9772'
-		or just a port ':9772'. In the second case server will be bound to all
-		available interfaces. By default ':9772'.
+*-websocket-host*='<host>'::
+	WebSocket endpoint will be bound with the specified interface.
+	By defult endpoint is bound to all interfaces.
 
-*-mqaddr*='<addr>'::
-		The MQ exchange will be bound to this interface. By default 'localhost:9773'
-
-*-ctladdr*='<addr>'::
-		The management API server will be bound to specified interface.
-		By default 'localhost:9774'.
-		
+*-websocket-port*='<port>'::
+	WebSocket endpoint will listen on the specified port.
+	Default: 8080.
+	
+*-backend-host*='<host>'::
+	Backend endpoint will be bound with the specified interface.
+	By default endpoitn is bound to all interfaces.
+	
+*-backend-port*='<port>'::
+	Backend endpoint will listen on the specified port.
+	Default: 8081.
+	
 *-cert*='<path>'::
-		Path to TLS certificate file.
+	Path to TLS certificate file.
 
 *-key*='<path>'::
-		Path to TLS public key file.
+	Path to TLS public key file.
 
 EXAMPLES
 --------
-Specifying endpoints for WebSocket server and management API:
+Specifying hosts and ports for the endpoints:
 
-	$ webrocket-server -wsaddr "myhost.com:9772" -ctladdr "localhost:9774"
-	$ webrocket-server -ctladdr ":9774"
+	$ webrocket-server -backend-port=8772 -backend-host=myhost.com
+	$ webrocket-server -websocket-port=8773
 
 Starting the server with TLS support enabled:
 

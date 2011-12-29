@@ -3,4 +3,4 @@ The `webrocket` core library
 
 This library contains core functionality of the WebRocket server.
 
-Check manual pages for the *webrocket*(7) to get more information.
+Check manual pages for the *webrocket*(3) to get more information.

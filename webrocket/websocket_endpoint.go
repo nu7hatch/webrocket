@@ -35,7 +35,7 @@ type WebsocketEndpoint struct {
 // Creates new websockets endpoint bound to specified host and port.
 // Leave host blank if you want to bind to all interfaces.
 //
-// A Trivial example server:
+// A trivial example server:
 // 
 //     package main
 //      

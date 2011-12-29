@@ -40,24 +40,24 @@ Main source tree contains several directories. Here's the short
 explanation what you can find in there.
 
 'docs'::
-		Documentation and man pages
+	Documentation and man pages
 
 'deps'::
-		External dependencies bundled with the project
+	External dependencies bundled with the project
 		
 'webrocket'::
-		WebRocket core library
+	WebRocket core library
 
 'webrocket-server'::
-		Tool for starting and preconfiguring single WebRocket
-		server node.
+	Tool for starting and preconfiguring single WebRocket
+	server node.
 
 'webrocket-ctl'::
-		Tool for ad-hoc configuration management of the running
-		WebRocket server nodes.
+	Tool for ad-hoc configuration management of the running
+	WebRocket server nodes.
 
 'webrocket-monitor'::
-		Tool for WebRocket server nodes and clusters monitoring. 
+	Tool for WebRocket server nodes and clusters monitoring. 
 
 Sponsors
 --------
