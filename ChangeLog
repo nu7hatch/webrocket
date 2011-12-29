@@ -2,7 +2,7 @@
 
 	* webrocket/: finished big refactoring
 	* webrocket-server/: adjusted to webrocket implementation
-	* INSTALL: improved description
+	* INSTALL: improved description, added zeromq description
 	* README: additional info, credis for cubox
 	* Makefile: the 'man' target removed from the 'all' deps
 
