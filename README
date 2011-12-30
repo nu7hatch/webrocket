@@ -1,5 +1,5 @@
-WEBROCKET - Distributed WebSockets/MQ server
-============================================
+WEBROCKET - Real-time Web Broker
+================================
 
 WebRocket is a hybrid of MQ and WebSockets server with great support for 
 horizontal scalability. WebRocket is very fast and easy to use from both
