@@ -27,10 +27,10 @@ import (
 )
 
 var (
-	ws  *websocket.Conn
-	err error
-	we  Endpoint
-	wv  *Vhost
+	ws   *websocket.Conn
+	werr error
+	we   Endpoint
+	wv   *Vhost
 )
 
 func init() {
@@ -48,9 +48,9 @@ func wssend(t *testing.T, data interface{}) {
 }
 
 func wssendto(t *testing.T, ws *websocket.Conn, data interface{}) {
-	err = websocket.JSON.Send(ws, data)
-	if err != nil {
-		t.Error(err)
+	werr = websocket.JSON.Send(ws, data)
+	if werr != nil {
+		t.Error(werr)
 	}
 }
 
@@ -60,14 +60,14 @@ func wsrecv(t *testing.T) *Message {
 
 func wsrecvfrom(t *testing.T, ws *websocket.Conn) *Message {
 	var resp map[string]interface{}
-	err := websocket.JSON.Receive(ws, &resp)
-	if err != nil {
-		t.Error(err)
+	werr := websocket.JSON.Receive(ws, &resp)
+	if werr != nil {
+		t.Error(werr)
 		return nil
 	}
-	msg, err := newMessage(resp)
-	if err != nil {
-		t.Error(err)
+	msg, werr := newMessage(resp)
+	if werr != nil {
+		t.Error(werr)
 	}
 	return msg
 }
@@ -82,10 +82,10 @@ func wsdial(port int) (*websocket.Conn, error) {
 	return websocket.Dial(url, "ws", "http://127.0.0.1/")
 }
 
-func TestWebsocketConnect(t *testing.T) {
-	ws, err = wsdial(9771)
-	if err != nil {
-		t.Error(err)
+func doTestWebsocketConnect(t *testing.T) {
+	ws, werr = wsdial(9771)
+	if werr != nil {
+		t.Error(werr)
 	}
 	resp := wsrecv(t)
 	if resp.Event() != "__connected" {
@@ -93,7 +93,7 @@ func TestWebsocketConnect(t *testing.T) {
 	}
 }
 
-func TestWebsocketBadRequest(t *testing.T) {
+func doTestWebsocketBadRequest(t *testing.T) {
 	ws.Write([]byte("foobar"))
 	resp := wsrecv(t)
 	if wserr(resp) != "Bad request" {
@@ -106,7 +106,7 @@ func TestWebsocketBadRequest(t *testing.T) {
 	}
 }
 
-func TestWebsocketNotFound(t *testing.T) {
+func doTestWebsocketNotFound(t *testing.T) {
 	ws.Write([]byte("{\"hello\": {}}"))
 	resp := wsrecv(t)
 	if wserr(resp) != "Bad request" {
@@ -114,7 +114,7 @@ func TestWebsocketNotFound(t *testing.T) {
 	}
 }
 
-func TestWebsocketAuthWithMissingToken(t *testing.T) {
+func doTestWebsocketAuthWithMissingToken(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"auth": map[string]interface{}{"foo": "bar"},
 	})
@@ -124,7 +124,7 @@ func TestWebsocketAuthWithMissingToken(t *testing.T) {
 	}
 }
 
-func TestWebsocketAuthWuthInvalidTokenValue(t *testing.T) {
+func doTestWebsocketAuthWuthInvalidTokenValue(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"auth": map[string]interface{}{"tokena": map[string]interface{}{}},
 	})
@@ -134,7 +134,7 @@ func TestWebsocketAuthWuthInvalidTokenValue(t *testing.T) {
 	}
 }
 
-func TestWebsocketAuthWithInvalidToken(t *testing.T) {
+func doTestWebsocketAuthWithInvalidToken(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"auth": map[string]interface{}{"token": "invalid"},
 	})
@@ -144,7 +144,7 @@ func TestWebsocketAuthWithInvalidToken(t *testing.T) {
 	}
 }
 
-func TestWebsocketAuthWithValidToken(t *testing.T) {
+func doTestWebsocketAuthWithValidToken(t *testing.T) {
 	token := wv.GenerateSingleAccessToken(".*")
 	wssend(t, map[string]interface{}{
 		"auth": map[string]interface{}{
@@ -157,7 +157,7 @@ func TestWebsocketAuthWithValidToken(t *testing.T) {
 	}
 }
 
-func TestWebsocketSubscribeInvalidChannelName(t *testing.T) {
+func doTestWebsocketSubscribeInvalidChannelName(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"subscribe": map[string]interface{}{"channel": "shit%dfsdf%#"},
 	})
@@ -167,7 +167,7 @@ func TestWebsocketSubscribeInvalidChannelName(t *testing.T) {
 	}
 }
 
-func TestWebsocketSubscribeEmptyChannelName(t *testing.T) {
+func doTestWebsocketSubscribeEmptyChannelName(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"subscribe": map[string]interface{}{"channel": ""},
 	})
@@ -177,7 +177,7 @@ func TestWebsocketSubscribeEmptyChannelName(t *testing.T) {
 	}
 }
 
-func TestWebsocketSubscribeNoChannelName(t *testing.T) {
+func doTestWebsocketSubscribeNoChannelName(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"subscribe": map[string]interface{}{"foo": ""},
 	})
@@ -187,7 +187,7 @@ func TestWebsocketSubscribeNoChannelName(t *testing.T) {
 	}
 }
 
-func TestWebsocketSubscribeAllowedChannel(t *testing.T) {
+func doTestWebsocketSubscribeAllowedChannel(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"subscribe": map[string]interface{}{"channel": "test"},
 	})
@@ -197,7 +197,7 @@ func TestWebsocketSubscribeAllowedChannel(t *testing.T) {
 	}
 }
 
-func TestWebsocketUnsubscribeEmptyChannelName(t *testing.T) {
+func doTestWebsocketUnsubscribeEmptyChannelName(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"unsubscribe": map[string]interface{}{"channel": ""},
 	})
@@ -207,7 +207,7 @@ func TestWebsocketUnsubscribeEmptyChannelName(t *testing.T) {
 	}
 }
 
-func TestWebsocketUnsubscribeInvalidChannelName(t *testing.T) {
+func doTestWebsocketUnsubscribeInvalidChannelName(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"unsubscribe": map[string]interface{}{"channel": "shit%dfsdf%#"},
 	})
@@ -217,7 +217,7 @@ func TestWebsocketUnsubscribeInvalidChannelName(t *testing.T) {
 	}
 }
 
-func TestWebsocketUnsubscribeNotSubscribedChannel(t *testing.T) {
+func doTestWebsocketUnsubscribeNotSubscribedChannel(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"unsubscribe": map[string]interface{}{"channel": "test2"},
 	})
@@ -227,7 +227,7 @@ func TestWebsocketUnsubscribeNotSubscribedChannel(t *testing.T) {
 	}
 }
 
-func TestWebsocketUnsubscribeValidChannel(t *testing.T) {
+func doTestWebsocketUnsubscribeValidChannel(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"unsubscribe": map[string]interface{}{"channel": "test"},
 	})
@@ -237,7 +237,7 @@ func TestWebsocketUnsubscribeValidChannel(t *testing.T) {
 	}
 }
 
-func TestWebsocketBroadcastWhenNotSubscribingTheChannel(t *testing.T) {
+func doTestWebsocketBroadcastWhenNotSubscribingTheChannel(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "test", "event": "foo", "data": map[string]interface{}{},
@@ -249,7 +249,7 @@ func TestWebsocketBroadcastWhenNotSubscribingTheChannel(t *testing.T) {
 	}
 }
 
-func TestWebsocketBroadcastWithInvalidData(t *testing.T) {
+func doTestWebsocketBroadcastWithInvalidData(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "test", "data": map[string]interface{}{},
@@ -270,7 +270,7 @@ func TestWebsocketBroadcastWithInvalidData(t *testing.T) {
 	}
 }
 
-func TestWebsocketBroadcastWhenInvalidChannelGiven(t *testing.T) {
+func doTestWebsocketBroadcastWhenInvalidChannelGiven(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "notexists", "event": "foo", "data": map[string]interface{}{},
@@ -282,7 +282,7 @@ func TestWebsocketBroadcastWhenInvalidChannelGiven(t *testing.T) {
 	}
 }
 
-func TestWebsocketBroadcastToNotSubscribedChannel(t *testing.T) {
+func doTestWebsocketBroadcastToNotSubscribedChannel(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "test2", "event": "foo", "data": map[string]interface{}{},
@@ -294,7 +294,7 @@ func TestWebsocketBroadcastToNotSubscribedChannel(t *testing.T) {
 	}
 }
 
-func TestWebsocketBroadcastValidData(t *testing.T) {
+func doTestWebsocketBroadcastValidData(t *testing.T) {
 	var wss [2]*websocket.Conn
 	for i := range wss {
 		wss[i], _ = wsdial(9771)
@@ -339,3 +339,30 @@ func TestWebsocketBroadcastValidData(t *testing.T) {
 // TODO: test 'subscribe' and 'broadcast' for protected channels
 // TODO: test 'trigger'
 // TODO: test 'close'
+
+func TestWebsocketProtocol(t *testing.T) {
+	// It kind of sucks, but it's an integration test where each
+	// steps may depend on the others, so we have to run it in
+	// correct order.
+	// FIXME: Find some way to do it more nicely...
+	doTestWebsocketConnect(t)
+	doTestWebsocketBadRequest(t)
+	doTestWebsocketNotFound(t)
+	doTestWebsocketAuthWithMissingToken(t)
+	doTestWebsocketAuthWuthInvalidTokenValue(t)
+	doTestWebsocketAuthWithInvalidToken(t)
+	doTestWebsocketAuthWithValidToken(t)
+	doTestWebsocketSubscribeInvalidChannelName(t)
+	doTestWebsocketSubscribeEmptyChannelName(t)
+	doTestWebsocketSubscribeNoChannelName(t)
+	doTestWebsocketSubscribeAllowedChannel(t)
+	doTestWebsocketUnsubscribeEmptyChannelName(t)
+	doTestWebsocketUnsubscribeInvalidChannelName(t)
+	doTestWebsocketUnsubscribeNotSubscribedChannel(t)
+	doTestWebsocketUnsubscribeValidChannel(t)
+	doTestWebsocketBroadcastWhenNotSubscribingTheChannel(t)
+	doTestWebsocketBroadcastWithInvalidData(t)
+	doTestWebsocketBroadcastWhenInvalidChannelGiven(t)
+	doTestWebsocketBroadcastToNotSubscribedChannel(t)
+	doTestWebsocketBroadcastValidData(t)
+}

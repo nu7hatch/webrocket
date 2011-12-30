@@ -32,6 +32,7 @@ import (
 var (
 	req  zmq.Socket
 	zctx zmq.Context
+	err  error
 	be   Endpoint
 	bv   *Vhost
 )
@@ -75,7 +76,7 @@ func bokstatus(msg *Message) string {
 	return s
 }
 
-func TestBackendReqConnectWithInvalidIdentitiy(t *testing.T) {
+func doTestBackendReqConnectWithInvalidIdentitiy(t *testing.T) {
 	req.SetSockOptString(zmq.IDENTITY, "invalid")
 	req.Connect("tcp://127.0.0.1:9772")
 	req.Send([]byte("{}"), 0)
@@ -85,7 +86,7 @@ func TestBackendReqConnectWithInvalidIdentitiy(t *testing.T) {
 	}
 }
 
-func TestBackendReqConnectWithValidIdentity(t *testing.T) {
+func doTestBackendReqConnectWithValidIdentity(t *testing.T) {
 	req.Close()
 	req, _ = zctx.NewSocket(zmq.REQ)
 	req.SetSockOptString(zmq.IDENTITY, fmt.Sprintf("req:/test:%s:%s", bv.accessToken, uuid.GenerateTime()))
@@ -97,7 +98,7 @@ func TestBackendReqConnectWithValidIdentity(t *testing.T) {
 	}
 }
 
-func TestBackendReqRequestWithInvalidData(t *testing.T) {
+func doTestBackendReqRequestWithInvalidData(t *testing.T) {
 	req.Send([]byte("[\"invalid\"]"), 0)
 	resp := breqrecv(t)
 	if berr(resp) != "Bad request" {
@@ -105,7 +106,7 @@ func TestBackendReqRequestWithInvalidData(t *testing.T) {
 	}
 }
 
-func TestBackendReqRequestWithNotFoundCommand(t *testing.T) {
+func doTestBackendReqRequestWithNotFoundCommand(t *testing.T) {
 	req.Send([]byte("{\"notfound\": {}}"), 0)
 	resp := breqrecv(t)
 	if berr(resp) != "Bad request" {
@@ -113,7 +114,7 @@ func TestBackendReqRequestWithNotFoundCommand(t *testing.T) {
 	}
 }
 
-func TestBackendReqOpenChannelWithNoNameSpecified(t *testing.T) {
+func doTestBackendReqOpenChannelWithNoNameSpecified(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"openChannel": map[string]interface{}{},
 	})
@@ -124,7 +125,7 @@ func TestBackendReqOpenChannelWithNoNameSpecified(t *testing.T) {
 	}
 }
 
-func TestBackendReqOpenChannelWithInvalidNameFormat(t *testing.T) {
+func doTestBackendReqOpenChannelWithInvalidNameFormat(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"openChannel": map[string]interface{}{
 			"channel": map[string]interface{}{},
@@ -137,7 +138,7 @@ func TestBackendReqOpenChannelWithInvalidNameFormat(t *testing.T) {
 	}
 }
 
-func TestBackendReqOpenChannelWithInvalidName(t *testing.T) {
+func doTestBackendReqOpenChannelWithInvalidName(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"openChannel": map[string]interface{}{
 			"channel": "this%name@#@is%invalid",
@@ -150,7 +151,7 @@ func TestBackendReqOpenChannelWithInvalidName(t *testing.T) {
 	}
 }
 
-func TestBackendReqOpenAlreadyExistingChannel(t *testing.T) {
+func doTestBackendReqOpenAlreadyExistingChannel(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"openChannel": map[string]interface{}{
 			"channel": "test",
@@ -163,7 +164,7 @@ func TestBackendReqOpenAlreadyExistingChannel(t *testing.T) {
 	}
 }
 
-func TestBackendReqOpenNewChannel(t *testing.T) {
+func doTestBackendReqOpenNewChannel(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"openChannel": map[string]interface{}{
 			"channel": "test2",
@@ -180,7 +181,7 @@ func TestBackendReqOpenNewChannel(t *testing.T) {
 	}
 }
 
-func TestBackendReqCloseChannelWithNoNameSpecified(t *testing.T) {
+func doTestBackendReqCloseChannelWithNoNameSpecified(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"closeChannel": map[string]interface{}{},
 	})
@@ -191,7 +192,7 @@ func TestBackendReqCloseChannelWithNoNameSpecified(t *testing.T) {
 	}
 }
 
-func TestBackendReqCloseChannelWithInvalidNameFormat(t *testing.T) {
+func doTestBackendReqCloseChannelWithInvalidNameFormat(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"closeChannel": map[string]interface{}{
 			"channel": map[string]interface{}{},
@@ -204,7 +205,7 @@ func TestBackendReqCloseChannelWithInvalidNameFormat(t *testing.T) {
 	}
 }
 
-func TestBackendReqCloseNotExistingChannel(t *testing.T) {
+func doTestBackendReqCloseNotExistingChannel(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"closeChannel": map[string]interface{}{
 			"channel": "notexists",
@@ -217,7 +218,7 @@ func TestBackendReqCloseNotExistingChannel(t *testing.T) {
 	}
 }
 
-func TestBackendReqCloseChannel(t *testing.T) {
+func doTestBackendReqCloseChannel(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"closeChannel": map[string]interface{}{
 			"channel": "test2",
@@ -234,7 +235,7 @@ func TestBackendReqCloseChannel(t *testing.T) {
 	}
 }
 
-func TestBackendReqRequestSingleAccessTokenWithoutSpecifyingPermissions(t *testing.T) {
+func doTestBackendReqRequestSingleAccessTokenWithoutSpecifyingPermissions(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"singleAccessToken": map[string]interface{}{},
 	})
@@ -253,7 +254,7 @@ func TestBackendReqRequestSingleAccessTokenWithoutSpecifyingPermissions(t *testi
 	}
 }
 
-func TestBackendReqRequestSingleAccessTokenWithSpecifyingPermissions(t *testing.T) {
+func doTestBackendReqRequestSingleAccessTokenWithSpecifyingPermissions(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"singleAccessToken": map[string]interface{}{
 			"permission": "(foo|bar)",
@@ -274,7 +275,7 @@ func TestBackendReqRequestSingleAccessTokenWithSpecifyingPermissions(t *testing.
 	}
 }
 
-func TestBackendReqBroadcastWhenInvalidChannelGiven(t *testing.T) {
+func doTestBackendReqBroadcastWhenInvalidChannelGiven(t *testing.T) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "notexists", "event": "foo", "data": map[string]interface{}{},
@@ -287,7 +288,7 @@ func TestBackendReqBroadcastWhenInvalidChannelGiven(t *testing.T) {
 	}
 }
 
-func TestBackendReqBroadcastValidData(t *testing.T) {
+func doTestBackendReqBroadcastValidData(t *testing.T) {
 	var wss [2]*websocket.Conn
 	for i := range wss {
 		wss[i], _ = wsdial(9773)
@@ -324,4 +325,27 @@ func TestBackendReqBroadcastValidData(t *testing.T) {
 			t.Errorf("Expected to broadcast passed data")
 		}
 	}
+}
+
+func TestBackendReqProtocol(t *testing.T) {
+	// The same as with websocket protocol, some steps depends on others
+	// so we need to preserve correct order.
+	// FIXME: find better way to do it
+	doTestBackendReqConnectWithInvalidIdentitiy(t)
+	doTestBackendReqConnectWithValidIdentity(t)
+	doTestBackendReqRequestWithInvalidData(t)
+	doTestBackendReqRequestWithNotFoundCommand(t)
+	doTestBackendReqOpenChannelWithNoNameSpecified(t)
+	doTestBackendReqOpenChannelWithInvalidNameFormat(t)
+	doTestBackendReqOpenChannelWithInvalidName(t)
+	doTestBackendReqOpenAlreadyExistingChannel(t)
+	doTestBackendReqOpenNewChannel(t)
+	doTestBackendReqCloseChannelWithNoNameSpecified(t)
+	doTestBackendReqCloseChannelWithInvalidNameFormat(t)
+	doTestBackendReqCloseNotExistingChannel(t)
+	doTestBackendReqCloseChannel(t)
+	doTestBackendReqRequestSingleAccessTokenWithoutSpecifyingPermissions(t)
+	doTestBackendReqRequestSingleAccessTokenWithSpecifyingPermissions(t)
+	doTestBackendReqBroadcastWhenInvalidChannelGiven(t)
+	doTestBackendReqBroadcastValidData(t)
 }
