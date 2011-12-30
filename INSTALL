@@ -8,43 +8,38 @@ Latest Go compiler
 WebRocket is written in Go language. If you don't have Go compiler
 installed yet, follow this installation guide: http://golang.org/doc/install.html
 
-IMPORTANT: Always build Go binaries!
+IMPORTANT: WebRocket have to be built against the last weekly release!
 
-So far, WebRocket is using a bunch of unreleased features
-and want to catch up with Go's development, that's why you
-should remember to clone *the head version* or the latest *weakly release*:
+So far, WebRocket is using a bunch of unreleased features and want to catch 
+up with Go's development, that's why you should remember to clone a *head
+version* or the latest *weakly release*:
 
-To get head version of the compiler use following command:
+To get and build a head version of the compiler use following command:
 
 	$ hg clone https://go.googlecode.com/hg/ go
-
-Then:
-
 	$ cd go
 	$ ./all.bash
 
-And follow Go instructions.
+If you have any other doubts or problems, please follow the instructions from
+the Go's documentation.
 
 Dependencies
 ------------
 WebRocket depends on few external libraries which have to be installed
 in your system before you build it.
 
-.zeromq (>= 2.1 and < 3.0)
-
+zeromq (>= 2.1 and < 3.0)
+~~~~~~~~~~~~~~~~~~~~~~~~~
 The ZeroMQ core library. This library should be available in you package
 manager's repository in most of operating systems.
 
-Debian:
-
+.Debian
 	$ apt-get install libzmq-dev
 
-Arch Linux:
-
+.Arch Linux
 	$ pacman -S zeromq
 
-On OS X:
-
+.On OS X
 	$ brew install zeromq
 
 If the 'zeromq' package is not available in your package manager,
@@ -56,8 +51,8 @@ Development dependencies
 If you want to work on WebRocket development, you need to install
 few additional dependencies.
 
-.asciidoc
-
+asciidoc
+~~~~~~~~
 Documentation and man pages generator.		
 
 TIP: If you're an OSX user, in order to make the 'asciidoc' work
@@ -66,11 +61,14 @@ properly you have to register the installed docbook.
 	$ brew install docbook asciidoc
 	$ sudo docbook-register
 
-On any other normal Linux/Unix distribution it's enough to just install deps
+On any other Linux/Unix distribution it's enough to just install deps
 with your favorite package manager:
 
-	$ sudo apt-get install docbook asciidoc
+.Debian
+	$ apt-get install docbook asciidoc
 
+.Arch Linux
+	$ pacman -S asciidoc
 
 Building WebRocket
 ------------------
@@ -82,14 +80,8 @@ use standard 'make' targets to build and install:
 	$ git clone git://github.com/nu7hatch/webrocket.git
 	$ cd webrocket
 	$ git submodule init && git submodule update
-	$ make
-	$ make check # it's a good idea to run tests
-
-If you have already build previous versions of webrocket you should clear
-trunk and all dependencies this way:
-
-	$ make clean
-
+	$ gomake
+	$ gomake check # it's a good idea to run tests
 
 Documentation and Manual pages
 ------------------------------
@@ -103,6 +95,15 @@ and other docs, use the following 'make' targets
 	$ make papers
 
 ... generates html versions of all other documents (README, INSTALL, etc.).
+
+Troubleshooting
+---------------
+You may encounter a situation when WebRocket fails to build due to using
+a stale version of the Go compiler and fails again due to compiler version
+mismatch after you update it to the latest version. In this case you should
+cleanup project workspace by running the 'clean' target:
+
+	$ make clean
 
 Usage
 -----
