@@ -90,11 +90,11 @@ and other docs, use the following 'make' targets
 
 	$ make man
 	
-... generates man pages and its html versions in the 'docs/' directory.
+...generates man pages and its html versions in the 'docs/' directory.
 
 	$ make papers
 
-... generates html versions of all other documents (README, INSTALL, etc.).
+...generates html versions of all other documents (README, INSTALL, etc.).
 
 Troubleshooting
 ---------------
@@ -111,6 +111,6 @@ Now all WebRocket tools should be available in your system. Check
 the manual entries for each of them to get information about how do
 they work. List of available manual entries:
 
-* *webrocket-server*(1)
-* *webrocket-ctl*(1)
-* *webrocket-monitor*(1)
+* link:docs/webrocket-server.1.html[*webrocket-server*(1)]
+* link:docs/webrocket-ctl.1.html[*webrocket-ctl*(1)]
+* link:docs/webrocket-monitor.1.html[*webrocket-monitor*(1)]
