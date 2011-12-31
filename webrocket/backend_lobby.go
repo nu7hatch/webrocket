@@ -85,7 +85,7 @@ func (l *backendLobby) doDequeue() {
 		agent := l.roundRobin()
 		if agent == nil {
 			// No agents available, waiting a while and retrying
-			time.Sleep(l.retryDelay)
+			<-time.After(l.retryDelay)
 			retries += 1
 			// TODO: error, no clients available
 			continue

@@ -26,6 +26,11 @@ import (
 	"websocket"
 )
 
+type testingT interface {
+	Errorf(format string, args ...interface{})
+	Error(args ...interface{})
+}
+
 var (
 	ws   *websocket.Conn
 	werr error
@@ -43,22 +48,22 @@ func init() {
 	go we.ListenAndServe()
 }
 
-func wssend(t *testing.T, data interface{}) {
+func wssend(t testingT, data interface{}) {
 	wssendto(t, ws, data)
 }
 
-func wssendto(t *testing.T, ws *websocket.Conn, data interface{}) {
+func wssendto(t testingT, ws *websocket.Conn, data interface{}) {
 	werr = websocket.JSON.Send(ws, data)
 	if werr != nil {
 		t.Error(werr)
 	}
 }
 
-func wsrecv(t *testing.T) *Message {
+func wsrecv(t testingT) *Message {
 	return wsrecvfrom(t, ws)
 }
 
-func wsrecvfrom(t *testing.T, ws *websocket.Conn) *Message {
+func wsrecvfrom(t testingT, ws *websocket.Conn) *Message {
 	var resp map[string]interface{}
 	werr := websocket.JSON.Receive(ws, &resp)
 	if werr != nil {
@@ -308,11 +313,12 @@ func doTestWebsocketBroadcastValidData(t *testing.T) {
 		"subscribe": map[string]interface{}{"channel": "test"},
 	})
 	wsrecv(t)
-	wssend(t, map[string]interface{}{"broadcast": map[string]interface{}{
-		"channel": "test",
-		"event":   "hello",
-		"data":    map[string]interface{}{"foo": "bar"},
-	},
+	wssend(t, map[string]interface{}{
+		"broadcast": map[string]interface{}{
+			"channel": "test",
+			"event":   "hello",
+			"data":    map[string]interface{}{"foo": "bar"},
+		},
 	})
 	time.Sleep(1e6)
 	for i := range wss {

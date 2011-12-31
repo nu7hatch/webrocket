@@ -66,7 +66,7 @@ func SetupEndpoint(kind string, e webrocket.Endpoint) {
 		}
 	}()
 	for !e.IsRunning() {
-		time.Sleep(1e2);
+		<-time.After(1e2);
 	}
 	fmt.Printf("\033[32mOK\033[0m\n")
 }
