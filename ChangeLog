@@ -1,5 +1,13 @@
 2011-12-30  Krzysztof Kowalik  <chris@nu7hat.ch>
 
+	* webrocket/backend_lobby.go: cleanups
+	* webrocket/channel.go: removed unnecessary checkings
+	* webrocket/websocket_client.go: added retries handling to Send func
+	* webrocket/websocket_endpoint.go: simplified ServeMux
+	* webrocket/websocket_handler.go: cleanups
+
+2011-12-30  Krzysztof Kowalik  <chris@nu7hat.ch>
+
 	* webrocket/: fixed various tests
 	* webrocket-server/: small fixes and tweaks
 

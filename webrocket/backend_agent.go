@@ -42,9 +42,6 @@ func (a *BackendAgent) Id() string {
 // Sends given payload to the client.
 func (a *BackendAgent) Send(payload interface{}) {
 	if a.IsAlive() {
-		// XXX: need to check if this mutex here is really needed...
-		a.mtx.Lock()
-		defer a.mtx.Unlock()
 		a.endpoint.SendTo(a.id, payload)
 	}
 }

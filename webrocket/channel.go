@@ -87,9 +87,7 @@ func (ch *Channel) Broadcast(payload interface{}) {
 	}
 	go func() {
 		for _, client := range ch.subscribers {
-			if client != nil {
-				client.Send(payload)
-			}
+			client.Send(payload)
 		}
 	}()
 }

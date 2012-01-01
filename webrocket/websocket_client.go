@@ -20,6 +20,12 @@ package webrocket
 import (
 	uuid "../uuid"
 	"websocket"
+	"time"
+)
+
+const (
+	websocketClientDefaultMaxRetries = 3
+	websocketClientDefaultRetryDelay = time.Duration(1e6)
 )
 
 // WebsocketClient represents single WebSockets connection.
@@ -29,6 +35,8 @@ type WebsocketClient struct {
 	id            string
 	permission    *Permission
 	subscriptions map[string]*Channel
+	maxRetries    int
+	retryDelay    time.Duration
 }
 
 // newWebsocketClient wraps given WebSocket connection within the newly created
@@ -39,6 +47,8 @@ func newWebsocketClient(v *Vhost, ws *websocket.Conn) (c *WebsocketClient) {
 	c.connection = newConnection(v)
 	c.id = uuid.GenerateTime()
 	c.subscriptions = make(map[string]*Channel)
+	c.maxRetries = websocketClientDefaultMaxRetries
+	c.retryDelay = websocketClientDefaultRetryDelay
 	return c
 }
 
@@ -65,14 +75,21 @@ func (c *WebsocketClient) Id() string {
 
 // Sends specified payload to the client.
 func (c *WebsocketClient) Send(payload interface{}) {
-	if c.IsAlive() {
-		c.mtx.Lock()
-		err := websocket.JSON.Send(c.Conn, payload)
-		c.mtx.Unlock()
-		if err != nil {
-			// Couldn't send to the client
-			wsproto.log(c, "597", err.Error())
+	retries := 0
+
+start:
+	// no need to lock, websocket package manages lock in the
+	// Send func.
+	err := websocket.JSON.Send(c.Conn, payload)
+	if err != nil {
+		// Couldn't send to the client
+		wsproto.log(c, "597", err.Error())
+		if retries >= c.maxRetries {
+			return
 		}
+		<-time.After(c.retryDelay)
+		retries += 1
+		goto start
 	}
 }
 

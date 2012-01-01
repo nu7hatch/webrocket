@@ -126,19 +126,6 @@ func NewServeMux() *ServeMux {
 	return &ServeMux{m: make(map[string]http.Handler)}
 }
 
-// Does path match pattern?
-func pathMatch(pattern, path string) bool {
-	if len(pattern) == 0 {
-		// should not happen
-		return false
-	}
-	n := len(pattern)
-	if pattern[n-1] != '/' {
-		return pattern == path
-	}
-	return len(path) >= n && path[0:n] == pattern
-}
-
 // Return the canonical path for p, eliminating . and .. elements.
 func cleanPath(p string) string {
 	if p == "" {
@@ -159,17 +146,7 @@ func cleanPath(p string) string {
 // Find a handler on a handler map given a path string
 // Most-specific (longest) pattern wins
 func (mux *ServeMux) match(path string) http.Handler {
-	var h http.Handler
-	var n = 0
-	for k, v := range mux.m {
-		if !pathMatch(k, path) {
-			continue
-		}
-		if h == nil || len(k) > n {
-			n = len(k)
-			h = v
-		}
-	}
+	h, _ := mux.m[path]
 	return h
 }
 

@@ -52,12 +52,15 @@ func (h *websocketHandler) handle(ws *websocket.Conn) {
 	c.Send(websocketEventConnected(c.Id()))
 	wsproto.log(c, "200", c.Id())
 	for {
-		keepgoing := h.doHandle(c)
-		if !keepgoing {
-			// If returned value is false, that means the connection
-			// has been closed and loop should be terminated.
+		if !c.IsAlive() {
 			break
 		}
+		if !h.isRunning {
+			c.Send(websocketEventClosed(c.Id()))
+			c.kill()
+			break
+		}
+		h.doHandle(c)
 	}
 }
 
@@ -66,11 +69,7 @@ func (h *websocketHandler) handle(ws *websocket.Conn) {
 //
 // TODO: make this handler non-blocking handler
 //
-func (h *websocketHandler) doHandle(c *WebsocketClient) bool {
-	if !h.isRunning {
-		c.Send(websocketEventClosed(c.Id()))
-		return false
-	}
+func (h *websocketHandler) doHandle(c *WebsocketClient) {
 	var recv map[string]interface{}
 	err := websocket.JSON.Receive(c.Conn, &recv)
 	if err != nil {
@@ -78,22 +77,27 @@ func (h *websocketHandler) doHandle(c *WebsocketClient) bool {
 			// End of file reached, which means that connection
 			// has been closed.
 			wsproto.log(c, "598", "Broken connection")
-			return false
+			c.kill()
+			return
 		}
 		// Any other case means that data we have received
 		// is invalid. 
 		wsproto.error(c, "400", errorBadRequest, "Invalid data received")
-		return true
+		return
 	}
 	msg, err := newMessage(recv)
 	if err != nil {
 		// Message couldn't be parsed so it has invalid format.
 		wsproto.error(c, "400", errorBadRequest, "Invalid message format")
-		return true
+		return
 	}
 	// Finally, if everything's cool, just dispatch the message
 	// using websocket protocol.
-	return wsproto.dispatch(c, msg)
+	if !wsproto.dispatch(c, msg) {
+		// If returned value is false, that means the connection
+		// has been closed and loop should be terminated.
+		c.kill()
+	}
 }
 
 // Stops execution of this handler.

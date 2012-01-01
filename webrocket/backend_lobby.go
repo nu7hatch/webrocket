@@ -77,21 +77,21 @@ func (l *backendLobby) dequeue() {
 func (l *backendLobby) doDequeue() {
 	payload := <-l.queue
 	retries := 0
-	for {
-		if retries > l.maxRetries {
+
+start:
+	agent := l.roundRobin()
+	if agent == nil {
+		// No agents available, waiting a while and retrying
+		// TODO: log error
+		if retries >= l.maxRetries {
 			// Retries limit reached, dropping the message...
-			break
+			return
 		}
-		agent := l.roundRobin()
-		if agent == nil {
-			// No agents available, waiting a while and retrying
-			<-time.After(l.retryDelay)
-			retries += 1
-			// TODO: error, no clients available
-			continue
-		}
-		agent.Send(payload)
+		<-time.After(l.retryDelay)
+		retries += 1
+		goto start
 	}
+	agent.Send(payload)
 }
 
 // Adds specified agent to the load ballancer ring using the round
