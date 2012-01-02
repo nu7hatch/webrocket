@@ -89,7 +89,15 @@ func main() {
 	websocket := ctx.NewWebsocketEndpoint(conf.WsHost, conf.WsPort)
 	SetupEndpoint("Websocket endpoint", websocket);
 
-	// Waiting for the interrupt
-	<- signal.Incoming
-	fmt.Printf("\n... \033[33mExiting\033[0m\n")
+	for {
+		// Waiting for the interrupt
+		sig := <-signal.Incoming
+		if sig == os.SIGKILL || sig == os.SIGINT {
+			fmt.Printf("\n... \033[33mInterrupted\033[0m\n")
+			return
+		}
+		if sig == os.SIGTSTP {
+			
+		}
+	}
 }
