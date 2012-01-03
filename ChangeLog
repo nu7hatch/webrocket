@@ -1,9 +1,12 @@
 2012-01-02  Krzysztof Kowalik  <chris@nu7hat.ch>
 
 	* webrocket/backend_identity.go: cleanups
-	* webrocket/websocket_client.go: changed errors logging
+	* webrocket/websocket_client.go: changed errors logging, updated uuid references
 	* webrocket/websocket_handler.go: changed logging approach
 	* webrocket/websocket_protocol.go: simplified protocol, changed logging
+	* websocket/vhost.go: updated uuid references
+	* websocket/permission.go: updated uuid references
+	* deps/gouuid: updated to newest version
 
 2011-12-30  Krzysztof Kowalik  <chris@nu7hat.ch>
 

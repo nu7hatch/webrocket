@@ -89,7 +89,8 @@ func doTestBackendReqConnectWithInvalidIdentitiy(t *testing.T) {
 func doTestBackendReqConnectWithValidIdentity(t *testing.T) {
 	req.Close()
 	req, _ = zctx.NewSocket(zmq.REQ)
-	req.SetSockOptString(zmq.IDENTITY, fmt.Sprintf("req:/test:%s:%s", bv.accessToken, uuid.GenerateTime()))
+	uuid, _ := uuid.NewV4()
+	req.SetSockOptString(zmq.IDENTITY, fmt.Sprintf("req:/test:%s:%s", bv.accessToken, uuid.String()))
 	req.Connect("tcp://127.0.0.1:9772")
 	req.Send([]byte("{}"), 0)
 	resp := breqrecv(t)

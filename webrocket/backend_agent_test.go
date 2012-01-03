@@ -26,7 +26,8 @@ func newTestBackendAgent() *BackendAgent {
 	ctx := NewContext()
 	b := ctx.NewBackendEndpoint("", 9772)
 	v, _ := newVhost(ctx, "/foo")
-	a := newBackendAgent(b.(*BackendEndpoint), v, []byte(uuid.GenerateTime()))
+	uuid, _ := uuid.NewV4()
+	a := newBackendAgent(b.(*BackendEndpoint), v, uuid[:])
 	return a
 }
 

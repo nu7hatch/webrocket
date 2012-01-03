@@ -59,9 +59,9 @@ func newVhost(ctx *Context, path string) (v *Vhost, err error) {
 
 // Generates access token for the backend connections. 
 func (v *Vhost) GenerateAccessToken() string {
-	var hash = sha1.New()
-	var uuid = uuid.GenerateTime()
-	hash.Write([]byte(uuid))
+	hash := sha1.New()
+	uuid, _ := uuid.NewV4()
+	hash.Write(uuid[:])
 	v.accessToken = fmt.Sprintf("%x", hash.Sum([]byte{}))
 	v.permissions = make(map[string]*Permission)
 	return v.accessToken

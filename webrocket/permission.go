@@ -26,9 +26,9 @@ import (
 
 // Generates single access token hash.
 func generateSingleAccessToken() string {
-	var hash = sha512.New()
-	var uuid = uuid.GenerateTime()
-	hash.Write([]byte(uuid))
+	hash := sha512.New()
+	uuid, _ := uuid.NewV4()
+	hash.Write(uuid[:])
 	return fmt.Sprintf("%x", hash.Sum([]byte{}))
 }
 

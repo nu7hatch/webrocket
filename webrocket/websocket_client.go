@@ -45,7 +45,8 @@ type WebsocketClient struct {
 func newWebsocketClient(v *Vhost, ws *websocket.Conn) (c *WebsocketClient) {
 	c = &WebsocketClient{Conn: ws}
 	c.connection = newConnection(v)
-	c.id = uuid.GenerateTime()
+	uuid, _ := uuid.NewV4()
+	c.id = uuid.String()
 	c.subscriptions = make(map[string]*Channel)
 	c.maxRetries = websocketClientDefaultMaxRetries
 	c.retryDelay = websocketClientDefaultRetryDelay
