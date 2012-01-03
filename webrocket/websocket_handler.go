@@ -25,25 +25,6 @@ import (
 	"websocket"
 )
 
-func websocketStatusLog(c *WebsocketClient, status string, code int, msg string) {
-	c.log.Printf("websocket[%s]: %d %s; %s", c.vhost.Path(), code, status, msg)
-}
-
-func websocketError(c *WebsocketClient, error string, code int, msg string) {
-	payload := map[string]interface{}{
-		"__error": map[string]interface{}{
-			"code":   code,
-			"status": error,
-		},
-	}
-	c.Send(payload)
-	websocketStatusLog(c, error, code, msg)
-}
-
-func websocketBadRequestError(c *WebsocketClient, msg string) {
-	websocketError(c, "Bad request", 400, msg)
-}
-
 // websocketHandler is a wrapper for the standard `websocket.Handler`
 // providing some thread safety tricks and access to related vhost.
 type websocketHandler struct {

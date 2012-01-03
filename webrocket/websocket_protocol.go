@@ -17,6 +17,29 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package webrocket
 
+// Helper for logging websocket handler's statuses.
+func websocketStatusLog(c *WebsocketClient, status string, code int, msg string) {
+	c.log.Printf("websocket[%s]: %d %s; %s", c.vhost.Path(), code, status, msg)
+}
+
+// Helper for logging protocol errors and and seding
+// it to the client.
+func websocketError(c *WebsocketClient, error string, code int, msg string) {
+	payload := map[string]interface{}{
+		"__error": map[string]interface{}{
+			"code":   code,
+			"status": error,
+		},
+	}
+	c.Send(payload)
+	websocketStatusLog(c, error, code, msg)
+}
+
+// Shorthand for returning handling a 'Bad Request' error.
+func websocketBadRequestError(c *WebsocketClient, msg string) {
+	websocketError(c, "Bad request", 400, msg)
+}
+
 // The '__connected' event's payload.
 func websocketEventConnected(sid string) map[string]interface{} {
 	return map[string]interface{}{

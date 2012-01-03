@@ -40,8 +40,7 @@ var (
 
 func init() {
 	ctx := NewContext()
-	//ctx.SetLog(
-		log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags)//)
+	ctx.SetLog(log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags))
 	we = ctx.NewWebsocketEndpoint("", 9771)
 	wv, _ = ctx.AddVhost("/test")
 	wv.OpenChannel("test")
