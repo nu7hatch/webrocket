@@ -83,7 +83,7 @@ start:
 	err := websocket.JSON.Send(c.Conn, payload)
 	if err != nil {
 		// Couldn't send to the client
-		wsproto.log(c, "597", err.Error())
+		websocketStatusLog(c, "Not send", 597, err.Error())
 		if retries >= c.maxRetries {
 			return
 		}

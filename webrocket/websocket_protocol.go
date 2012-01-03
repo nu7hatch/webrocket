@@ -60,60 +60,37 @@ func websocketEventClosed(sid string) map[string]interface{} {
 	}
 }
 
-// It's just plain struct to gather all event handlers together.
-// The idea is to have one global copy of the protocol object
-// and share it across all connected clients.
-type websocketProtocol struct{}
-
-// dispatch takes an incoming message and handles it in appropriate
-// way according to the protocol specification.
-func (p *websocketProtocol) dispatch(c *WebsocketClient, msg *Message) bool {
-	switch msg.Event() {
-	case "broadcast":
-		p.handleBroadcast(c, msg)
-	case "trigger":
-		p.handleTrigger(c, msg)
-	case "subscribe":
-		p.handleSubscribe(c, msg)
-	case "unsubscribe":
-		p.handleUnsubscribe(c, msg)
-	case "auth":
-		p.handleAuth(c, msg)
-	case "pong":
-		p.handlePong(c, msg)
-	case "close":
-		p.handleClose(c, msg)
-		return false
-	default:
-		p.notFound(c, msg)
-	}
-	return true
+// Available handlers for the websocket protocol.
+var websocketProtocol = map[string]func(*WebsocketClient, *Message)(string,int){
+	"broadcast":   websocketHandleBroadcast,
+	"trigger":     websocketHandleTrigger,
+	"subscribe":   websocketHandleSubscribe,
+	"unsubscribe": websocketHandleUnsubscribe,
+	"auth":        websocketHandleAuth,
+	"close":       websocketHandleClose,
 }
 
-// Shorthand for logging operations.
-func (p *websocketProtocol) log(c *WebsocketClient, code string, a ...interface{}) {
-	msg, ok := logMsg[code]
-	if ok {
-		a = append([]interface{}{"websocket", c.vhost.Path(), code}, a...)
-		c.log.Printf(msg, a...)
+// websocketDispatch takes an incoming message and handles it
+// in appropriate way according to the protocol specification.
+func websocketDispatch(c *WebsocketClient, msg *Message) (status string, code int, keepgoing bool) {
+	if msg.Event() != "close" {
+		keepgoing = true
 	}
-}
-
-// Shorthand for handling errors.
-func (p *websocketProtocol) error(c *WebsocketClient, code string,
-	err map[string]interface{}, a ...interface{}) {
-	c.Send(err)
-	p.log(c, code, a...)
+	handlerFunc, ok := websocketProtocol[msg.Event()]
+	if !ok {
+		status, code = "Bad request", 400
+		return
+	}
+	status, code = handlerFunc(c, msg)
+	return
 }
 
 // The 'auth' event handler.
-func (p *websocketProtocol) handleAuth(c *WebsocketClient, msg *Message) {
+func websocketHandleAuth(c *WebsocketClient, msg *Message) (status string, code int) {
 	// Getting data from payload...
 	token, ok := msg.Get("token").(string)
 	if !ok || token == "" {
-		// Bad request
-		p.error(c, "400", errorBadRequest, "Invalid payload params")
-		return
+		return "Bad request", 400
 	}
 	// Closing current session if authenticated...
 	if c.IsAuthenticated() {
@@ -123,25 +100,21 @@ func (p *websocketProtocol) handleAuth(c *WebsocketClient, msg *Message) {
 	// Checking if given single access token exists
 	perm, ok := c.vhost.ValidateSingleAccessToken(token)
 	if !ok || perm == nil {
-		// Unauthorized
-		p.error(c, "402", errorUnauthorized, "Invalid access token")
-		return
+		return "Unauthorized", 402
 	}
 	// And if everything's fine then authenticate the client's
 	// session and send a confirmation message. 
 	c.authenticate(perm)
 	c.Send(websocketEventAuthenticated())
-	p.log(c, "201", perm.Pattern(), c.Id())
+	return "Authenticated", 201
 }
 
 // The 'subscribe' event handler.
-func (p *websocketProtocol) handleSubscribe(c *WebsocketClient, msg *Message) {
+func websocketHandleSubscribe(c *WebsocketClient, msg *Message) (status string, code int) {
 	// Getting data from payload...
 	chanName, ok := msg.Get("channel").(string)
 	if !ok || chanName == "" {
-		// Bad request
-		p.error(c, "400", errorBadRequest, "Invalid channel name")
-		return
+		return "Bad request", 400
 	}
 	/*
 		TODO: presence channels
@@ -157,48 +130,39 @@ func (p *websocketProtocol) handleSubscribe(c *WebsocketClient, msg *Message) {
 	// Checking if channel exists...
 	channel, err := c.vhost.Channel(chanName)
 	if err != nil {
-		// Channel not found
-		p.error(c, "454", errorChannelNotFound, chanName)
-		return
+		return "Channel not found", 454
 	}
 	// Everything's fine, adding connection to subscribers and
 	// sending an answer.
 	channel.addSubscriber(c)
 	c.Send(websocketEventSubscribed(chanName))
-	p.log(c, "202", chanName, c.Id())
+	return "Subscribed", 202
 }
 
 // The 'unsubscribe' event handler.
-func (p *websocketProtocol) handleUnsubscribe(c *WebsocketClient, msg *Message) {
+func websocketHandleUnsubscribe(c *WebsocketClient, msg *Message) (status string, code int) {
 	// Getting data from payload...
 	chanName, ok := msg.Get("channel").(string)
 	if !ok || chanName == "" {
-		// Bad request
-		p.error(c, "400", errorBadRequest, "Invalid channel name")
-		return
+		return "Bad request", 400
 	}
 	// Checking if channel exists and if current user is subscribing
 	// this channel...
 	channel, err := c.vhost.Channel(chanName)
 	if err != nil || channel == nil {
-		// Channel not found
-		p.error(c, "454", errorChannelNotFound, chanName)
-		return
+		return "Channel not found", 454
 	}
 	if !channel.hasSubscriber(c) {
-		// Not subscribed
-		p.error(c, "453", errorNotSubscribed, chanName)
-		return
+		return "Not subscribed", 453
 	}
 	// Unsubscribing from this channel
 	channel.deleteSubscriber(c)
 	c.Send(websocketEventUnsubscribed(chanName))
-	p.log(c, "203", chanName, c.Id())
-	return
+	return "Unsubscribed", 203
 }
 
 // The 'broadcast' event handler.
-func (p *websocketProtocol) handleBroadcast(c *WebsocketClient, msg *Message) {
+func websocketHandleBroadcast(c *WebsocketClient, msg *Message) (status string, code int) {
 	// Getting data from payload...
 	chanName, _ := msg.Get("channel").(string)
 	eventName, _ := msg.Get("event").(string)
@@ -206,9 +170,7 @@ func (p *websocketProtocol) handleBroadcast(c *WebsocketClient, msg *Message) {
 
 	// Checking if message's payload is valid 
 	if chanName == "" || eventName == "" {
-		// Bad request
-		p.error(c, "400", errorBadRequest, "Invalid payload params")
-		return
+		return "Bad request", 400
 	}
 	// Data field is optional, so when it's empty we have to
 	// assign an empty map.
@@ -225,14 +187,11 @@ func (p *websocketProtocol) handleBroadcast(c *WebsocketClient, msg *Message) {
 	// Checking if channel exists...
 	channel, err := c.vhost.Channel(chanName)
 	if err != nil || channel == nil {
-		// Channel not found
-		p.error(c, "454", errorChannelNotFound, chanName)
-		return
+		return "Channel not found", 454
 	}
 	// ... and if client is subscribing it
 	if !channel.hasSubscriber(c) {
-		p.error(c, "453", errorNotSubscribed, chanName)
-		return
+		return "Not subscribed", 453
 	}
 	// Extending data with sender and channel information before
 	// passing it forward...
@@ -240,51 +199,39 @@ func (p *websocketProtocol) handleBroadcast(c *WebsocketClient, msg *Message) {
 	data["channel"] = chanName
 	// ... and broadcasting it to all subscribers.
 	channel.Broadcast(&map[string]interface{}{eventName: data})
-	p.log(c, "204", eventName, chanName, c.Id())
 	// If the `trigger` param specified, then we have to send
 	// an event to the backend agent.
 	if trigger != "" {
 		// TODO: Trigger backend job
 	}
+	return "Broadcasted", 204
 }
 
 // The 'trigger' event handler.
-func (p *websocketProtocol) handleTrigger(c *WebsocketClient, msg *Message) {
+func websocketHandleTrigger(c *WebsocketClient, msg *Message) (status string, code int) {
 	// Getting data from payload...
 	eventName, _ := msg.Get("event").(string)
 	data, ok := msg.Get("data").(map[string]interface{})
 
 	// Checking if message's payload is valid
 	if eventName == "" || !ok {
-		// Bad request
-		return
+		return "Bad request", 400
 	}
 	// Checking if client is authenticated...
 	if !c.IsAuthenticated() {
-		// Forbidden
-		return
+		return "Forbidden", 403
 	}
 	// Extending data with sender information before passing
 	// it forward...
 	data["sid"] = c.Id()
 	// ... and sending it to one of the agents.
 	// TODO: send
-}
-
-// The 'pong' event handler.
-func (p *websocketProtocol) handlePong(c *WebsocketClient, msg *Message) {
+	return "Triggered", 205
 }
 
 // The 'close' event handler.
-func (p *websocketProtocol) handleClose(c *WebsocketClient, msg *Message) {
+func websocketHandleClose(c *WebsocketClient, msg *Message) (status string, code int) {
 	// Just sending the confirmation
 	c.Send(websocketEventClosed(c.Id()))
-	p.log(c, "207", c.Id())
-}
-
-// Handles situation when requested event is not supported by
-// the WebRocket Frontend Protocol.
-func (p *websocketProtocol) notFound(c *WebsocketClient, msg *Message) {
-	// Reply with the 'Bad request' error...
-	p.error(c, "400", errorBadRequest, "Event not implemented")
+	return "Disconnected", 207
 }

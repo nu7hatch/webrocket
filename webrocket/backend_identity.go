@@ -23,6 +23,9 @@ import (
 	"regexp"
 )
 
+// A valid identity regexp.
+const identityPattern = "^(dlr|req)\\:(/[\\w\\d\\-\\_]+(/[\\w\\d\\-\\_]+)*)\\:([\\d\\w]{40})\\:([\\d\\w\\-]{36})$"
+
 // backendIdentity represents parsed identity information.
 type backendIdentity struct {
 	Raw         []byte
@@ -38,9 +41,7 @@ type backendIdentity struct {
 //     [type]:[vhost]:[access-token]:[client-id]
 //
 func parseBackendIdentity(raw []byte) (idty *backendIdentity, err error) {
-	re, _ := regexp.Compile(
-		"(dlr|req)\\:(/[\\w\\d\\-\\_]+(/[\\w\\d\\-\\_]+)*)\\:" +
-			"([\\d\\w]{40})\\:([\\d\\w\\-]{36})")
+	re, _ := regexp.Compile(identityPattern)
 	parts := re.FindStringSubmatch(string(raw))
 	if len(parts) != 6 {
 		err = errors.New("Invalid identity")

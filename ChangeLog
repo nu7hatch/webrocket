@@ -1,3 +1,10 @@
+2012-01-02  Krzysztof Kowalik  <chris@nu7hat.ch>
+
+	* webrocket/backend_identity.go: cleanups
+	* webrocket/websocket_client.go: changed errors logging
+	* webrocket/websocket_handler.go: changed logging approach
+	* webrocket/websocket_protocol.go: simplified protocol, changed logging
+
 2011-12-30  Krzysztof Kowalik  <chris@nu7hat.ch>
 
 	* webrocket/backend_lobby.go: cleanups

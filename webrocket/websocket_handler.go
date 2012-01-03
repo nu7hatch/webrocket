@@ -21,11 +21,28 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"encoding/json"
 	"websocket"
 )
 
-// Global WebSocket protocol dispatcher.
-var wsproto websocketProtocol
+func websocketStatusLog(c *WebsocketClient, status string, code int, msg string) {
+	c.log.Printf("websocket[%s]: %d %s; %s", c.vhost.Path(), code, status, msg)
+}
+
+func websocketError(c *WebsocketClient, error string, code int, msg string) {
+	payload := map[string]interface{}{
+		"__error": map[string]interface{}{
+			"code":   code,
+			"status": error,
+		},
+	}
+	c.Send(payload)
+	websocketStatusLog(c, error, code, msg)
+}
+
+func websocketBadRequestError(c *WebsocketClient, msg string) {
+	websocketError(c, "Bad request", 400, msg)
+}
 
 // websocketHandler is a wrapper for the standard `websocket.Handler`
 // providing some thread safety tricks and access to related vhost.
@@ -50,16 +67,18 @@ func (h *websocketHandler) handle(ws *websocket.Conn) {
 	// New connection established, so we have to send the '__connected'
 	// event to the client.
 	c.Send(websocketEventConnected(c.Id()))
-	wsproto.log(c, "200", c.Id())
+	websocketStatusLog(c, "Connected", 200, "")
 	for {
+		// Break if client is dead
 		if !c.IsAlive() {
 			break
 		}
-		if !h.isRunning {
-			c.Send(websocketEventClosed(c.Id()))
+		// Break if handler has been stopped
+		if !h.IsRunning() {
 			c.kill()
 			break
 		}
+		// Handle connection
 		h.doHandle(c)
 	}
 }
@@ -76,26 +95,33 @@ func (h *websocketHandler) doHandle(c *WebsocketClient) {
 		if err == io.EOF {
 			// End of file reached, which means that connection
 			// has been closed.
-			wsproto.log(c, "598", "Broken connection")
+			websocketError(c, "Connection closed", 598, "")
 			c.kill()
 			return
 		}
 		// Any other case means that data we have received
-		// is invalid. 
-		wsproto.error(c, "400", errorBadRequest, "Invalid data received")
+		// is invalid.
+		websocketBadRequestError(c, "")
 		return
 	}
 	msg, err := newMessage(recv)
+	msgstr, _ := json.Marshal(recv)
 	if err != nil {
-		// Message couldn't be parsed so it has invalid format.
-		wsproto.error(c, "400", errorBadRequest, "Invalid message format")
+		// Message couldn't be parsed due to invalid JSON format.
+		websocketBadRequestError(c, string(msgstr))
 		return
 	}
-	// Finally, if everything's cool, just dispatch the message
-	// using websocket protocol.
-	if !wsproto.dispatch(c, msg) {
-		// If returned value is false, that means the connection
-		// has been closed and loop should be terminated.
+	// Finally, if everything's cool, dispatch the message
+	// and check it's response status.
+	status, code, keepgoing := websocketDispatch(c, msg)
+	if code >= 400 {
+		websocketError(c, status, code, string(msgstr))
+	} else {
+		websocketStatusLog(c, status, code, string(msgstr))
+	}
+	// If returned value is false, that means the connection
+	// has been closed and loop should be terminated.
+	if !keepgoing {
 		c.kill()
 	}
 }
@@ -114,10 +140,17 @@ func (h *websocketHandler) start() {
 	h.isRunning = true
 }
 
+// Returns true if this handler is still alive.
+func (h *websocketHandler) IsRunning() bool {
+	h.mtx.Lock()
+	defer h.mtx.Unlock()
+	return h.isRunning
+}
+
 // ServeHTTP extends standard websocket.Handler implementation
 // of http.Handler interface.
 func (h *websocketHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	if h.isRunning {
+	if h.IsRunning() {
 		h.handler.ServeHTTP(w, req)
 	}
 }
