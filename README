@@ -52,7 +52,7 @@ explanation what you can find in there.
 	Tool for starting and preconfiguring single WebRocket
 	server node.
 
-'webrocket-ctl'::
+'webrocket-admin'::
 	Tool for ad-hoc configuration management of the running
 	WebRocket server nodes.
 
