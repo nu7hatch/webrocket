@@ -3,15 +3,17 @@ TODO list
 
 webrocket
 ---------
-* Backend REQ protocol
-* Backend DEALER protocol
 * Presence channels
 * Private channels
-* Persistance for vhosts and channels
 * clustering support
 * add direct message action (but first investigate if really needed)
+* test generating cookies
+* test admin endpoint & its protocol 
 
 webrocket-server
 ----------------
-* cleanup connections when interrupted
 * different tls keys for backend and frontend
+
+webrocket-admin
+---------------
+* tests

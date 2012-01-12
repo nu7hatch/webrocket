@@ -55,6 +55,20 @@ If the 'zeromq' package is not available in your package manager,
 try to build it manualy following the installation instructions at
 http://www.zeromq.org/intro:get-the-software
 
+kyoto-cabinet (>= 1.2)
+~~~~~~~~~~~~~~~~~~~~~~
+The Kyoto Cabinet hash table library. This library shoult be available
+in your package manager's repository in most of operating systems.
+
+.Debian
+	$ TODO ...
+
+.Arch Linux
+	$ yaourt -S kyoto-cabinet // or install it manually from AUR
+
+.Brew
+	$ brew install kyoto-cabinet
+
 Development dependencies
 ------------------------
 If you want to work on WebRocket development, you need to install
