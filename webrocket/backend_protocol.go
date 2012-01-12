@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,168 +12,169 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
-// The '__singleAccessToken' event's payload.
-func backendEventSingleAccessToken(token string) map[string]interface{} {
-	return map[string]interface{}{
-		"__singleAccessToken": map[string]interface{}{
-			"token": token,
-		},
+import (
+	"fmt"
+	"encoding/json"
+)
+
+var backendReqProtocol = map[string]func(*backendRequest)(string,int){
+	"BC": backendReqHandleBroadcast,
+	"OC": backendReqHandleOpenChannel,
+	"CC": backendReqHandleCloseChannel,
+	"AT": backendReqHandleSingleAccessTokenRequest,
+}
+
+// Helper for logging backend handler's statuses.
+func backendStatusLog(b *BackendEndpoint, v *Vhost, status string, code int, msg string) {
+	path := "..."
+	if v != nil {
+		path = v.Path()
 	}
+	b.log.Printf("backend[%s]: %d %s; %s", path, code, status, msg)
 }
 
-// It's just plain struct to gather all event handlers together.
-// The idea is to have one global copy of the protocol object
-// and share it across all connected agents.
-type backendReqProtocol struct{}
-
-// dispatch takes a message incoming from the REQ client and
-// handles it in appropriate way according to the protocol
-// specification.
-func (p *backendReqProtocol) dispatch(b *BackendEndpoint,
-	vhost *Vhost, aid []byte, msg *Message) {
-	switch msg.Event() {
-	case "broadcast":
-		p.handleBroadcast(b, vhost, aid, msg)
-	case "openChannel":
-		p.handleOpenChannel(b, vhost, aid, msg)
-	case "closeChannel":
-		p.handleCloseChannel(b, vhost, aid, msg)
-	case "singleAccessToken":
-		p.handleSingleAccessToken(b, vhost, aid, msg)
-	default:
-		p.notFound(b, vhost, aid, msg)
-	}
+// Helper for logging protocol errors and and seding it to
+// the client.
+func backendError(b *BackendEndpoint, v *Vhost, aid []byte, error string,
+	code int, msg string) {
+	b.SendTo(aid, true, "ER", fmt.Sprintf("%d", code))
+	backendStatusLog(b, v, error, code, msg)
 }
 
-// Shorthand for logging operations.
-func (p *backendReqProtocol) log(b *BackendEndpoint, vhost *Vhost,
-	aid []byte, code string, a ...interface{}) {
-	msg, ok := logMsg[code]
-	if ok {
-		path := "..."
-		if vhost != nil {
-			path = vhost.Path()
-		}
-		a = append([]interface{}{"req", path, code}, a...)
-		b.log.Printf(msg, a...)
-	}
-}
-
-// Shorthand for handling errors.
-func (p *backendReqProtocol) error(b *BackendEndpoint, vhost *Vhost,
-	aid []byte, code string, err map[string]interface{}, a ...interface{}) {
-	b.SendTo(aid, err)
-	p.log(b, vhost, aid, code, a...)
-}
-
-// The 'broadcast' event handler.
-func (p *backendReqProtocol) handleBroadcast(b *BackendEndpoint,
-	vhost *Vhost, aid []byte, msg *Message) {
-	// Getting data from payload...
-	chanName, _ := msg.Get("channel").(string)
-	eventName, _ := msg.Get("event").(string)
-
-	// Checking if message's payload is valid 
-	if chanName == "" || eventName == "" {
-		// Bad request
-		p.error(b, vhost, aid, "400", errorBadRequest, "Invalid payload params")
+// backendDealerDispatch takes a message received from the agent
+// and handles it in appropriate way accoring to the backend worker
+// protocol specification.
+func backendDealerDispatch(r *backendRequest) (status string, code int) {
+	var agent *BackendAgent
+	lobby, ok := r.endpoint.lobbys[r.vhost.Path()]
+	if !ok {
+		// Something's fucked up, it should never happen
+		status, code = "Internal error", 500
 		return
 	}
-	// Data field is optional, so when it's empty we have to
-	// assign an empty map.
-	data, ok := msg.Get("data").(map[string]interface{})
+	switch r.cmd {
+	case "RD":
+		// first message from the agent, means it's ready to work
+		agent = newBackendAgent(r.endpoint, r.vhost, r.id)
+		lobby.addAgent(agent)
+		status, code = "Ready", 300
+	case "HB":
+		agent, ok = lobby.getAgentById(string(r.id))
+		if ok {
+			status, code = "Heartbeat", 301
+		} else {
+			// seems that agent sent heartbeat after liveness period,
+			// we have to send a quit message restart it.
+			r.Reply("QT")
+			status, code = "Expired", 308
+		}
+	default:
+		status, code = "Bad request", 400
+	}
+	// Refresh expiration time...
+	agent.updateExpiration()
+	return 
+}
+
+// backendReqDispatch takes an incoming message and handles it
+// in appropriate way accoring to the backend worker protocol
+// specification.
+func backendReqDispatch(r *backendRequest) (string, int) {
+	handlerFunc, ok := backendReqProtocol[r.cmd]
 	if !ok {
+		return "Bad request", 400
+	}
+	return handlerFunc(r)
+}
+
+// The 'BC' (broadcast) event handler.
+func backendReqHandleBroadcast(r *backendRequest) (string, int) {
+	// Getting data from payload...
+	if len(r.msg) < 3 {
+		return "Bad request", 400
+	}
+	chanName, eventName := string(r.msg[0]), string(r.msg[1])
+	if chanName == "" || eventName == "" {
+		return "Bad request", 400
+	}
+	rawData := r.msg[2]
+	var data map[string]interface{}
+	err := json.Unmarshal(rawData, &data)
+	if err != nil {
 		data = map[string]interface{}{}
 	}
 	// Checking if channel exists...
-	channel, err := vhost.Channel(chanName)
-	if err != nil || channel == nil {
-		// Channel not found
-		p.error(b, vhost, aid, "454", errorChannelNotFound, chanName)
-		return
+	channel, ok := r.vhost.Channel(chanName)
+	if !ok || channel == nil {
+		return "Channel not found", 454
 	}
 	// Extending data with sender id and channel information before
-	// pass it forward.
+	// pass it forward. Finally, broadcasting and replying to the client.
 	data["channel"] = chanName
-	// ... and finally broadcasting it on the channel.
 	channel.Broadcast(&map[string]interface{}{eventName: data})
-	b.SendTo(aid, okBroadcasted)
-	p.log(b, vhost, aid, "204", eventName, chanName, "...")
+	r.Reply("OK")
+	return "Broadcasted", 204
 }
 
-// The 'openChannel' event handler.
-func (p *backendReqProtocol) handleOpenChannel(b *BackendEndpoint,
-	vhost *Vhost, aid []byte, msg *Message) {
-	// Getting data from payload... 
-	chanName, ok := msg.Get("channel").(string)
-	if !ok || chanName == "" {
-		// Bad request
-		p.error(b, vhost, aid, "400", errorBadRequest, "Invalid payload params")
-		return
+// The 'OC' (open channel) event handler.
+func backendReqHandleOpenChannel(r *backendRequest) (string, int) {
+	// Getting data from payload...
+	if len(r.msg) < 1 {
+		return "Bad request", 400
+	}
+	chanName := string(r.msg[0])
+	if chanName == "" {
+		return "Bad request", 400
 	}
 	// Checking if channel already exists
-	_, err := vhost.Channel(chanName)
-	if err == nil {
-		// If channel exists, then return success response
-		b.SendTo(aid, okChannelExists)
-		p.log(b, vhost, aid, "251", chanName)
-		return
+	_, ok := r.vhost.Channel(chanName)
+	if ok {
+		r.Reply("OK")
+		return "Channel exists", 251
 	}
 	// Trying to create if not exists...
-	_, err = vhost.OpenChannel(chanName)
+	_, err := r.vhost.OpenChannel(chanName)
 	if err != nil {
-		// Invalid channel name
-		p.error(b, vhost, aid, "451", errorInvalidChannelName, chanName)
-		return
+		return "Invalid channel name", 451
 	}
 	// Channel created, sending success response
-	b.SendTo(aid, okChannelOpened)
-	p.log(b, vhost, aid, "250", chanName)
+	r.Reply("OK")
+	return "Channel opened", 250
 }
 
-// The 'closeChannel' event handler.
-func (p *backendReqProtocol) handleCloseChannel(b *BackendEndpoint,
-	vhost *Vhost, aid []byte, msg *Message) {
-	// Getting data from payload... 
-	chanName, ok := msg.Get("channel").(string)
-	if !ok || chanName == "" {
-		// Bad request
-		p.error(b, vhost, aid, "400", errorBadRequest, "Invalid payload params")
-		return
+// The 'CC' (close channel) event handler.
+func backendReqHandleCloseChannel(r *backendRequest) (string, int) {
+	// Getting data from payload...
+	if len(r.msg) < 1 {
+		return "Bad request", 400
+	}
+	chanName := string(r.msg[0])
+	if chanName == "" {
+		return "Bad request", 400
 	}
 	// Deleting channel if exists
-	err := vhost.DeleteChannel(chanName)
-	if err != nil {
-		// Channel not found
-		p.error(b, vhost, aid, "454", errorChannelNotFound, chanName)
-		return
+	ok := r.vhost.DeleteChannel(chanName)
+	if !ok {
+		return "Channel not found", 454
 	}
 	// Channel deleted, sending success response
-	b.SendTo(aid, okChannelClosed)
-	p.log(b, vhost, aid, "252", chanName)
+	r.Reply("OK")
+	return "Channel closed", 252
 }
 
-// The 'singleAccessToken' event handler.
-func (p *backendReqProtocol) handleSingleAccessToken(b *BackendEndpoint,
-	vhost *Vhost, aid []byte, msg *Message) {
-	// Getting data from payload... 
-	pattern, ok := msg.Get("permission").(string)
-	if !ok || pattern == "" {
-		// Set default pattern if not present...
-		pattern = ".*"
+// The 'AT' (access token) event handler.
+func backendReqHandleSingleAccessTokenRequest(r *backendRequest) (string, int) {
+	// Getting data from payload...
+	pattern := ".*"
+	if len(r.msg) > 0 {
+		pattern = string(r.msg[0])
 	}
 	// Generating a single access token for specified permissions...
-	token := vhost.GenerateSingleAccessToken(pattern)
+	token := r.vhost.GenerateSingleAccessToken(pattern)
 	// ... and sending it in the response
-	b.SendTo(aid, backendEventSingleAccessToken(token))
-	p.log(b, vhost, aid, "253", pattern)
-}
-
-// Handles situation when requested event is not supported by
-// the WebRocket Frontend Protocol.
-func (p *backendReqProtocol) notFound(b *BackendEndpoint,
-	vhost *Vhost, aid []byte, msg *Message) {
-	p.error(b, vhost, aid, "400", errorBadRequest, "Event not implemented")
+	r.Reply("AT", token)
+	return "Single access token generated", 270 
 }

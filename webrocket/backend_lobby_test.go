@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,14 +12,15 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import "testing"
 
 func TestNewBackendLobby(t *testing.T) {
 	bl := newBackendLobby()
-	if !bl.isRunning {
-		t.Errorf("Expected lobby to be running")
+	if !bl.IsAlive() {
+		t.Errorf("Expected lobby to be alive")
 	}
 }
 
@@ -64,13 +62,13 @@ func TestBackendLobbyGetAgentById(t *testing.T) {
 	}
 }
 
-func TestBackendLobbyRoundRobin(t *testing.T) {
+func TestBackendLobbyLoadBallance(t *testing.T) {
 	bl := newBackendLobby()
 	bl.addAgent(newTestBackendAgent())
 	bl.addAgent(newTestBackendAgent())
 	var lastAgent, currentAgent *BackendAgent
 	for i := 0; i < 5; i += 1 {
-		currentAgent = bl.roundRobin()
+		currentAgent = bl.loadBallance()
 		if currentAgent == nil {
 			t.Errorf("Expected to pick valid agent")
 			continue
@@ -85,7 +83,7 @@ func TestBackendLobbyRoundRobin(t *testing.T) {
 	bl.deleteAgent(lastAgent)
 	lastAgent, currentAgent = nil, nil
 	for i := 0; i < 3; i += 1 {
-		currentAgent = bl.roundRobin()
+		currentAgent = bl.loadBallance()
 		if currentAgent == nil {
 			t.Errorf("Expected to pick valid agent")
 			continue
@@ -104,8 +102,8 @@ func TestBackendLobbyRoundRobin(t *testing.T) {
 
 func TestBackendLobbyKill(t *testing.T) {
 	bl := newBackendLobby()
-	bl.kill()
-	if bl.isRunning {
+	bl.Kill()
+	if bl.IsAlive() {
 		t.Errorf("Expected lobby to be killed")
 	}
 }

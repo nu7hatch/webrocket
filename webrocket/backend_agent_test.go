@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,16 +12,18 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
 	uuid "../uuid"
 	"testing"
+	"time"
 )
 
 func newTestBackendAgent() *BackendAgent {
 	ctx := NewContext()
-	b := ctx.NewBackendEndpoint("", 9772)
+	b := ctx.NewBackendEndpoint(":9772")
 	v, _ := newVhost(ctx, "/foo")
 	uuid, _ := uuid.NewV4()
 	a := newBackendAgent(b.(*BackendEndpoint), v, uuid[:])
@@ -38,5 +37,21 @@ func TestNewBackendAgent(t *testing.T) {
 	}
 	if string(a.id) == "" {
 		t.Errorf("Expected new agent to have proper id")
+	}
+}
+
+func TestNewBackendAgentIsAlive(t *testing.T) {
+	a := newTestBackendAgent()
+	a.expiry = time.Now()
+	if a.IsAlive() {
+		t.Errorf("Expected agent to be not alive")
+	}
+	a.updateExpiration()
+	if !a.IsAlive() {
+		t.Errorf("Expected agent to be alive")
+	}
+	a.Kill()
+	if a.IsAlive() {
+		t.Errorf("Expected agent to be killed")
 	}
 }

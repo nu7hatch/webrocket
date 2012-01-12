@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +12,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import "testing"
@@ -33,9 +31,6 @@ func TestNewWebsocketClient(t *testing.T) {
 	}
 	if c.IsAuthenticated() {
 		t.Errorf("Expected client to be not authenticated")
-	}
-	if !c.IsAlive() {
-		t.Errorf("Expected new client to be alive")
 	}
 }
 
@@ -56,7 +51,7 @@ func TestWebsocketClientAuthenticate(t *testing.T) {
 	if !c.IsAuthenticated() {
 		t.Errorf("Expected to authenticate the client")
 	}
-	if c.permission.Token() != p.Token() {
+	if c.permission.Token != p.Token {
 		t.Errorf("Expected to authenticate the client with given permission")
 	}
 }

@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,12 +12,15 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
 	uuid "../uuid"
 	"websocket"
 	"time"
+	"io"
+	"encoding/json"
 )
 
 const (
@@ -43,19 +43,28 @@ type WebsocketClient struct {
 // WebsocketClient structure. Each client uses separate goroutine to deal
 // with the outgoing messages.
 func newWebsocketClient(v *Vhost, ws *websocket.Conn) (c *WebsocketClient) {
-	c = &WebsocketClient{Conn: ws}
-	c.connection = newConnection(v)
 	uuid, _ := uuid.NewV4()
-	c.id = uuid.String()
-	c.subscriptions = make(map[string]*Channel)
-	c.maxRetries = websocketClientDefaultMaxRetries
-	c.retryDelay = websocketClientDefaultRetryDelay
-	return c
+	c = &WebsocketClient{
+		Conn:          ws,
+		id:            uuid.String(),
+		maxRetries:    websocketClientDefaultMaxRetries,
+		retryDelay:    websocketClientDefaultRetryDelay,
+		connection:    newConnection(v),
+		subscriptions: make(map[string]*Channel),
+	}
+	return
 }
 
 // Marks this client as authenticate with given permissions. 
 func (c *WebsocketClient) authenticate(p *Permission) {
 	c.permission = p
+}
+
+// Removes all subscriptions created by this client.
+func (c *WebsocketClient) clearSubscriptions() {
+	for _, ch := range c.subscriptions {
+		ch.deleteSubscriber(c)
+	}
 }
 
 // Returns true when given client is authenticated
@@ -76,34 +85,58 @@ func (c *WebsocketClient) Id() string {
 
 // Sends specified payload to the client.
 func (c *WebsocketClient) Send(payload interface{}) {
-	retries := 0
-
-start:
-	// no need to lock, websocket package manages lock in the
-	// Send func.
-	err := websocket.JSON.Send(c.Conn, payload)
-	if err != nil {
-		// Couldn't send to the client
-		websocketStatusLog(c, "Not send", 597, err.Error())
-		if retries >= c.maxRetries {
-			return
+	if c.IsAlive() {
+		c.mtx.Lock()
+		defer c.mtx.Unlock()
+		err := websocket.JSON.Send(c.Conn, payload)
+		if err != nil {
+			websocketStatusLog(c, "Not send", 597, err.Error())
 		}
-		<-time.After(c.retryDelay)
-		retries += 1
-		goto start
 	}
 }
 
-// Removes all subscriptions created by this client.
-func (c *WebsocketClient) clearSubscriptions() {
-	for _, ch := range c.subscriptions {
-		ch.deleteSubscriber(c)
+// Receive reads a message from the client and parses it into
+// the internal message object. If there is no data to read from
+// the connection then it block until new data arrive.
+func (c *WebsocketClient) Receive() *Message {
+again:
+	if !c.IsAlive() {
+		return nil
 	}
+	var recv map[string]interface{}
+	err := websocket.JSON.Receive(c.Conn, &recv)
+	if err != nil {
+		if err == io.EOF {
+			// End of file reached, which means that connection
+			// has been closed.
+			websocketError(c, "Connection closed", 598, "")
+			c.Kill()
+			return nil
+		}
+		websocketBadRequestError(c, "")
+		goto again
+	}
+	msg, err := newMessage(recv)
+	if err != nil {
+		// Message couldn't be parsed due to invalid JSON format.
+		msgstr, _ := json.Marshal(recv)
+		websocketBadRequestError(c, string(msgstr))
+		goto again
+	}
+	return msg
+}
+
+// Returns true if the connection is alive.
+func (c *WebsocketClient) IsAlive() bool {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+	return c.Conn != nil
 }
 
 // Kills the client and closes underlaying connection.
-func (c *WebsocketClient) kill() {
-	c.connection.kill()
+func (c *WebsocketClient) Kill() {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
 	c.clearSubscriptions()
 	c.Conn.Close()
 }

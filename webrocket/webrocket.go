@@ -15,11 +15,14 @@
 
 package webrocket
 
-// Endpoint is an interface representing all endpoints installed
-// on the context's rack.
-type Endpoint interface {
-	ListenAndServe() error
-	ListenAndServeTLS(certFile, certKey string) error
-	Addr() string
-	IsAlive() bool
+import "fmt"
+
+const (
+	VerMajor = 0
+	VerMinor = 3
+	VerPatch = 0
+)
+
+func Version() string {
+	return fmt.Sprintf("%d.%d.%d", VerMajor, VerMinor, VerPatch)
 }

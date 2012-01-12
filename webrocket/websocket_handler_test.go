@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +12,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import "testing"
@@ -23,15 +21,11 @@ func TestWebsocketHandlerStartingAndStopping(t *testing.T) {
 	ctx := NewContext()
 	v, _ := newVhost(ctx, "/foo")
 	h := newWebsocketHandler(v)
-	if h.isRunning {
-		t.Errorf("Expected websocket handler state set to not running by default")
+	if !h.IsAlive() {
+		t.Errorf("Expected websocket handler state set to running by default")
 	}
-	h.start()
-	if !h.isRunning {
-		t.Errorf("Expected websocket handler state to change to running")
-	}
-	h.stop()
-	if h.isRunning {
+	h.Kill()
+	if h.IsAlive() {
 		t.Errorf("Expected websocket handler state to change to not running")
 	}
 }

@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,13 +12,14 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import "testing"
 
 func TestNewWebsocketEndpoint(t *testing.T) {
 	ctx := NewContext()
-	e := ctx.NewWebsocketEndpoint("localhost", 9000)
+	e := ctx.NewWebsocketEndpoint("localhost:9000")
 	if e.Addr() != "localhost:9000" {
 		t.Errorf("Expected to bing websockets endpoint to localhost:9000")
 	}
@@ -32,7 +30,7 @@ func TestNewWebsocketEndpoint(t *testing.T) {
 
 func TestWebsocketEndpointRegisterAndUnregisterVhost(t *testing.T) {
 	ctx := NewContext()
-	e := ctx.NewWebsocketEndpoint("localhost", 9000)
+	e := ctx.NewWebsocketEndpoint("localhost:9000")
 	w := e.(*WebsocketEndpoint)
 	v, _ := newVhost(ctx, "/foo")
 	w.registerVhost(v)
@@ -50,7 +48,7 @@ func TestWebsocketEndpointRegisterAndUnregisterVhost(t *testing.T) {
 func TestWebsocketRegisterDefinedVhostsOnCreate(t *testing.T) {
 	ctx := NewContext()
 	v, _ := ctx.AddVhost("/foo")
-	e := ctx.NewWebsocketEndpoint("localhost", 9000)
+	e := ctx.NewWebsocketEndpoint("localhost:9000")
 	w := e.(*WebsocketEndpoint)
 	h, ok := w.handlers["/foo"]
 	if !ok || h == nil || h.vhost.Path() != v.Path() {

@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +12,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
@@ -74,4 +72,10 @@ func (m *Message) Data() map[string]interface{} {
 func (m *Message) Get(key string) (value interface{}) {
 	value, _ = m.data[key]
 	return
+}
+
+// Returns message as stringified JSON.
+func (m *Message) JSON() string {
+	buf, _ := json.Marshal(&map[string]interface{}{m.event: m.data})
+	return string(buf)
 }

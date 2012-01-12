@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,21 +12,18 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import "testing"
 
 func TestNewBackendEndpoint(t *testing.T) {
 	ctx := NewContext()
-	e := ctx.NewBackendEndpoint("localhost", 9000)
-	if e.Addr() != "tcp://localhost:9000" {
-		t.Errorf("Expected to bing backends endpoint to tcp://localhost:9000")
+	e := ctx.NewBackendEndpoint("127.0.0.1:9000")
+	if e.Addr() != "127.0.0.1:9000" {
+		t.Errorf("Expected to bind backends endpoint to 127.0.0.1:9000, given: %s", e.Addr())
 	}
 	if ctx.backend == nil || ctx.backend.Addr() != e.Addr() {
 		t.Errorf("Expected to register backends endpoint in the context")
-	}
-	e = ctx.NewBackendEndpoint("", 9000)
-	if e.Addr() != "tcp://*:9000" {
-		t.Errorf("Expected to bing backends endpoint to tcp://*:9000")
 	}
 }

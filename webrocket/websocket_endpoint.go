@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,21 +12,25 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
-	"fmt"
 	"net"
 	"net/http"
 	"path"
 	"sync"
+	"crypto/rand"
+	"crypto/tls"
 )
 
 // WebsocketEndpoint defines parameters for running an WebSocket server.
 type WebsocketEndpoint struct {
-	http.Server
-	BaseEndpoint
+	*http.Server
+	ctx      *Context
+	alive    bool
 	handlers map[string]*websocketHandler
+	mtx      sync.Mutex
 }
 
 // Creates new websockets endpoint bound to specified host and port.
@@ -48,34 +49,40 @@ type WebsocketEndpoint struct {
 //         ws.ListenAndServe()
 //     }
 //
-func (ctx *Context) NewWebsocketEndpoint(host string, port uint) Endpoint {
-	e := &WebsocketEndpoint{}
-	e.ctx = ctx
-	e.handlers = make(map[string]*websocketHandler)
-	e.Server.Addr = fmt.Sprintf("%s:%d", host, port)
-	e.Handler = NewServeMux()
-	ctx.websocket = e
+func (ctx *Context) NewWebsocketEndpoint(addr string) Endpoint {
+	e := &WebsocketEndpoint{
+		ctx:      ctx,
+		handlers: make(map[string]*websocketHandler),
+		Server:   &http.Server{
+			Addr:    addr,
+			Handler: NewServeMux(),
+		},
+	}
 	for _, vhost := range ctx.vhosts {
 		e.registerVhost(vhost)
 	}
+	ctx.websocket = e
 	return e
 }
 
 // Registers a websockets handler for specified vhost. 
 func (w *WebsocketEndpoint) registerVhost(vhost *Vhost) {
+	w.mtx.Lock()
+	defer w.mtx.Unlock()
 	h := newWebsocketHandler(vhost)
-	w.Handler.(*ServeMux).AddHandler(vhost.Path(), h)
 	w.handlers[vhost.Path()] = h
-	h.start()
+	w.Handler.(*ServeMux).AddHandler(vhost.Path(), h)
 }
 
 // Removes websockets handler for specified vhost. 
 func (w *WebsocketEndpoint) unregisterVhost(vhost *Vhost) {
+	w.mtx.Lock()
+	defer w.mtx.Unlock()
 	h, ok := w.handlers[vhost.Path()]
 	if !ok {
 		return
 	}
-	h.stop()
+	h.Kill()
 	delete(w.handlers, vhost.Path())
 	w.Handler.(*ServeMux).DeleteHandler(vhost.Path())
 }
@@ -95,22 +102,50 @@ func (w *WebsocketEndpoint) ListenAndServe() error {
 	if e != nil {
 		return e
 	}
-	w.alive()
+	w.alive = true
 	return w.Server.Serve(l)
 }
 
 // Extendended http.Server.ListenAndServeTLS funcion.
 func (w *WebsocketEndpoint) ListenAndServeTLS(certFile, certKey string) error {
-	w.alive()
-	return w.Server.ListenAndServeTLS(certFile, certKey)
+	addr := w.Server.Addr
+	if addr == "" {
+  		addr = ":https"
+  	}
+  	config := &tls.Config{
+		Rand:       rand.Reader,
+		NextProtos: []string{"http/1.1"},
+	}
+  	var err error
+  	config.Certificates = make([]tls.Certificate, 1)
+  	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, certKey)
+	if err != nil {
+  		return err
+  	}
+	conn, err := net.Listen("tcp", addr)
+	if err != nil {
+		return err
+ 	}
+	tlsListener := tls.NewListener(conn, config)
+	w.alive = true
+	return w.Server.Serve(tlsListener)
+}
+
+// Returns true if this endpoint is activated.
+func (w *WebsocketEndpoint) IsAlive() bool {
+	w.mtx.Lock()
+	defer w.mtx.Unlock()
+	return w.alive
 }
 
 // Extended version of the kill func. Stops all alive handlers.
-func (w *WebsocketEndpoint) kill() {
+func (w *WebsocketEndpoint) Kill() {
+	w.mtx.Lock()
+	defer w.mtx.Unlock()
+	w.alive = false
 	for _, h := range w.handlers {
-		h.stop()
+		h.Kill()
 	}
-	w.BaseEndpoint.kill()
 }
 
 // ServeMux is an HTTP request multiplexer. Basically works the same as

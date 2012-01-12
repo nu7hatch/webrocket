@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +12,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
@@ -24,30 +22,17 @@ import (
 
 // Base connection wrapper.
 type connection struct {
-	vhost   *Vhost
-	ctx     *Context
-	log     *log.Logger
-	mtx     sync.Mutex
-	isAlive bool
+	vhost *Vhost
+	ctx   *Context
+	log   *log.Logger
+	mtx   sync.Mutex
 }
 
 // newConnection creates and initializes new connection.
-func newConnection(vhost *Vhost) (c *connection) {
-	c = &connection{isAlive: true}
-	c.vhost = vhost
-	c.ctx = vhost.ctx
-	c.log = c.ctx.log
-	return
-}
-
-// Returns true if this connection is alive.
-func (c *connection) IsAlive() bool {
-	return c.isAlive
-}
-
-// Turns off the connection's alive state.
-func (c *connection) kill() {
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
-	c.isAlive = false
+func newConnection(vhost *Vhost) *connection {
+	return &connection{
+		vhost: vhost,
+		ctx:   vhost.ctx,
+		log:   vhost.ctx.log,
+	}
 }

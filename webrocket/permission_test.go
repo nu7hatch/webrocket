@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,13 +12,14 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import "testing"
 
 func TestNewPermission(t *testing.T) {
 	p := NewPermission(".*")
-	if len(p.Token()) != 128 {
+	if len(p.Token) != 128 {
 		t.Errorf("Expected to generate single access token for the permission")
 	}
 }

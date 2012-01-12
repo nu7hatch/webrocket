@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +12,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
@@ -25,7 +23,7 @@ import (
 
 const (
 	backendLobbyDefaultMaxRetries = 3
-	backendLobbyDefaultRetryDelay = time.Duration(2e6)
+	backendLobbyDefaultRetryDelay = 2e6 * time.Nanosecond
 )
 
 // backendLobby coordinates messages flow between the WebRocket and all
@@ -33,65 +31,60 @@ const (
 type backendLobby struct {
 	agents     map[string]*BackendAgent
 	queue      chan interface{}
+	dead       chan bool
 	robin      *ring.Ring
 	maxRetries int
 	retryDelay time.Duration
-	isRunning  bool
 	mtx        sync.Mutex
 }
 
 // Creates new backendLobby exchange.
 func newBackendLobby() (l *backendLobby) {
-	l = new(backendLobby)
-	l.isRunning = true
-	l.robin = nil
-	l.agents = make(map[string]*BackendAgent)
-	l.queue = make(chan interface{})
-	l.maxRetries = backendLobbyDefaultMaxRetries
-	l.retryDelay = backendLobbyDefaultRetryDelay
+	l = &backendLobby{
+		robin:      nil,
+		agents:     make(map[string]*BackendAgent),
+		queue:      make(chan interface{}),
+		dead:       make(chan bool),
+		maxRetries: backendLobbyDefaultMaxRetries,
+		retryDelay: backendLobbyDefaultRetryDelay,
+	}
 	go l.dequeue()
 	return l
 }
 
 // Enqueues given message.
 func (l *backendLobby) enqueue(payload interface{}) {
-	if l.isRunning {
-		l.queue <- payload
-	}
+	l.queue <- payload
 }
 
 // dequeue is an event loop which picks enqueued message and
 // load ballances it across connected agents.
 func (l *backendLobby) dequeue() {
-	defer l.kill()
-	for {
-		if !l.isRunning {
-			break
-		}
-		l.doDequeue()
+	for payload := range l.queue {
+		l.send(payload)
+	}
+	for _, agent := range l.agents {
+		agent.Kill()
 	}
 }
 
 // Dequeues single message and load ballances it across connected
 // clients.
-func (l *backendLobby) doDequeue() {
-	payload := <-l.queue
+func (l *backendLobby) send(payload interface{}) {
 	retries := 0
-
 start:
-	agent := l.roundRobin()
-	if agent == nil {
-		// No agents available, waiting a while and retrying
-		// TODO: log error
-		if retries >= l.maxRetries {
-			// Retries limit reached, dropping the message...
-			return
-		}
+	agent := l.loadBallance()
+	if agent != nil {
+		agent.Trigger(payload)
+		return
+	}
+	// No agents available, waiting a while and retrying
+	// TODO: log error
+	if retries >= l.maxRetries {
 		<-time.After(l.retryDelay)
 		retries += 1
 		goto start
 	}
-	agent.Send(payload)
 }
 
 // Adds specified agent to the load ballancer ring using the round
@@ -123,10 +116,7 @@ func (l *backendLobby) getAgentById(id string) (agent *BackendAgent, ok bool) {
 }
 
 // Moves agent cursor to the next available one. 
-func (l *backendLobby) roundRobin() (agent *BackendAgent) {
-	l.mtx.Lock()
-	defer l.mtx.Unlock()
-
+func (l *backendLobby) loadBallance() (agent *BackendAgent) {
 start:
 	if l.robin == nil || l.robin.Len() == 0 {
 		return
@@ -150,9 +140,17 @@ start:
 	return
 }
 
-// Stops execution of this lobby.
-func (l *backendLobby) kill() {
+// Returns true if lobby is running.
+func (l *backendLobby) IsAlive() bool {
 	l.mtx.Lock()
 	defer l.mtx.Unlock()
-	l.isRunning = false
+	return l.queue != nil
+}
+
+// Stops execution of this lobby.
+func (l *backendLobby) Kill() {
+	l.mtx.Lock()
+	defer l.mtx.Unlock()
+	close(l.queue)
+	l.queue = nil
 }

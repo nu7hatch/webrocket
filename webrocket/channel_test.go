@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +12,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import "testing"
@@ -32,8 +30,8 @@ func TestNewChannel(t *testing.T) {
 func TestNewChannelWithInvalidName(t *testing.T) {
 	for _, name := range []string{".foo", "", "foo%", "-foo"} {
 		_, err := newChannel(name)
-		if err == nil || err.Error() != "Invalid name" {
-			t.Errorf("Expected to throw 'Invalid name' error while creating a '%s' channel", name)
+		if err == nil || err.Error() != "invalid name" {
+			t.Errorf("Expected to throw 'invalid name' error while creating a '%s' channel", name)
 		}
 	}
 }

@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,10 +12,11 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
-	uuid "../uuid"
+	"crypto/rand"
 	"crypto/sha1"
 	"errors"
 	"fmt"
@@ -36,8 +34,8 @@ type Vhost struct {
 	path        string
 	channels    map[string]*Channel
 	ctx         *Context
-	usersMtx    sync.Mutex
-	chansMtx    sync.Mutex
+	cmtx        sync.Mutex // channels' mutex
+	tmtx        sync.Mutex // single access token mutex
 	accessToken string
 	permissions map[string]*Permission
 }
@@ -48,35 +46,53 @@ type Vhost struct {
 func newVhost(ctx *Context, path string) (v *Vhost, err error) {
 	re, err := regexp.Compile(vhostNamePattern)
 	if !re.MatchString(path) {
-		err = errors.New("Invalid path")
+		err = errors.New("invalid path")
 		return
 	}
-	v = &Vhost{path: path, ctx: ctx}
-	v.GenerateAccessToken()
-	v.channels = make(map[string]*Channel)
+	v = &Vhost{
+		path:        path,
+		ctx:         ctx,
+		channels:    make(map[string]*Channel),
+		permissions: make(map[string]*Permission),
+	}
 	return
 }
 
 // Generates access token for the backend connections. 
 func (v *Vhost) GenerateAccessToken() string {
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		return ""
+	}
 	hash := sha1.New()
-	uuid, _ := uuid.NewV4()
-	hash.Write(uuid[:])
+	hash.Write(buf[:])
 	v.accessToken = fmt.Sprintf("%x", hash.Sum([]byte{}))
-	v.permissions = make(map[string]*Permission)
+	if v.ctx != nil && v.ctx.storageEnabled() {
+		v.ctx.storage.AddVhost(v.path, v.accessToken)
+	}
+	return v.accessToken
+}
+
+// AccessToken returns vhost's access token.
+func (v *Vhost) AccessToken() string {
 	return v.accessToken
 }
 
 // Generates single access token within this vhost.
 func (v *Vhost) GenerateSingleAccessToken(pattern string) string {
+	v.tmtx.Lock()
+	defer v.tmtx.Unlock()
 	var p = NewPermission(pattern)
-	v.permissions[p.Token()] = p
-	return p.Token()
+	v.permissions[p.Token] = p
+	return p.Token
 }
 
 // Checks if specified token allows to access this vhost,
 // and if so then returns associated permission.
 func (v *Vhost) ValidateSingleAccessToken(token string) (p *Permission, ok bool) {
+	v.tmtx.Lock()
+	defer v.tmtx.Unlock()
 	p, ok = v.permissions[token]
 	if ok {
 		delete(v.permissions, token)
@@ -91,62 +107,58 @@ func (v *Vhost) Path() string {
 
 // Opens new channel and registers it for this vhost.
 func (v *Vhost) OpenChannel(name string) (ch *Channel, err error) {
-	var exists bool
-
-	_, exists = v.channels[name]
+	v.cmtx.Lock()
+	defer v.cmtx.Unlock()
+	_, exists := v.channels[name]
 	if exists {
-		err = errors.New(fmt.Sprintf("The '%s' channel already exists", name))
+		err = errors.New("channel already exists")
 		return
 	}
 	ch, err = newChannel(name)
 	if err != nil {
 		return
 	}
-	v.chansMtx.Lock()
-	defer v.chansMtx.Unlock()
+	if v.ctx != nil && v.ctx.storageEnabled() {
+		err = v.ctx.storage.AddChannel(v.path, name)
+		if err != nil {
+			return
+		}
+	}
 	v.channels[name] = ch
 	return
 }
 
 // Removes specified channel from this vhost.
-func (v *Vhost) DeleteChannel(name string) (err error) {
-	var ch *Channel
-
-	ch, err = v.Channel(name)
-	if err != nil {
+func (v *Vhost) DeleteChannel(name string) (ok bool) {
+	v.cmtx.Lock()
+	defer v.cmtx.Unlock()
+	ch, ok := v.channels[name]
+	if !ok {
 		return
 	}
-	v.chansMtx.Lock()
+	if v.ctx != nil && v.ctx.storageEnabled() {
+		err := v.ctx.storage.DeleteChannel(v.path, name)
+		if err != nil {
+			return
+		}
+	}
 	delete(v.channels, name)
-	v.chansMtx.Unlock()
-	ch.kill()
-	// XXX: No idea what should we assume here? I think we should
-	// assume that deleting the channel is only admin operation,
-	// which shouldn't be done on live application (while channels
-	// are automatically created when someone is subscribing it).
-	// FIXME: We could send here unsubscribe message to all subscribers
-	// to be sure that everything's fine.
+	ch.Kill()
 	return
 }
 
 // Returns specified channel if exists.
-func (v *Vhost) Channel(name string) (ch *Channel, err error) {
-	var ok bool
-
+func (v *Vhost) Channel(name string) (ch *Channel, ok bool) {
+	v.cmtx.Lock()
+	defer v.cmtx.Unlock()
 	ch, ok = v.channels[name]
-	if !ok {
-		err = errors.New(fmt.Sprintf("The '%s' channel doesn't exist", name))
-	}
 	return
 }
 
 // Returns list of channels opened in this vhost.
 func (v *Vhost) Channels() (channels []*Channel) {
-	var i = 0
-	var channel *Channel
-
-	channels = make([]*Channel, len(v.channels))
-	for _, channel = range v.channels {
+	channels, i := make([]*Channel, len(v.channels)), 0
+	for _, channel := range v.channels {
 		channels[i] = channel
 		i += 1
 	}

@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +12,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import "testing"
@@ -39,8 +37,8 @@ func TestNewVhostWithInvalidPath(t *testing.T) {
 	ctx := NewContext()
 	for _, path := range []string{"foo", "/", "/hello/", "/hello/foobar//"} {
 		_, err := newVhost(ctx, path)
-		if err == nil || err.Error() != "Invalid path" {
-			t.Errorf("Expected to throw 'Invalid path' error while creating a vhost for '%s'", path)
+		if err == nil || err.Error() != "invalid path" {
+			t.Errorf("Expected to throw 'invalid path' error while creating a vhost for '%s'", path)
 		}
 	}
 }
@@ -57,7 +55,7 @@ func TestVhostValidateSingleAccessToken(t *testing.T) {
 	v, _ := newTestVhost()
 	token := v.GenerateSingleAccessToken(".*")
 	pv, ok := v.ValidateSingleAccessToken(token)
-	if !ok || pv.Token() != token {
+	if !ok || pv.Token != token {
 		t.Errorf("Expected successfull validation of existing access token")
 	}
 	_, ok = v.ValidateSingleAccessToken(token)
@@ -81,37 +79,37 @@ func TestVhostOpenChannel(t *testing.T) {
 		t.Errorf("Expected to add channel to vhost's channels list")
 	}
 	_, err = v.OpenChannel("hello")
-	if err == nil || err.Error() != "The 'hello' channel already exists" {
+	if err == nil || err.Error() != "channel already exists" {
 		t.Errorf("Expected error while creating duplicated channel")
 	}
 }
 
 func TestVhostDeleteChannel(t *testing.T) {
-	v, err := newTestVhost()
+	v, _ := newTestVhost()
 	v.OpenChannel("hello")
-	err = v.DeleteChannel("hello")
-	if err != nil {
+	ok := v.DeleteChannel("hello")
+	if !ok {
 		t.Errorf("Expected to delete channel without errors")
 	}
-	_, ok := v.channels["hello"]
+	_, ok = v.channels["hello"]
 	if ok {
 		t.Errorf("Expected to unregister channel from vhost's channels list")
 	}
-	err = v.DeleteChannel("hello")
-	if err == nil || err.Error() != "The 'hello' channel doesn't exist" {
+	ok = v.DeleteChannel("hello")
+	if ok {
 		t.Errorf("Expected error while deleting non existing channel")
 	}
 }
 
 func TestVhostGetChannel(t *testing.T) {
-	v, err := newTestVhost()
+	v, _ := newTestVhost()
 	ch, _ := v.OpenChannel("hello")
-	vch, err := v.Channel("hello")
-	if err != nil || vch == nil || vch.Name() != ch.Name() {
+	vch, ok := v.Channel("hello")
+	if !ok || vch == nil || vch.Name() != ch.Name() {
 		t.Errorf("Expected to get channel without errors")
 	}
-	_, err = v.Channel("john")
-	if err == nil || err.Error() != "The 'john' channel doesn't exist" {
+	_, ok = v.Channel("john")
+	if ok {
 		t.Errorf("Expected to throw error while getting not existent channel")
 	}
 }

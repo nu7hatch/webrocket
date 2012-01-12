@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,10 +12,11 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
-	uuid "../uuid"
+	"crypto/rand"
 	"crypto/sha512"
 	"fmt"
 	"regexp"
@@ -26,45 +24,37 @@ import (
 
 // Generates single access token hash.
 func generateSingleAccessToken() string {
+	var buf [32]byte
+	_, err := rand.Read(buf[:])
+	if err != nil {
+		return ""
+	}
 	hash := sha512.New()
-	uuid, _ := uuid.NewV4()
-	hash.Write(uuid[:])
+	hash.Write(buf[:])
 	return fmt.Sprintf("%x", hash.Sum([]byte{}))
 }
 
 // Permission is represents single access token and permission
 // pattern assigned to it. 
 type Permission struct {
-	pattern string
-	token   string
+	Pattern string
+	Token   string
 }
 
 // Creates new permission for specified pattern.
-func NewPermission(pattern string) (p *Permission) {
-	p = &Permission{pattern: pattern}
-	p.token = generateSingleAccessToken()
-	return p
+func NewPermission(pattern string) *Permission {
+	return &Permission{pattern, generateSingleAccessToken()}
 }
 
 // Checks if permission description allows to operate on specified
 // channel. Speaking shortly just matches permission regexp with
 // the channel name.
 func (p *Permission) IsMatching(channel string) (ok bool) {
-	re, err := regexp.Compile(fmt.Sprintf("^(%s)$", p.pattern))
+	re, err := regexp.Compile(fmt.Sprintf("^(%s)$", p.Pattern))
 	if err != nil {
 		ok = false
 		return
 	}
 	ok = re.MatchString(channel)
 	return
-}
-
-// Token returns a string with the single access token hash.
-func (p *Permission) Token() string {
-	return p.token
-}
-
-// Pattern returns a permission regexp.
-func (p *Permission) Pattern() string {
-	return p.pattern
 }

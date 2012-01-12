@@ -1,20 +1,18 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
+// it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// GNU Affero General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
+// You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
@@ -41,7 +39,7 @@ var (
 func init() {
 	ctx := NewContext()
 	ctx.SetLog(log.New(bytes.NewBuffer([]byte{}), "", log.LstdFlags))
-	we = ctx.NewWebsocketEndpoint("", 9771)
+	we = ctx.NewWebsocketEndpoint(":9771")
 	wv, _ = ctx.AddVhost("/test")
 	wv.OpenChannel("test")
 	wv.OpenChannel("test2")
@@ -91,6 +89,7 @@ func doTestWebsocketConnect(t *testing.T) {
 	ws, werr = wsdial(9771)
 	if werr != nil {
 		t.Error(werr)
+		return
 	}
 	resp := wsrecv(t)
 	if resp.Event() != "__connected" {
@@ -242,6 +241,44 @@ func doTestWebsocketUnsubscribeValidChannel(t *testing.T) {
 	}
 }
 
+func doTestWebsocketStatInvalidChannelName(t *testing.T) {
+	wssend(t, map[string]interface{}{
+		"statChannel": map[string]interface{}{"channel": "shit%dfsdf%#"},
+	})
+	resp := wsrecv(t)
+	if wserr(resp) != "Channel not found" {
+		t.Errorf("Expected 'Channel not found' error")
+	}
+}
+
+func doTestWebsocketStatEmptyChannelName(t *testing.T) {
+	wssend(t, map[string]interface{}{
+		"statChannel": map[string]interface{}{"channel": ""},
+	})
+	resp := wsrecv(t)
+	if wserr(resp) != "Bad request" {
+		t.Errorf("Expected 'Bad request' error")
+	}
+}
+
+func doTestWebsocketStatValidChannel(t *testing.T) {
+	wssend(t, map[string]interface{}{
+		"statChannel": map[string]interface{}{"channel": "test"},
+	})
+	resp := wsrecv(t)
+	if resp.Event() != "__statChannel" {
+		t.Errorf("Expected to receive the '__statChannel' event, given '%s'", resp.Event())
+	}
+	chanName, _ := resp.Get("channel").(string)
+	if chanName != "test" {
+		t.Errorf("Expected to have channel name in stat data")
+	}
+	subscribers, _ := resp.Get("subscribersCount").(int)
+	if subscribers != 0 {
+		t.Errorf("Expected to have channel subscribers count")
+	}
+}
+
 func doTestWebsocketBroadcastWhenNotSubscribingTheChannel(t *testing.T) {
 	wssend(t, map[string]interface{}{
 		"broadcast": map[string]interface{}{
@@ -345,7 +382,6 @@ func doTestWebsocketBroadcastValidData(t *testing.T) {
 // TODO: test 'subscribe' and 'broadcast' for protected channels
 // TODO: test 'trigger'
 // TODO: test 'close'
-
 func TestWebsocketProtocol(t *testing.T) {
 	// It kind of sucks, but it's an integration test where each
 	// steps may depend on the others, so we have to run it in
@@ -366,9 +402,19 @@ func TestWebsocketProtocol(t *testing.T) {
 	doTestWebsocketUnsubscribeInvalidChannelName(t)
 	doTestWebsocketUnsubscribeNotSubscribedChannel(t)
 	doTestWebsocketUnsubscribeValidChannel(t)
+	doTestWebsocketStatEmptyChannelName(t)
+	doTestWebsocketStatInvalidChannelName(t)
+	doTestWebsocketStatValidChannel(t)
 	doTestWebsocketBroadcastWhenNotSubscribingTheChannel(t)
 	doTestWebsocketBroadcastWithInvalidData(t)
 	doTestWebsocketBroadcastWhenInvalidChannelGiven(t)
 	doTestWebsocketBroadcastToNotSubscribedChannel(t)
 	doTestWebsocketBroadcastValidData(t)
+	//TODO: doTestWebsocketBroadcastWithTriggerWhenNotAuthenticated(t)
+	//TODO: doTestWebsocketBroadcastWithTriggerWhenAuthenticated(t)
+	//TODO: doTestTriggerWithInvalidEventName(t)
+	//TODO: doTestTriggerWithInvalidData(t)
+	//TODO: doTestTriggerWhenNotAuthenticated(t)
+	//TODO: doTestTriggerWhenAuthenticated(t)
+	//TODO: doTestWebsocketClose(t)
 }

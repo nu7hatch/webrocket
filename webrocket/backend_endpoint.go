@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,42 +12,39 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
 	zmq "../gozmq"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
+	"sync"
+	"net"
 )
-
-// Global backend REQ protocol dispatcher.
-var reqproto backendReqProtocol
 
 // BackendEndpoint is a wrapper for 0MQ ROUTER server. It handles
 // all incoming connections from the backend application agents.
 type BackendEndpoint struct {
-	BaseEndpoint
+	ctx       *Context
 	addr      string
+	alive     bool
 	lobbys    map[string]*backendLobby
 	router    zmq.Socket
 	zmqctx    zmq.Context
-	isRunning bool
+	mtx       sync.Mutex
 	log       *log.Logger
 }
 
 // newBackendEndpoint creates and preconfigures new backend server.
-func (ctx *Context) NewBackendEndpoint(host string, port uint) Endpoint {
-	if host == "" {
-		host = "*"
+func (ctx *Context) NewBackendEndpoint(addr string) Endpoint {
+	e := &BackendEndpoint{
+		addr:   addr,
+		ctx:    ctx,
+		log:    ctx.log,
+		lobbys: make(map[string]*backendLobby),
 	}
-	e := &BackendEndpoint{}
-	e.addr = fmt.Sprintf("tcp://%s:%d", host, int(port))
-	e.ctx = ctx
-	e.log = e.ctx.log
-	e.lobbys = make(map[string]*backendLobby)
-	e.router = nil
 	e.zmqctx, _ = zmq.NewContext() // XXX: should i handle this error here?
 	ctx.backend = e
 	return e
@@ -63,16 +57,20 @@ func (w *BackendEndpoint) Addr() string {
 
 // Registers a lobby for specified vhost. 
 func (b *BackendEndpoint) registerVhost(vhost *Vhost) {
+	b.mtx.Lock()
+	defer b.mtx.Unlock()
 	b.lobbys[vhost.Path()] = newBackendLobby()
 }
 
 // Removes a lobby for specified vhost. 
 func (b *BackendEndpoint) unregisterVhost(vhost *Vhost) {
+	b.mtx.Lock()
+	defer b.mtx.Unlock()
 	l, ok := b.lobbys[vhost.Path()]
 	if !ok {
 		return
 	}
-	l.kill()
+	l.Kill()
 	delete(b.lobbys, vhost.Path())
 }
 
@@ -102,15 +100,17 @@ func (b *BackendEndpoint) authenticate(identity []byte) (vhost *Vhost,
 }
 
 // Server's event loop - handles all incoming messages.
-func (b *BackendEndpoint) eventLoop() {
-	b.alive()
-	defer b.kill()
+func (b *BackendEndpoint) serve() {
 	for {
-		if !b.IsRunning() {
-			// TODO: send quit message to everyone
+		if !b.IsAlive() {
 			break
 		}
-		b.receiveAndHandle()
+		recv, err := b.router.RecvMultipart(0)
+		if err != nil {
+			// TODO: log
+			continue
+		}
+		go b.handle(recv)
 	}
 }
 
@@ -121,63 +121,46 @@ func (b *BackendEndpoint) eventLoop() {
 // handled at the same time.
 // TODO: Add such limit...
 //
-func (b *BackendEndpoint) receiveAndHandle() {
-	// Receiving a message blob
-	recv, err := b.router.RecvMultipart(0)
-	if err != nil || len(recv) != 3 {
+func (b *BackendEndpoint) handle(msg [][]byte) {
+	var status string
+	var code int
+	// Check the message and read an envelope.
+	if len(msg) < 3 {
+		backendStatusLog(b, nil, "Bad request", 400, "")
 		return
 	}
-	aid, payload := recv[0], recv[2]
-	// Non-blocking handler...
-	go func() {
-		// Authenticating an agent using it's identity...
-		vhost, idty, ok := b.authenticate(aid)
-		if !ok {
-			// If authentication failed, sent an unauthorized error...
-			// TODO: log error
-			b.SendTo(aid, errorUnauthorized)
-			return
-		}
-		// Parsing the message
-		msg, err := newMessageFromJSON(payload)
-		if err != nil {
-			// TODO: log error
-			b.SendTo(aid, errorBadRequest)
-			return
-		}
-		// Dispatch the message depending on the socket type
+	aid, cmd := msg[0], msg[2]
+	request := newBackendRequest(b, nil, aid, string(cmd), msg[3:])
+	// Authenticating an agent using it's identity...
+	vhost, idty, ok := b.authenticate(aid)
+	if ok {
+		request.vhost = vhost
 		if idty.Type == zmq.DEALER {
-			lobby, ok := b.lobbys[vhost.Path()]
-			if !ok {
-				// Something's fucked up, it should never happen
-				// TODO: log error
-				b.SendTo(aid, errorInternal)
-				return
-			}
-			agent, ok := lobby.getAgentById(string(aid))
-			if !ok {
-				// If it's first message from this agent, we have to
-				// add him to the lobby.
-				agent = newBackendAgent(b, vhost, aid)
-				lobby.addAgent(agent)
-			}
-			//dlrproto.dispatch(agent, msg)
+			status, code = backendDealerDispatch(request)
 		} else { // zmq.REQ
-			reqproto.dispatch(b, vhost, aid, msg)
+			status, code = backendReqDispatch(request)
 		}
-	}()
+	} else {
+		status, code = "Unauthorized", 402
+	}
+	// Log status...
+	if code >= 400 {
+		backendError(b, vhost, aid, status, code, request.String())
+	} else {
+		backendStatusLog(b, vhost, status, code, request.String())
+	}
 }
 
-// Send enqueues specified message to internal lobby queue.
+// Trigger enqueues specified message to internal lobby queue.
 // Given message is load ballanced across all agents waiting
 // in there.
-func (b *BackendEndpoint) Send(vhost *Vhost, payload interface{}) error {
+func (b *BackendEndpoint) Trigger(vhost *Vhost, payload interface{}) error {
 	if vhost == nil {
 		return errors.New("Invalid vhost")
 	}
 	lobby, ok := b.lobbys[vhost.Path()]
 	if !ok {
-		// Something's fucked...
+		// Something's fucked, should never happen...
 		return errors.New("No lobby found for specified vhost")
 	}
 	lobby.enqueue(payload)
@@ -185,36 +168,68 @@ func (b *BackendEndpoint) Send(vhost *Vhost, payload interface{}) error {
 }
 
 // SendTo directly sends message to specified agent.
-func (b *BackendEndpoint) SendTo(id []byte, payload interface{}) (err error) {
-	if b.router == nil {
-		return errors.New("Endpoint is not running")
-	}
-	encoded, err := json.Marshal(payload)
-	if err != nil {
-		return
-	}
+func (b *BackendEndpoint) SendTo(id []byte, nonblock bool, cmd string, frames ...string) (err error) {
 	b.mtx.Lock()
 	defer b.mtx.Unlock()
-	err = b.router.SendMultipart([][]byte{id, {}, encoded}, zmq.NOBLOCK)
+	if b.router == nil || !b.alive {
+		return errors.New("Endpoint is not running")
+	}
+	var msg = make([][]byte, len(frames) + 3)
+	msg[0], msg[2] = id, []byte(cmd)
+	for i, frame := range frames {
+		msg[i+3] = []byte(frame)
+	}
+	var flags zmq.SendRecvOption = 0
+	if nonblock {
+		flags |= zmq.NOBLOCK
+	}
+	err = b.router.SendMultipart(msg, flags) // FIXME: do polling here?
 	return
 }
-
-// ListenAndServe setups the 0MQ ROUTER socket and binds it to
+	
+	// ListenAndServe setups the 0MQ ROUTER socket and binds it to
 // previously configured address.
 func (b *BackendEndpoint) ListenAndServe() (err error) {
 	b.router, err = b.zmqctx.NewSocket(zmq.ROUTER)
-	defer b.router.Close()
-	if err == nil {
-		err = b.router.Bind(b.addr)
-	}
 	if err != nil {
 		return
 	}
-	b.eventLoop()
+	defer b.router.Close()
+	addr, err := net.ResolveTCPAddr("tcp", b.addr)
+	if err != nil {
+		return
+	}
+	host := addr.IP.String()
+	if host == "<nil>" {
+		host = "*"
+	}
+	err = b.router.Bind(fmt.Sprintf("tcp://%s:%d", host, addr.Port))
+	if err != nil {
+		return
+	}
+	b.alive = true
+	b.serve()
 	return
 }
 
 // TODO: ...
 func (b *BackendEndpoint) ListenAndServeTLS(certFile, certKey string) (err error) {
 	return errors.New("Not implemented")
+}
+
+// Returns true if this endpoint is activated.
+func (w *BackendEndpoint) IsAlive() bool {
+	w.mtx.Lock()
+	defer w.mtx.Unlock()
+	return w.alive
+}
+
+// Extended version of the kill func. Stops all alive agents.
+func (w *BackendEndpoint) Kill() {
+	w.mtx.Lock()
+	defer w.mtx.Unlock()
+	w.alive = false
+	for _, lobby := range w.lobbys {
+		lobby.Kill()
+	}
 }

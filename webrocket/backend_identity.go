@@ -1,6 +1,3 @@
-// This package provides a hybrid of MQ and WebSockets server with
-// support for horizontal scalability.
-//
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -15,6 +12,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 package webrocket
 
 import (
@@ -47,14 +45,16 @@ func parseBackendIdentity(raw []byte) (idty *backendIdentity, err error) {
 		err = errors.New("Invalid identity")
 		return
 	}
-	idty = &backendIdentity{Raw: raw}
+	idty = &backendIdentity{
+		Raw:         raw,
+		Id:          parts[5],
+		Vhost:       parts[2],
+		AccessToken: parts[4],
+	}
 	if parts[1] == "dlr" {
 		idty.Type = zmq.DEALER
 	} else {
 		idty.Type = zmq.REQ
 	}
-	idty.Vhost = parts[2]
-	idty.AccessToken = parts[4]
-	idty.Id = parts[5]
 	return
 }

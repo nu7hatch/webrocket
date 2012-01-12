@@ -13,13 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-package webrocket
+Package webrocket
 
-// Endpoint is an interface representing all endpoints installed
-// on the context's rack.
-type Endpoint interface {
-	ListenAndServe() error
-	ListenAndServeTLS(certFile, certKey string) error
-	Addr() string
-	IsAlive() bool
-}
+// TODO: write tests...
