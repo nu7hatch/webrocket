@@ -4,100 +4,175 @@
 // Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
 //
 // This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
+// it under the terms of the GNU Affero General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// GNU Affero General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
+// You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
 	"../webrocket"
+	stepper "../gostepper"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
+	"os/exec"
+	"syscall"
 	"time"
+	"strings"
+	"path/filepath"
 )
 
 type Config struct {
-	WsHost   string
-	WsPort   uint
-	BackHost string
-	BackPort uint
-	CertFile string
-	KeyFile  string
+	Backend    string
+	Websocket  string
+	Admin      string
+	CertFile   string
+	KeyFile    string
+	StorageDir string
 }
 
 var (
-	conf Config
-	ctx  *webrocket.Context
+	conf  Config
+	ctx   *webrocket.Context
+	s     stepper.Stepper
 )
 
 func init() {
-	flag.StringVar(&conf.WsHost, "websocket-host", "", "bind websocket endpoint with given interface")
-	flag.UintVar(&conf.WsPort, "websocket-port", 8080, "websocket endpoint will listen on this port")
-	flag.StringVar(&conf.BackHost, "backend-host", "", "bind backend endpoint with given interface")
-	flag.UintVar(&conf.BackPort, "backend-port", 8081, "backend endpoint will listen on this port")
+	flag.StringVar(&conf.Websocket, "websocket-addr", ":8080", "websocket endpoint address")
+	flag.StringVar(&conf.Backend, "backend-addr", ":8081", "backend endpoint address")
+	flag.StringVar(&conf.Admin, "admin-addr", ":8082", "admin endpoint address")
 	flag.StringVar(&conf.CertFile, "cert", "", "path to server certificate")
 	flag.StringVar(&conf.KeyFile, "key", "", "private key")
+	flag.StringVar(&conf.StorageDir, "storage-dir", "/var/lib/webrocket", "path to webrocket's internal data-store")
 	flag.Parse()
+
+	conf.StorageDir, _ = filepath.Abs(conf.StorageDir)
+}
+
+func SetupContext() {
+	s.Start("Setting up a context")
+	ctx = webrocket.NewContext()
+	s.Ok()
+	s.Start("Loading configuration")
+	if err := ctx.SetStorage(conf.StorageDir); err != nil {
+		s.Fail(err.Error(), true)
+	}
+	s.Ok()
+	s.Start("Generating cookie")
+	if err := ctx.GenerateCookie(false); err != nil {
+		s.Fail(err.Error(), true)
+	}
+	s.Ok()
 }
 
 func SetupEndpoint(kind string, e webrocket.Endpoint) {
 	go func() {
 		var err error
+		s.Start("Starting %s", kind)
 		if conf.CertFile != "" && conf.KeyFile != "" {
-			fmt.Printf(">>> %s is about to listen at `%s`... ", kind, e.Addr())
 			err = e.ListenAndServeTLS(conf.CertFile, conf.KeyFile)
 		} else {
-			fmt.Printf(">>> %s is about to listen at `%s`... ", kind, e.Addr())
 			err = e.ListenAndServe()
 		}
 		if err != nil {
-			fmt.Printf("\033[31mFAIL\n!!! %s\033[0m\n", err.Error())
-			os.Exit(1)
+			s.Fail(err.Error(), true)
 		}
 	}()
-	for !e.IsRunning() {
-		<-time.After(1e2);
+	for !e.IsAlive() {
+		<-time.After(500 * time.Nanosecond);
 	}
-	fmt.Printf("\033[32mOK\033[0m\n")
+	s.Ok()
+}
+
+func SignalTrap() {
+	for sig := range signal.Incoming {
+        if usig, ok := sig.(os.UnixSignal); ok {
+            switch usig {
+            case os.SIGQUIT, os.SIGINT:
+				fmt.Printf("\n\033[33mInterrupted\033[0m\n")
+				if ctx != nil {
+					fmt.Printf("\n")
+					s.Start("Cleaning up")
+					if err := ctx.Close(); err != nil {
+						s.Fail(err.Error(), true)
+					}
+					s.Ok()
+				}
+				os.Exit(0)
+            case os.SIGTSTP:
+                syscall.Kill(syscall.Getpid(), syscall.SIGSTOP)
+            case os.SIGHUP:
+				// TODO: reload configuration
+            }
+        }
+    }
+}
+
+func SetupDaemon() {
+	fmt.Printf("\nWebRocket is running!\n")
+}
+
+// TODO: move it to webrocket...
+func GetNodeName() string {
+	x := exec.Command("uname", "-n")
+	node, err := x.Output()
+	if err != nil {
+		panic("can't get node name: " + err.Error())
+	}
+	return strings.TrimSpace(string(node))
+}
+
+func DisplayAsciiArt() {
+	fmt.Printf("\n")
+	fmt.Printf(
+		`            /\                                                                     ` + "\n" +
+		`      ,    /  \      o               .        ___---___                    .       ` + "\n" +
+		`          /    \            .              .--\        --.     .     .         .   ` + "\n" +
+		`         /______\                        ./.;_.\     __/~ \.                       ` + "\n" + 
+		`   .    |        |                      /;  / '-'  __\    . \                      ` + "\n" +
+		`        |        |    .        .       / ,--'     / .   .;   \        |            ` + "\n" +
+		`        |________|                    | .|       /       __   |      -O-       .   ` + "\n" +
+		`        |________|                   |__/    __ |  . ;   \ | . |      |            ` + "\n" +
+		`       /|   ||   |\                  |      /  \\_    . ;| \___|                   ` + "\n" +
+		`      / |   ||   | \    .    o       |      \  .~\\___,--'     |           .       ` + "\n" +
+		`     /  |   ||   |  \                 |     | . ; ~~~~\_    __|                    ` + "\n" +
+		`    /___|:::||:::|___\   |             \    \   .  .  ; \  /_/   .                 ` + "\n" +
+		`        |::::::::|      -O-        .    \   /         . |  ~/                  .   ` + "\n" +
+		`         \::::::/         |    .          ~\ \   .      /  /~          o           ` + "\n" +
+		`   o      ||__||       .                   ~--___ ; ___--~                         ` + "\n" +
+		`            ||                        .          ---         .              .      ` + "\n" +
+		`            ''                                                                     ` + "\n")
+	fmt.Printf("WebRocket v%s\n", webrocket.Version())
+	fmt.Printf("Copyright (C) 2011-2012 by Krzysztof Kowalik and folks at Cubox.\n")
+	fmt.Printf("Released under the AGPL. See http://www.webrocket.io/ for details.\n\n")
+}
+
+func DisplaySystemSettings() {
+	fmt.Printf("\n")
+	fmt.Printf("Node               : %s\n", GetNodeName())
+	fmt.Printf("Cookie             : %s\n", ctx.Cookie())
+	fmt.Printf("Data store dir     : %s\n", conf.StorageDir)
+	fmt.Printf("Backend endpoint   : tcp://%s\n", conf.Backend)
+	fmt.Printf("Websocket endpoint : ws://%s\n", conf.Websocket)
+	fmt.Printf("Admin endpoint     : http://%s\n", conf.Admin)
 }
 
 func main() {
-	// Setting up a context
-	fmt.Printf("... Initializing context\n")
-	ctx = webrocket.NewContext()
-
-	// Configuring...
-	fmt.Printf("... Loading configuration\n")
-	vhost, _ := ctx.AddVhost("/test")
-	vhost.OpenChannel("test")
-
-	// Setting up a Backend Workers endpoint
-	backend := ctx.NewBackendEndpoint(conf.BackHost, conf.BackPort)
-	SetupEndpoint("Backend endpoint", backend);
-
-	// Setting up a Websocket Frontend endpoint
-	websocket := ctx.NewWebsocketEndpoint(conf.WsHost, conf.WsPort)
-	SetupEndpoint("Websocket endpoint", websocket);
-
-	for {
-		// Waiting for the interrupt
-		sig := <-signal.Incoming
-		if sig == os.SIGKILL || sig == os.SIGINT {
-			fmt.Printf("\n... \033[33mInterrupted\033[0m\n")
-			return
-		}
-		if sig == os.SIGTSTP {
-			
-		}
-	}
+	DisplayAsciiArt()
+	SetupContext()
+	SetupEndpoint("backend endpoint", ctx.NewBackendEndpoint(conf.Backend));
+	SetupEndpoint("websocket endpoint", ctx.NewWebsocketEndpoint(conf.Websocket));
+	SetupEndpoint("admin endpoint", ctx.NewAdminEndpoint(conf.Admin));
+	DisplaySystemSettings()
+	SetupDaemon()
+	SignalTrap()
 }
