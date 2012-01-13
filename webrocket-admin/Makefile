@@ -13,6 +13,7 @@ GOFILES = \
 	cmd_list_channels.go \
 	cmd_add_channel.go \
 	cmd_delete_channel.go \
-	cmd_clear_channels.go
+	cmd_clear_channels.go \
+	cmd_list_workers.go
 
 include $(GOROOT)/src/Make.cmd

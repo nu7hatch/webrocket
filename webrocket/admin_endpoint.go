@@ -163,6 +163,11 @@ func (a *AdminEndpoint) route(w http.ResponseWriter, r *http.Request) {
 		case "DELETE":
 			a.clearChannels(w, r)
 		}
+	case "/workers":
+		switch r.Method {
+		case "GET":
+			a.allWorkers(w, r)
+		}
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
@@ -398,4 +403,36 @@ func (a *AdminEndpoint) clearChannels(w http.ResponseWriter, r *http.Request) {
 	}
 	adminStatusLog(a, fmt.Sprintf("All channels deleted from `%s` vhost", vhost.path))
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func (a *AdminEndpoint) allWorkers(w http.ResponseWriter, r *http.Request) {
+	vhostPath := r.Form.Get("vhost")
+	vhost, err := a.ctx.Vhost(vhostPath)
+	if err != nil {
+		a.error(w, http.StatusNotFound, err)
+		return
+	}
+	lobby, ok := a.ctx.backend.lobbys[vhost.path]
+	if !ok {
+		a.error(w, http.StatusInternalServerError, errors.New("something went wrong"))
+		return
+	}
+	workers := []interface{}{}
+	for _, worker := range lobby.agents {
+		if worker.IsAlive() {
+			workers = append(workers, map[string]interface{}{
+				"self": fmt.Sprintf("/worker?vhost=%s&id=%s", vhost.path, worker.id),
+				"vhost": fmt.Sprintf("/vhost?path=%s", vhost.path),
+				"id": string(worker.id),
+			})
+		}
+	}
+	workersData := map[string]interface{}{"workers": workers}
+	data, err := json.Marshal(workersData)
+	if err != nil {
+		a.error(w, http.StatusInternalServerError, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
 }

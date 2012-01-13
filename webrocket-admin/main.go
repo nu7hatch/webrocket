@@ -60,6 +60,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  add_channel [vhost] [name]: Shows list of vhosts opened under given channel\n")
 	fmt.Fprintf(os.Stderr, "  delete_channel [vhost] [name]: Removes channel from the specified vhost\n")
 	fmt.Fprintf(os.Stderr, "  clear_channels [vhost]: Removes all channels from the specified vhost\n")
+	fmt.Fprintf(os.Stderr, "  list_workers [vhost]: Shows list of the backend workers connected to the specified vhost\n")
 	fmt.Fprintf(os.Stderr, "\nAvailable options\n")
 	flag.PrintDefaults()
 }
@@ -101,6 +102,8 @@ func main() {
 		cmdDeleteChannel(flag.Arg(1), flag.Arg(2))
 	case "clear_channels":
 		cmdClearChannels(flag.Arg(1))
+	case "list_workers":
+		cmdListWorkers(flag.Arg(1))
 	default:
 		usage()
 	}
