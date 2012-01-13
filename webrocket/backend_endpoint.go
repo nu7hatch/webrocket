@@ -45,6 +45,9 @@ func (ctx *Context) NewBackendEndpoint(addr string) Endpoint {
 		log:    ctx.log,
 		lobbys: make(map[string]*backendLobby),
 	}
+	for _, vhost := range ctx.vhosts {
+		e.registerVhost(vhost)
+	}
 	e.zmqctx, _ = zmq.NewContext() // XXX: should i handle this error here?
 	ctx.backend = e
 	return e
@@ -146,7 +149,7 @@ func (b *BackendEndpoint) handle(msg [][]byte) {
 	// Log status...
 	if code >= 400 {
 		backendError(b, vhost, aid, status, code, request.String())
-	} else {
+	} else if code < 300 {
 		backendStatusLog(b, vhost, status, code, request.String())
 	}
 }

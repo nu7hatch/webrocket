@@ -106,6 +106,7 @@ func (l *backendLobby) addAgent(agent *BackendAgent) {
 func (l *backendLobby) deleteAgent(agent *BackendAgent) {
 	l.mtx.Lock()
 	defer l.mtx.Unlock()
+	agent.Kill()
 	delete(l.agents, string(agent.id))
 }
 

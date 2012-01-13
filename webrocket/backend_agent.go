@@ -23,7 +23,7 @@ import (
 const (
 	backendAgentHeartbeatInterval = 2 * time.Second
 	backendAgentHeartbeatLiveness = 3
-	backendAgentHeartbeatExpiry   = backendAgentHeartbeatInterval + backendAgentHeartbeatLiveness
+	backendAgentHeartbeatExpiry   = backendAgentHeartbeatInterval * backendAgentHeartbeatLiveness
 )
 
 // BackendAgent represents single Backend Application client connection.
@@ -85,7 +85,7 @@ func (a *BackendAgent) Kill() {
 func (a *BackendAgent) updateExpiration() {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
-	a.expiry = a.expiry.Add(backendAgentHeartbeatExpiry)
+	a.expiry = time.Now().Add(backendAgentHeartbeatExpiry)
 }
 
 func (a *BackendAgent) heartbeat() {

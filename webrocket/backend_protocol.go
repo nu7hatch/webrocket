@@ -56,26 +56,35 @@ func backendDealerDispatch(r *backendRequest) (status string, code int) {
 		return
 	}
 	switch r.cmd {
+	case "QT":
+		agent, ok = lobby.getAgentById(string(r.id))
+		if ok {
+			lobby.deleteAgent(agent);
+			status, code = "Disconnected", 309
+			return
+		}
+		status, code = "Forbidden", 403
+		return
 	case "RD":
-		// first message from the agent, means it's ready to work
+		// First message from the agent, means it's ready to work
 		agent = newBackendAgent(r.endpoint, r.vhost, r.id)
 		lobby.addAgent(agent)
 		status, code = "Ready", 300
 	case "HB":
 		agent, ok = lobby.getAgentById(string(r.id))
 		if ok {
+			// Just update expiration time...
+			agent.updateExpiration()
 			status, code = "Heartbeat", 301
 		} else {
-			// seems that agent sent heartbeat after liveness period,
+			// Seems that agent sent heartbeat after liveness period,
 			// we have to send a quit message restart it.
 			r.Reply("QT")
-			status, code = "Expired", 308
+			status, code = "Expired", 408
 		}
 	default:
 		status, code = "Bad request", 400
 	}
-	// Refresh expiration time...
-	agent.updateExpiration()
 	return 
 }
 

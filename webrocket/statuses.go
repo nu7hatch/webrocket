@@ -31,12 +31,6 @@ package webrocket
 // * 252: Channel closed
 // * 270: Single access token generated
 //
-// = Information codes (backend only)
-//
-// * 300: Ready
-// * 301: Heartbeat
-// * 308: Expired
-//
 // = Error codes
 //
 // * 400: Bad request
@@ -47,4 +41,10 @@ package webrocket
 // * 454: Channel not found
 // * 597: Internal error
 // * 598: End of file
-
+//
+// = Information and error codes (backend only)
+//
+// * 300: Ready
+// * 301: Heartbeat
+// * 408: Expired
+//
