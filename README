@@ -1,15 +1,15 @@
 WEBROCKET - Real-time Web Broker
 ================================
 
-WebRocket is a hybrid of MQ and WebSockets server with great support for 
+WebRocket is a hybrid of MQ and WebSockets server with great support for
 horizontal scalability. WebRocket is very fast and easy to use from both
-sides: backend (via MQ connection) and frontend (via WebSockets). 
+sides: backend (via MQ connection) and frontend (via WebSockets).
 This combination will lead you to new quality of web development and
-will finally make bidirectional Web easy for everyone. 
+will finally make bidirectional Web easy for everyone.
 
 Installation
 ------------
-The file 'INSTALL' in this directory says how to build and install 
+The file 'INSTALL' in this directory explains how to build and install
 WebRocket  on various systems, once you have unpacked or checked out the
 entire WebRocket file tree.
 
@@ -29,14 +29,14 @@ Contributing
 ------------
 We appreciate any kind of help in WebRocket development and testing.
 If you don't know how can you help us, please check the project's
-issues or 'TODO' file in project root directory. Before you start
+issues or 'TODO' file in the project root directory. Before you start
 working on the code, and before you send us a pull request, make sure
 you understand and follow the contributors guide, which you can find
 in the 'CONTRIBUTE' file.
 
 Project structure
 -----------------
-Main source tree contains several directories. Here's the short
+The main source tree contains several directories. Here's the short
 explanation what you can find in there.
 
 'docs'::
@@ -44,7 +44,7 @@ explanation what you can find in there.
 
 'deps'::
 	External dependencies bundled with the project
-		
+
 'webrocket'::
 	WebRocket core library
 
@@ -57,13 +57,13 @@ explanation what you can find in there.
 	WebRocket server nodes.
 
 'webrocket-monitor'::
-	Tool for WebRocket server nodes and clusters monitoring. 
+	Tool for WebRocket server nodes and clusters monitoring.
 
 Sponsors
 --------
-Whole work on the project is sponsored and supported by Cubox - an
+All the work on the project is sponsored and supported by Cubox - an
 awesome dev shop from Uruguay <http://cuboxsa.com>.
-		
+
 Copyright
 ---------
 Copyright (C) 2011 by Krzysztof Kowalik <chris@nu7hat.ch>
