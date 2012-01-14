@@ -1,3 +1,10 @@
+2012-01-14  Pablo Astigarraga  <pote@tardis.com.uy>
+
+	* CONTRIBUTE: Various language nipticks.
+	* CONTRIBUTORS: Language change, proper email address.
+	* INSTALL: Language changes, typos, trailing characters, etc.
+	* README: Minor language changes, trailing characters.
+
 2012-01-12  Krzysztof Kowalik  <chris@nu7hat.ch>
 
 	* webrocket-admin/: added list_workers option

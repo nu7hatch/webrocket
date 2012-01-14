@@ -5,22 +5,22 @@ To install WebRocket you need the following tools and dependecies:
 
 Latest Go compiler
 ------------------
-WebRocket is written in Go language. If you don't have Go compiler
-installed yet, follow this installation guide: http://golang.org/doc/install.html
+WebRocket is written in the Go programming language. If you don't have the Go
+compiler installed yet, follow this installation guide: http://golang.org/doc/install.html
 
-IMPORTANT: WebRocket have to be built against the last weekly release!
+IMPORTANT: WebRocket has to be built against the latest weekly release!
 
-So far, WebRocket is using a bunch of unreleased features and want to catch 
-up with Go's development, that's why you should remember to clone a *head
+So far, WebRocket is using a bunch of unreleased features and attempts to
+keep up with Go's development, thats why you should remember to clone a *head
 version* or the latest *weakly release*:
 
-To get and build a head version of the compiler use following command:
+To get and build a head version of the compiler use the following command:
 
 	$ hg clone https://go.googlecode.com/hg/ go
 	$ cd go/src
 	$ ./all.bash
 
-When build succeed, you need to add few environment variables to your
+When the build succeeds you need to add few environment variables to your
 '~/.bashrc' (or other shell configuration file):
 
 	export GOROOT=/path/to/go
@@ -29,8 +29,8 @@ When build succeed, you need to add few environment variables to your
 	export GOBIN=$GOROOT/bin
 	export PATH=$GOBIN:$PATH
 	
-If you have any other doubts or problems, please follow the instructions
-from the Go's documentation.
+If you have any other doubts or problems please follow the instructions
+in Go's documentation.
 
 Dependencies
 ------------
@@ -39,8 +39,8 @@ in your system before you build it.
 
 zeromq (>= 2.1 and < 3.0)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-The ZeroMQ core library. This library should be available in you package
-manager's repository in most of operating systems.
+The ZeroMQ core library. This library should be available in your package
+manager's repository in most operating systems.
 
 .Debian
 	$ apt-get install libzmq-dev
@@ -57,8 +57,8 @@ http://www.zeromq.org/intro:get-the-software
 
 kyoto-cabinet (>= 1.2)
 ~~~~~~~~~~~~~~~~~~~~~~
-The Kyoto Cabinet hash table library. This library shoult be available
-in your package manager's repository in most of operating systems.
+The Kyoto Cabinet hash table library. This library should be available
+in your package manager's repository in most operating systems.
 
 .Debian
 	$ TODO ...
@@ -71,12 +71,12 @@ in your package manager's repository in most of operating systems.
 
 Development dependencies
 ------------------------
-If you want to work on WebRocket development, you need to install
+If you want to work on WebRocket development, you need to install a
 few additional dependencies.
 
 asciidoc
 ~~~~~~~~
-Documentation and man pages generator.		
+Documentation and man pages generator.
 
 TIP: If you're an OSX user, in order to make the 'asciidoc' work
 properly you have to register the installed docbook.
@@ -97,8 +97,8 @@ Building WebRocket
 ------------------
 Once you have the Go compiler and all dependencies installed, we can move
 to building our WebRocket installation. Building WebRocket is very easy and
-shouldn't cause too many problems. After you will clone the repository, just
-use standard 'make' targets to build and install:
+shouldn't cause too many problems. After you clone the repository, just use
+the standard 'make' targets to build and install:
 
 	$ git clone git://github.com/nu7hatch/webrocket.git
 	$ cd webrocket
@@ -108,7 +108,7 @@ use standard 'make' targets to build and install:
 
 Documentation and Manual pages
 ------------------------------
-If you work on the documentation or want to simply generate man pages
+If you are working on the documentation or want to simply generate man pages
 and other docs, use the following 'make' targets
 
 	$ make man
@@ -124,15 +124,15 @@ Troubleshooting
 You may encounter a situation when WebRocket fails to build due to using
 a stale version of the Go compiler and fails again due to compiler version
 mismatch after you update it to the latest version. In this case you should
-cleanup project workspace by running the 'clean' target:
+cleanup the project workspace by running the 'clean' target:
 
 	$ make clean
 
 Usage
 -----
-Now all WebRocket tools should be available in your system. Check
-the manual entries for each of them to get information about how do
-they work. List of available manual entries:
+Now all the WebRocket tools should be available in your system. Check
+the manual entries for each of them to get information about their usage.
+List of available manual entries:
 
 * link:docs/webrocket-server.1.html[*webrocket-server*(1)]
 * link:docs/webrocket-ctl.1.html[*webrocket-ctl*(1)]
