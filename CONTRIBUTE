@@ -18,19 +18,19 @@ Coding standards
 .Formatting
 
 Go is simple and straightforward enough to avoid code mess. Although,
-you should always check your code formating with 'gofmt' tool.
+you should always check your code formating with the 'gofmt' tool.
 
 .Testing
 
-If you implemented new feature, then appropriate tests should be
-added to prove its proper functionality. Remember to always check if
-all tests are passing before you submit your changes. Use `make check`
-command to run our test suite. 
+If you are implementing a new feature, please write the appropriate tests
+to prove its proper functionality. Remember to always check that all the
+tests are passing before you submit your changes. Use the `make check`
+command to run our test suite.
 
 .Documentation
 
 All new types and functions added to the code should be documented.
-Good documentation makes our and your life much esier.
+Good documentation makes your life and ours much easier.
 
 Submitting Patches
 ------------------
@@ -44,8 +44,8 @@ revise your patch, send it as a followup to the initial topic.
 
 .Description
 
-For bug fixes, a description of the bug and how your patch fixes thisbug.
-For new features, a description of the feature and your implementation.
+Bug fixes must include a description of the bug and how your patch fixes it.
+New features must include a description of the feature and your implementation.
 
 .ChangeLog
 
@@ -57,8 +57,8 @@ documentation, i.e. txt files in the 'docs' directory.
 
 .The patch itself
 
-Please, reread your patch's diff before you submit it. Use `git diff` command
-to review it. 
+Please, reread your patch's diff before you submit it. Use the `git diff` command
+to review it.
 
 .Do not mix changes
 
