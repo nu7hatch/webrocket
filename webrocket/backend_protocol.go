@@ -28,75 +28,22 @@ var backendReqProtocol = map[string]func(*backendRequest)(string,int){
 }
 
 // Helper for logging backend handler's statuses.
-func backendStatusLog(b *BackendEndpoint, v *Vhost, status string, code int, msg string) {
-	path := "..."
-	if v != nil {
-		path = v.Path()
+func backendStatusLog(b *BackendEndpoint, req *backendRequest, status string, code int) {
+	msg, path := "", "..."
+	if req != nil {
+		if req.vhost != nil {
+			path = req.vhost.Path()
+		}
+		msg = req.String()
 	}
 	b.log.Printf("backend[%s]: %d %s; %s", path, code, status, msg)
 }
 
 // Helper for logging protocol errors and and seding it to
 // the client.
-func backendError(b *BackendEndpoint, v *Vhost, aid []byte, error string,
-	code int, msg string) {
-	b.SendTo(aid, true, "ER", fmt.Sprintf("%d", code))
-	backendStatusLog(b, v, error, code, msg)
-}
-
-// backendDealerDispatch takes a message received from the agent
-// and handles it in appropriate way accoring to the backend worker
-// protocol specification.
-func backendDealerDispatch(r *backendRequest) (status string, code int) {
-	var agent *BackendAgent
-	lobby, ok := r.endpoint.lobbys[r.vhost.Path()]
-	if !ok {
-		// Something's fucked up, it should never happen
-		status, code = "Internal error", 500
-		return
-	}
-	switch r.cmd {
-	case "QT":
-		agent, ok = lobby.getAgentById(string(r.id))
-		if ok {
-			lobby.deleteAgent(agent);
-			status, code = "Disconnected", 309
-			return
-		}
-		status, code = "Forbidden", 403
-		return
-	case "RD":
-		// First message from the agent, means it's ready to work
-		agent = newBackendAgent(r.endpoint, r.vhost, r.id)
-		lobby.addAgent(agent)
-		status, code = "Ready", 300
-	case "HB":
-		agent, ok = lobby.getAgentById(string(r.id))
-		if ok {
-			// Just update expiration time...
-			agent.updateExpiration()
-			status, code = "Heartbeat", 301
-		} else {
-			// Seems that agent sent heartbeat after liveness period,
-			// we have to send a quit message restart it.
-			r.Reply("QT")
-			status, code = "Expired", 408
-		}
-	default:
-		status, code = "Bad request", 400
-	}
-	return 
-}
-
-// backendReqDispatch takes an incoming message and handles it
-// in appropriate way accoring to the backend worker protocol
-// specification.
-func backendReqDispatch(r *backendRequest) (string, int) {
-	handlerFunc, ok := backendReqProtocol[r.cmd]
-	if !ok {
-		return "Bad request", 400
-	}
-	return handlerFunc(r)
+func backendError(b *BackendEndpoint, req *backendRequest, error string, code int) {
+	req.Reply("ER", fmt.Sprintf("%d", code))
+	backendStatusLog(b, req, error, code)
 }
 
 // The 'BC' (broadcast) event handler.

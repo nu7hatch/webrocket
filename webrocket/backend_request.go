@@ -17,31 +17,38 @@ package webrocket
 
 import (
 	"fmt"
+	"errors"
 	"bytes"
 )
 
 type backendRequest struct {
-	endpoint *BackendEndpoint
-	vhost    *Vhost
-	id       []byte
-	cmd      string
-	msg      [][]byte
+	conn  *backendConnection
+	vhost *Vhost
+	id    []byte
+	cmd   string
+	msg   [][]byte
 }
 
-func newBackendRequest(endpoint *BackendEndpoint, vhost *Vhost, id []byte,
+func newBackendRequest(conn *backendConnection, vhost *Vhost, id []byte,
 	cmd string, msg [][]byte) (r *backendRequest) {
 	r = &backendRequest{
-		endpoint: endpoint,
-		vhost:    vhost,
-		id:       id,
-		cmd:      cmd,
-		msg:      msg,
+		conn:  conn,
+		vhost: vhost,
+		id:    id,
+		cmd:   cmd,
+		msg:   msg,
 	}
 	return r
 }
 
 func (r *backendRequest) Reply(cmd string, frames ...string) (err error) {
-	return r.endpoint.SendTo(r.id, false, cmd, frames...)
+	if r == nil || r.conn == nil {
+		err = errors.New("broken connection")
+		return
+	}
+	err = r.conn.Send(cmd, frames...)
+	r.conn.Kill()
+	return err
 }
 
 func (r *backendRequest) String() string {

@@ -14,9 +14,8 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 package webrocket
-
+/*
 import (
-	zmq "../gozmq"
 	uuid "../uuid"
 	"bytes"
 	"fmt"
@@ -24,14 +23,14 @@ import (
 	"testing"
 	"time"
 	"websocket"
+	"net"
 )
 
 var (
-	req  zmq.Socket
-	zctx zmq.Context
-	err  error
-	be   Endpoint
-	bv   *Vhost
+	req *backendConnection
+	err error
+	be  Endpoint
+	bv  *Vhost
 )
 
 func init() {
@@ -43,48 +42,39 @@ func init() {
 	bv.OpenChannel("test")
 	go be.ListenAndServe()
 	go we.ListenAndServe()
-	zctx, _ = zmq.NewContext()
-	req, err = zctx.NewSocket(zmq.REQ)
+	conn, err = conn.Dial("tcp", "127.0.0.1:9772")
+	req = newBackendConnection(be, conn)
 }
 
-func breqrecv(t *testing.T) [][]byte {
-	data, err := req.RecvMultipart(0)
+func breqrecv(t *testing.T) *backendRequest {
+	data, err := req.Recv()
 	if err != nil {
 		t.Error(err)
 		return nil
 	}
-	return data
+	return data.msg
 }
 
-func breqsend(t *testing.T, frames ...string) {
-	var payload = make([][]byte, len(frames))
-	for i, frame := range frames {
-		payload[i] = []byte(frame)
-	}
-	err := req.SendMultipart(payload, 0)
+func breqsend(t *testing.T, idty, cmd, frames ...string) {
+	err := req.Send(cmd, frames...)
 	if err != nil {
 		t.Error(err)
 	}
 }
 
-func berr(msg [][]byte) string {
-	if len(msg) < 2 || string(msg[0]) != "ER" {
+func berr(req *backendRequest) string {
+	if req.cmd != "ER" || len(req.msg) < 1 {
 		return ""
 	}
-	return string(msg[1])
+	return string(req.msg[0])
 }
 
-func bokstatus(msg [][]byte) bool {
-	if len(msg) < 1 {
-		return false
-	}
-	return string(msg[0]) != "OK\n"
+func bokstatus(req *backendRequest) bool {
+	return req.cmd != "OK"
 }
 
 func doTestBackendReqConnectWithInvalidIdentitiy(t *testing.T) {
-	req.SetSockOptString(zmq.IDENTITY, "invalid")
-	req.Connect("tcp://127.0.0.1:9772")
-	breqsend(t, "{}")
+	breqsend(t, """{}")
 	resp := breqrecv(t)
 	if berr(resp) != "402" {
 		t.Errorf("Expected to be unauthorized")
@@ -267,3 +257,4 @@ func TestBackendReqProtocol(t *testing.T) {
 	doTestBackendReqBroadcastWhenInvalidChannelGiven(t)
 	doTestBackendReqBroadcastValidData(t)
 } 
+*/

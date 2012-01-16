@@ -16,7 +16,6 @@
 package webrocket
 
 import (
-	zmq "../gozmq"
 	"errors"
 	"regexp"
 )
@@ -27,7 +26,7 @@ const identityPattern = "^(dlr|req)\\:(/[\\w\\d\\-\\_]+(/[\\w\\d\\-\\_]+)*)\\:([
 // backendIdentity represents parsed identity information.
 type backendIdentity struct {
 	Raw         []byte
-	Type        zmq.SocketType
+	Type        string
 	AccessToken string
 	Id          string
 	Vhost       string
@@ -50,11 +49,7 @@ func parseBackendIdentity(raw []byte) (idty *backendIdentity, err error) {
 		Id:          parts[5],
 		Vhost:       parts[2],
 		AccessToken: parts[4],
-	}
-	if parts[1] == "dlr" {
-		idty.Type = zmq.DEALER
-	} else {
-		idty.Type = zmq.REQ
+		Type:        parts[1],
 	}
 	return
 }

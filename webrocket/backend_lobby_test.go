@@ -15,7 +15,15 @@
 
 package webrocket
 
-import "testing"
+import (
+	"testing"
+	uuid "../uuid"
+)
+
+func newTestBackendAgent() *BackendAgent {
+	id, _ := uuid.NewV4()
+	return &BackendAgent{id: []byte(id.String())}
+}
 
 func TestNewBackendLobby(t *testing.T) {
 	bl := newBackendLobby()

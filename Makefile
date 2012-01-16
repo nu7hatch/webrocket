@@ -13,7 +13,7 @@ endif
 
 ASCIIDOC = asciidoc
 
-all: gozmq gouuid gocabinet gostepper server admin
+all: gouuid gocabinet gostepper server admin
 	@rm -rf _build
 	@$(ECHO) "\033[35mgathering things together\033[0m"
 	mkdir -p $(BUILD_DIR)/bin $(BUILD_DIR)/share
@@ -24,7 +24,7 @@ all: gozmq gouuid gocabinet gostepper server admin
 clean: clean-lib clean-server clean-admin clean-deps
 	rm -rf build
 
-clean-deps: clean-gozmq clean-gouuid  clean-gocabinet clean-gostepper
+clean-deps: clean-gouuid clean-gocabinet clean-gostepper
 install: install-server install-admin install-man
 check: all check-lib
 
@@ -62,13 +62,6 @@ clean-man:
 	-@$(MAKE) -C docs clean
 install-man:
 	-@$(MAKE) -C docs install
-
-gozmq:
-	@$(ECHO) "\033[35mbuilding \033[1;32m./deps/gozmq\033[0m"
-	@$(MAKE) -C deps/gozmq
-	cp deps/gozmq/_obj/github.com/alecthomas/*.a .
-clean-gozmq:
-	$(MAKE) -C deps/gozmq clean
 
 gouuid:
 	@$(ECHO) "\033[35mbuilding \033[1;32m./deps/gouuid\033[0m"

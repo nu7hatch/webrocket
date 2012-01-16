@@ -15,7 +15,9 @@
 
 package webrocket
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	VerMajor = 0

@@ -18,6 +18,7 @@ package webrocket
 import (
 	"encoding/json"
 	"time"
+	"io"
 )
 
 const (
@@ -29,23 +30,24 @@ const (
 // BackendAgent represents single Backend Application client connection.
 type BackendAgent struct {
 	*connection
-	id       []byte
-	endpoint *BackendEndpoint
-	expiry   time.Time
+	id          []byte
+	conn        *backendConnection
+	expiry      time.Time
+	heartbeatAt time.Time
 }
 
 // newBackendAgent creates reference to specified backend application's client
 // connection. Each client uses separate goroutine to deal with the
 // outgoing messages.
-func newBackendAgent(endpoint *BackendEndpoint, v *Vhost, id []byte) (a *BackendAgent) {
+func newBackendAgent(conn *backendConnection, v *Vhost, id []byte) (a *BackendAgent) {
 	a = &BackendAgent{
-		id:         id,
-		endpoint:   endpoint,
-		connection: newConnection(v),
-		expiry:     time.Now(),
+		id:          id,
+		conn:        conn,
+		connection:  newConnection(v),
+		expiry:      time.Now(),
+		heartbeatAt: time.Now().Add(backendAgentHeartbeatInterval),
 	}
 	a.updateExpiration()
-	go a.heartbeat()
 	return a
 }
 
@@ -62,7 +64,7 @@ func (a *BackendAgent) Trigger(payload interface{}) (err error) {
 		if err != nil {
 			return
 		}
-		err = a.endpoint.SendTo(a.id, true, "TR", string(frame))
+		err = a.conn.Send("TR", string(frame))
 	}
 	return
 }
@@ -71,14 +73,15 @@ func (a *BackendAgent) Trigger(payload interface{}) (err error) {
 func (a *BackendAgent) IsAlive() bool {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
-	return a.expiry.After(time.Now())
+	return a.expiry.After(time.Now()) || a.conn == nil
 }
 
 // Turns off the agent's alive state.
 func (a *BackendAgent) Kill() {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
-	a.endpoint.SendTo(a.id, true, "QT")
+	a.conn.Send("QT")
+	a.conn.Kill()
 	a.expiry = time.Now()
 }
 
@@ -88,12 +91,28 @@ func (a *BackendAgent) updateExpiration() {
 	a.expiry = time.Now().Add(backendAgentHeartbeatExpiry)
 }
 
-func (a *BackendAgent) heartbeat() {
+func (a *BackendAgent) listen() {
+	defer a.Kill()
+	a.conn.SetTimeout(int64(backendAgentHeartbeatInterval))
 	for {
 		if !a.IsAlive() {
 			break
 		}
-		<-time.After(backendAgentHeartbeatInterval)
-		a.endpoint.SendTo(a.id, true, "HB")
+		req, err := a.conn.Recv()
+		if err != nil && err == io.EOF {
+			break
+		}
+		if req != nil {
+			switch req.cmd {
+			case "HB": // heartbeat
+				a.updateExpiration()
+			case "QT": // quit
+				break
+			}
+		}
+		if a.heartbeatAt.Before(time.Now()) {
+			a.conn.Send("HB")
+			a.heartbeatAt = time.Now().Add(backendAgentHeartbeatInterval)
+		}
 	}
 }

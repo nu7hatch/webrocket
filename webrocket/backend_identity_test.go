@@ -16,7 +16,6 @@
 package webrocket
 
 import (
-	zmq "../gozmq"
 	"testing"
 )
 
@@ -27,7 +26,7 @@ func TestParseBackendIdentityWithValidIdentity(t *testing.T) {
 		t.Errorf("Expected to parse a valid identity")
 		return
 	}
-	if identity.Type != zmq.DEALER {
+	if identity.Type != "dlr" {
 		t.Errorf("Expected to parse identity type")
 	}
 	if identity.AccessToken != "1234567890abcdefghij1234567890abcdefghij" {

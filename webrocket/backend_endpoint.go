@@ -16,12 +16,11 @@
 package webrocket
 
 import (
-	zmq "../gozmq"
 	"errors"
-	"fmt"
 	"log"
 	"sync"
 	"net"
+	"time"
 )
 
 // BackendEndpoint is a wrapper for 0MQ ROUTER server. It handles
@@ -31,8 +30,7 @@ type BackendEndpoint struct {
 	addr      string
 	alive     bool
 	lobbys    map[string]*backendLobby
-	router    zmq.Socket
-	zmqctx    zmq.Context
+	listener  *net.TCPListener
 	mtx       sync.Mutex
 	log       *log.Logger
 }
@@ -48,7 +46,6 @@ func (ctx *Context) NewBackendEndpoint(addr string) Endpoint {
 	for _, vhost := range ctx.vhosts {
 		e.registerVhost(vhost)
 	}
-	e.zmqctx, _ = zmq.NewContext() // XXX: should i handle this error here?
 	ctx.backend = e
 	return e
 }
@@ -102,56 +99,52 @@ func (b *BackendEndpoint) authenticate(identity []byte) (vhost *Vhost,
 	return
 }
 
-// Server's event loop - handles all incoming messages.
-func (b *BackendEndpoint) serve() {
-	for {
-		if !b.IsAlive() {
-			break
-		}
-		recv, err := b.router.RecvMultipart(0)
-		if err != nil {
-			// TODO: log
-			continue
-		}
-		go b.handle(recv)
-	}
-}
-
 // receiveAndHandle performs single receive operation and dispatches
 // received message.
-//
-// XXX: handler is non-blocking, but there is no limit of the messages
-// handled at the same time.
-// TODO: Add such limit...
-//
-func (b *BackendEndpoint) handle(msg [][]byte) {
-	var status string
-	var code int
-	// Check the message and read an envelope.
-	if len(msg) < 3 {
-		backendStatusLog(b, nil, "Bad request", 400, "")
-		return
+func (b *BackendEndpoint) handle(conn net.Conn) (request *backendRequest, status string, code int) {
+	bconn := newBackendConnection(b, conn)
+	request, err := bconn.Recv()
+	if err != nil {
+		return nil, "Bad request", 400
 	}
-	aid, cmd := msg[0], msg[2]
-	request := newBackendRequest(b, nil, aid, string(cmd), msg[3:])
+	println("REQ", request.cmd, string(request.id))
 	// Authenticating an agent using it's identity...
-	vhost, idty, ok := b.authenticate(aid)
-	if ok {
-		request.vhost = vhost
-		if idty.Type == zmq.DEALER {
-			status, code = backendDealerDispatch(request)
-		} else { // zmq.REQ
-			status, code = backendReqDispatch(request)
+	vhost, idty, ok := b.authenticate(request.id)
+	if !ok {
+		return request, "Unauthorized", 402
+	}
+	request.vhost = vhost
+	if idty.Type == "dlr" { // DEALER
+		var agent *BackendAgent
+		lobby, ok := b.lobbys[vhost.Path()]
+		if !ok {
+			// Something's fucked up, it should never happen
+			return request, "Internal error", 597
 		}
-	} else {
-		status, code = "Unauthorized", 402
+		switch request.cmd {
+		case "RD":
+			// First message from the agent, means it's ready to work
+			agent = newBackendAgent(bconn, request.vhost, request.id)
+			lobby.addAgent(agent)
+			// Blocking in here, keeping worker alive
+			agent.listen()
+			lobby.deleteAgent(agent)
+			return nil, "Disconnected", 309
+		case "HB":
+			// Seems that agent sent heartbeat after liveness period,
+			// we have to send a quit message restart it.
+			request.Reply("QT")
+			return request, "Expired", 408
+		}
+	} else { // REQ
+		// Dispatching request to appropriate handler...
+		handlerFunc, ok := backendReqProtocol[request.cmd]
+		if ok {
+			status, code = handlerFunc(request)
+			return request, status, code
+		}
 	}
-	// Log status...
-	if code >= 400 {
-		backendError(b, vhost, aid, status, code, request.String())
-	} else if code < 300 {
-		backendStatusLog(b, vhost, status, code, request.String())
-	}
+	return request, "Bad request", 400
 }
 
 // Trigger enqueues specified message to internal lobby queue.
@@ -170,49 +163,42 @@ func (b *BackendEndpoint) Trigger(vhost *Vhost, payload interface{}) error {
 	return nil
 }
 
-// SendTo directly sends message to specified agent.
-func (b *BackendEndpoint) SendTo(id []byte, nonblock bool, cmd string, frames ...string) (err error) {
-	b.mtx.Lock()
-	defer b.mtx.Unlock()
-	if b.router == nil || !b.alive {
-		return errors.New("Endpoint is not running")
-	}
-	var msg = make([][]byte, len(frames) + 3)
-	msg[0], msg[2] = id, []byte(cmd)
-	for i, frame := range frames {
-		msg[i+3] = []byte(frame)
-	}
-	var flags zmq.SendRecvOption = 0
-	if nonblock {
-		flags |= zmq.NOBLOCK
-	}
-	err = b.router.SendMultipart(msg, flags) // FIXME: do polling here?
-	return
-}
-	
-	// ListenAndServe setups the 0MQ ROUTER socket and binds it to
+// ListenAndServe setups the 0MQ ROUTER socket and binds it to
 // previously configured address.
 func (b *BackendEndpoint) ListenAndServe() (err error) {
-	b.router, err = b.zmqctx.NewSocket(zmq.ROUTER)
-	if err != nil {
-		return
-	}
-	defer b.router.Close()
 	addr, err := net.ResolveTCPAddr("tcp", b.addr)
 	if err != nil {
 		return
 	}
-	host := addr.IP.String()
-	if host == "<nil>" {
-		host = "*"
-	}
-	err = b.router.Bind(fmt.Sprintf("tcp://%s:%d", host, addr.Port))
+	b.listener, err = net.ListenTCP("tcp", addr)
 	if err != nil {
 		return
 	}
 	b.alive = true
-	b.serve()
-	return
+	for {
+		if !b.IsAlive() {
+			break
+		}
+		var conn net.Conn
+		conn, err = b.listener.Accept()
+		if err != nil {
+			if nerr, ok := err.(net.Error); ok && nerr.Temporary() {
+				log.Printf("accept error: %v\n", err)
+				<-time.After(1 * time.Second)
+				continue
+			}
+			return
+		}
+		go func(conn net.Conn) {
+			request, status, code := b.handle(conn)
+			if code >= 400 {
+				backendError(b, request, status, code)
+			} else if code < 300 {
+				backendStatusLog(b, request, status, code)
+			}
+		}(conn)
+	}
+	return nil
 }
 
 // TODO: ...

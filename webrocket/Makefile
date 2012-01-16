@@ -22,6 +22,7 @@ GOFILES = \
 	backend_endpoint.go \
 	backend_lobby.go \
 	backend_request.go \
+	backend_connection.go \
 	backend_protocol.go \
 	admin_endpoint.go
 
