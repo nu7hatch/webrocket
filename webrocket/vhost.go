@@ -24,28 +24,50 @@ import (
 	"sync"
 )
 
-// Vhost name will be validated using this pattern.
-const vhostNamePattern = "^/[\\w\\d\\-\\_]+(/[\\w\\d\\-\\_]+)*$"
+// Pattern used to validate the vhost name.
+var validVhostNamePattern = regexp.MustCompile("^/[\\w\\d\\-\\_]+(/[\\w\\d\\-\\_]+)*$")
 
-// Vhost is a standalone, independent component of the WebRocket
+// Vhost implements a standalone, independent component of the WebRocket
 // server which contains it's own users with permissions, channels,
 // and other related settings.
 type Vhost struct {
-	path        string
-	channels    map[string]*Channel
-	ctx         *Context
-	cmtx        sync.Mutex // channels' mutex
-	tmtx        sync.Mutex // single access token mutex
+	// A vhost's path.
+	path string
+	// A vhost's access token. 
 	accessToken string
+	// List of channels opened within the vhost. 
+	channels map[string]*Channel
+	// List of permissions generated for the vhost.
 	permissions map[string]*Permission
+	// Parent context.
+	ctx *Context
+	// Channel management semaphore
+	cmtx sync.Mutex
+	// Single access token's generation semaphore
+	tmtx sync.Mutex
+	// Internal semaphore
+	imtx sync.Mutex
 }
 
-// Creates new vhost for specified path. Path format allows you
-// to use only letters, numbers, dashes and underscores. Also your
-// path elemets can be separated with backslash.
+// Internal constructor
+// -----------------------------------------------------------------------------
+
+// Creates new vhost for specified path. Path format allows you to use only
+// letters, numbers, dashes and underscores. Also your path elemets can be
+// separated with backslash.
+//
+// Note: New vhost is not persisted until access token will be generated.
+//
+// ctx  - The parent context.
+// path - The vhost's path name.
+//
+// Examples
+//
+//     v, err := newVhost(ctx, "/hello")
+//
+// Returns new vhost or error if something went wrong.
 func newVhost(ctx *Context, path string) (v *Vhost, err error) {
-	re, err := regexp.Compile(vhostNamePattern)
-	if !re.MatchString(path) {
+	if !validVhostNamePattern.MatchString(path) {
 		err = errors.New("invalid path")
 		return
 	}
@@ -58,69 +80,107 @@ func newVhost(ctx *Context, path string) (v *Vhost, err error) {
 	return
 }
 
-// Generates access token for the backend connections. 
+// Exported
+// -----------------------------------------------------------------------------
+
+// GenerateAccessToken create a new access token for the backend connections.
+// Threadsafe, called from main context and admin interface.
 func (v *Vhost) GenerateAccessToken() string {
+	v.imtx.Lock()
+	defer v.imtx.Unlock()
 	var buf [32]byte
-	_, err := rand.Read(buf[:])
-	if err != nil {
+	if _, err := rand.Read(buf[:]); err != nil {
 		return ""
 	}
 	hash := sha1.New()
 	hash.Write(buf[:])
 	v.accessToken = fmt.Sprintf("%x", hash.Sum([]byte{}))
-	if v.ctx != nil && v.ctx.storageEnabled() {
+	if v.ctx != nil && v.ctx.isStorageEnabled() {
+		// Write generated access token to the storage.
 		v.ctx.storage.AddVhost(v.path, v.accessToken)
 	}
 	return v.accessToken
 }
 
-// AccessToken returns vhost's access token.
+// AccessToken returns vhost's access token. Threadsafe, called from various
+// backend connection's handlers.
 func (v *Vhost) AccessToken() string {
+	v.imtx.Lock()
+	defer v.imtx.Unlock()
 	return v.accessToken
 }
 
-// Generates single access token within this vhost.
-func (v *Vhost) GenerateSingleAccessToken(pattern string) string {
-	v.tmtx.Lock()
-	defer v.tmtx.Unlock()
-	var p = NewPermission(pattern)
-	v.permissions[p.Token] = p
-	return p.Token
+// GenerateSingleAccessToken generates new single access token for the
+// specified permissions. Threadsafe, called from various connection's
+// handlers.
+//
+// pattern - The permission regexp to be attached to the token.
+//
+// Examples
+//
+//     token := v.GenerateSingleAccessToken("(foo|bar)")
+//     println(token)
+//     // => "f74fda...f54abd3"
+//
+func (v *Vhost) GenerateSingleAccessToken(pattern string) (token string) {
+	if p, err := NewPermission(pattern); err == nil {
+		token = p.Token()
+		v.tmtx.Lock()
+		defer v.tmtx.Unlock()
+		v.permissions[token] = p
+		return
+	}
+	return ""
 }
 
-// Checks if specified token allows to access this vhost,
-// and if so then returns associated permission.
+// ValidateSingleAccessToken checks if the specified token allows to access
+// this vhost, and if so then returns associated permission. Threadsafe,
+// called from the various connection's handlers.
+//
+// token - The token to be checked.
+//
+// Returns related permission object and boolean status.  
 func (v *Vhost) ValidateSingleAccessToken(token string) (p *Permission, ok bool) {
 	v.tmtx.Lock()
 	defer v.tmtx.Unlock()
-	p, ok = v.permissions[token]
-	if ok {
+	if p, ok = v.permissions[token]; ok {
 		delete(v.permissions, token)
 	}
 	return
 }
 
-// Returns configured path of this vhost.
+// Path returns configured path of this vhost.
 func (v *Vhost) Path() string {
 	return v.path
 }
 
-// Opens new channel and registers it for this vhost.
-func (v *Vhost) OpenChannel(name string) (ch *Channel, err error) {
+// OpenChannel creates new channel and registers it within the vhost.
+// Threadsafe, may be called from the admin interface and affects other
+// functions.
+//
+// name - The name of the new channel.
+// kind - The type of the new channel.
+//
+// Examples
+//
+//     ch, _ = v.OpenChannel("hello")
+//     println(ch.Name())
+//     // => "hello"
+//
+// Returns new channel or error if something went wrong.
+func (v *Vhost) OpenChannel(name string, kind ChannelType) (ch *Channel, err error) {
 	v.cmtx.Lock()
 	defer v.cmtx.Unlock()
-	_, exists := v.channels[name]
-	if exists {
+	if _, ok := v.channels[name]; ok {
 		err = errors.New("channel already exists")
 		return
 	}
-	ch, err = newChannel(name)
-	if err != nil {
+	if ch, err = newChannel(name, kind); err != nil {
 		return
 	}
-	if v.ctx != nil && v.ctx.storageEnabled() {
-		err = v.ctx.storage.AddChannel(v.path, name)
-		if err != nil {
+	if v.ctx != nil && v.ctx.isStorageEnabled() {
+		// Write the channel info to the storage.
+		if err = v.ctx.storage.AddChannel(v.path, name, kind); err != nil {
 			return
 		}
 	}
@@ -128,17 +188,22 @@ func (v *Vhost) OpenChannel(name string) (ch *Channel, err error) {
 	return
 }
 
-// Removes specified channel from this vhost.
+// DeleteChannel removes channel with the specified name from the vhost.
+// Threadsafe, may be called from the admin interface and affect other functions.
+//
+// name - The name of the channel to be deleted.
+//
+// Returns whether this channel has been removed or not.
 func (v *Vhost) DeleteChannel(name string) (ok bool) {
 	v.cmtx.Lock()
 	defer v.cmtx.Unlock()
-	ch, ok := v.channels[name]
-	if !ok {
+	var ch *Channel
+	if ch, ok = v.channels[name]; !ok {
 		return
 	}
-	if v.ctx != nil && v.ctx.storageEnabled() {
-		err := v.ctx.storage.DeleteChannel(v.path, name)
-		if err != nil {
+	if v.ctx != nil && v.ctx.isStorageEnabled() {
+		// Remove the channel from the storage.
+		if err := v.ctx.storage.DeleteChannel(v.path, name); err != nil {
 			return
 		}
 	}
@@ -147,20 +212,25 @@ func (v *Vhost) DeleteChannel(name string) (ok bool) {
 	return
 }
 
-// Returns specified channel if exists.
-func (v *Vhost) Channel(name string) (ch *Channel, ok bool) {
+// Channel returns specified channel if exists. Threadsafe, may be called
+// from many places and being affected by other functions.
+//
+// name - The name of the channel to find.
+//
+// Returns a channel with given name and existance status.
+func (v *Vhost) Channel(name string) (ch *Channel, err error) {
 	v.cmtx.Lock()
 	defer v.cmtx.Unlock()
-	ch, ok = v.channels[name]
+	var ok bool
+	if ch, ok = v.channels[name]; !ok {
+		err = errors.New("channel doesn't exist")
+	}
 	return
 }
 
-// Returns list of channels opened in this vhost.
-func (v *Vhost) Channels() (channels []*Channel) {
-	channels, i := make([]*Channel, len(v.channels)), 0
-	for _, channel := range v.channels {
-		channels[i] = channel
-		i += 1
-	}
-	return
+// Channels returns list of the channels registered within the vhost.
+func (v *Vhost) Channels() map[string]*Channel {
+	v.cmtx.Lock()
+	defer v.cmtx.Unlock()
+	return v.channels
 }

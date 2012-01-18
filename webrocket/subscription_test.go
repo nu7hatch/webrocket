@@ -15,4 +15,17 @@
 
 package webrocket
 
-// TODO: write tests...
+import "testing"
+
+func TestNewSubscription(t *testing.T) {
+	s := newSubscription(&WebsocketConnection{}, true, map[string]interface{}{"foo": "bar"})
+	if s.Client() == nil {
+		t.Errorf("Expected subscription client to be not null")
+	}
+	if !s.IsHidden() {
+		t.Errorf("Expected subscription to be hidden")
+	} 
+	if s.Data()["foo"] != "bar" {
+		t.Errorf("Expected subscription to contain valid data")
+	}
+}

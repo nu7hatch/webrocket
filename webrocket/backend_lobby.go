@@ -21,65 +21,78 @@ import (
 	"time"
 )
 
+// Backend bobby defaults.
 const (
 	backendLobbyDefaultMaxRetries = 3
 	backendLobbyDefaultRetryDelay = 2e6 * time.Nanosecond
 )
 
 // backendLobby coordinates messages flow between the WebRocket and all
-// connected backend application agents.  
+// connected backend application workers.  
 type backendLobby struct {
-	agents     map[string]*BackendAgent
-	queue      chan interface{}
-	dead       chan bool
-	robin      *ring.Ring
+	// List of active workers.
+	workers map[string]*BackendWorker
+	// Internal queue.
+	queue chan interface{}
+	// The load ballancing ring.
+	robin *ring.Ring
+	// The maximum number of retries to send a message. 
 	maxRetries int
+	// The delay time before the next try to send a message.
 	retryDelay time.Duration
-	mtx        sync.Mutex
+	// Internal semaphore.
+	mtx sync.Mutex
 }
 
-// Creates new backendLobby exchange.
+// Internal constructor
+// -----------------------------------------------------------------------------
+
+// newBackendLobby creates new backend lobby exchange and initializes
+// a goroutine for dequeueing and sending the messages.
+//
+// Returns new backend lobby object.
 func newBackendLobby() (l *backendLobby) {
 	l = &backendLobby{
 		robin:      nil,
-		agents:     make(map[string]*BackendAgent),
+		workers:    make(map[string]*BackendWorker),
 		queue:      make(chan interface{}),
-		dead:       make(chan bool),
 		maxRetries: backendLobbyDefaultMaxRetries,
 		retryDelay: backendLobbyDefaultRetryDelay,
 	}
-	go l.dequeue()
+	go l.dequeueLoop()
 	return l
 }
 
-// Enqueues given message.
-func (l *backendLobby) enqueue(payload interface{}) {
-	l.queue <- payload
-}
+// Internal
+// -----------------------------------------------------------------------------
 
-// dequeue is an event loop which picks enqueued message and
-// load ballances it across connected agents.
-func (l *backendLobby) dequeue() {
+// dequeueLoop is an event loop which waits for the messages and load ballances
+// it across all the connected workers.
+func (l *backendLobby) dequeueLoop() {
 	for payload := range l.queue {
 		l.send(payload)
 	}
-	for _, agent := range l.agents {
-		agent.Kill()
+	// We have to kill all the workers when it terminates... 
+	for _, worker := range l.workers {
+		worker.Kill()
 	}
 }
 
-// Dequeues single message and load ballances it across connected
-// clients.
+// send requests for a worker from the load ballancer and sends given data
+// to it. If it's not possible to get free worker then it tries again
+// until the maxRetries limit is reached.
+//
+// payload - The data to be send.
+//
 func (l *backendLobby) send(payload interface{}) {
 	retries := 0
 start:
-	agent := l.loadBallance()
-	if agent != nil {
-		agent.Trigger(payload)
+	if worker := l.getAvailableWorker(); worker != nil {
+		worker.Trigger(payload)
 		return
 	}
-	// No agents available, waiting a while and retrying
-	// TODO: log error
+	// No workers available, waiting a while and retrying
+	// TODO: some debug info?
 	if retries >= l.maxRetries {
 		<-time.After(l.retryDelay)
 		retries += 1
@@ -87,14 +100,17 @@ start:
 	}
 }
 
-// Adds specified agent to the load ballancer ring using the round
-// robin method.
-func (l *backendLobby) addAgent(agent *BackendAgent) {
+// AddWorker pushes given worker to the list of the available workers. Threadsafe,
+// may be called from many handlers and affects the other workers.
+//
+// worker - The worker to be added.
+//
+func (l *backendLobby) addWorker(worker *BackendWorker) {
 	l.mtx.Lock()
 	defer l.mtx.Unlock()
-	l.agents[string(agent.id)] = agent
+	l.workers[worker.Id()] = worker
 	r := ring.New(1)
-	r.Value = agent
+	r.Value = worker
 	if l.robin == nil {
 		l.robin = r
 	} else {
@@ -102,38 +118,48 @@ func (l *backendLobby) addAgent(agent *BackendAgent) {
 	}
 }
 
-// Removes specified agent from the load ballancer ring.
-func (l *backendLobby) deleteAgent(agent *BackendAgent) {
+// deleteWorker removes specified worker from the load ballancer's ring.
+// Threadsafe, may be called from many handlers and affects the other workers
+// related calls.
+//
+// worker - The worker to be deleted
+//
+func (l *backendLobby) deleteWorker(worker *BackendWorker) {
 	l.mtx.Lock()
 	defer l.mtx.Unlock()
-	agent.Kill()
-	delete(l.agents, string(agent.id))
+	worker.Kill()
+	delete(l.workers, worker.Id())
 }
 
-// Find agent with specified ID and returns it.
-func (l *backendLobby) getAgentById(id string) (agent *BackendAgent, ok bool) {
-	agent, ok = l.agents[id]
+// getWorkerById returns an worker with the specified ID and its existance
+// status. Threadsafe, called only internally but may be affected by the other
+// workers related calls.
+func (l *backendLobby) getWorkerById(id string) (worker *BackendWorker, ok bool) {
+	l.mtx.Lock()
+	defer l.mtx.Unlock()
+	worker, ok = l.workers[id]
 	return
 }
 
-// Moves agent cursor to the next available one. 
-func (l *backendLobby) loadBallance() (agent *BackendAgent) {
+// getAvailableWorker pick an available agend and moves cursor forward (simple
+// round robin technique).
+//
+// Returns an available worker.
+func (l *backendLobby) getAvailableWorker() (worker *BackendWorker) {
+	var ok bool
 start:
 	if l.robin == nil || l.robin.Len() == 0 {
 		return
 	}
 	next := l.robin.Next()
-	agent, ok := next.Value.(*BackendAgent)
-	if !ok {
+	if worker, ok = next.Value.(*BackendWorker); !ok {
 		return
 	}
-	// Now we're checking if the agent wasn't deleted
-	_, ok = l.agents[string(agent.id)]
-	if !ok {
-		// If it was deleted, we have to remove it from the
-		// ring as well.
+	if _, ok = l.getWorkerById(worker.Id()); !ok {
+		// Seems that worker has been deleted, removing it from the load
+		// ballancer's ring as well.
 		l.robin.Unlink(1)
-		agent = nil
+		worker = nil
 		goto start
 	} else {
 		l.robin = next
@@ -141,17 +167,30 @@ start:
 	return
 }
 
-// Returns true if lobby is running.
+// Exported
+// -----------------------------------------------------------------------------
+
+// Enqueue pushes given message to the queue.
+//
+// payload - data to be send to the client.
+//
+func (l *backendLobby) Enqueue(payload interface{}) {
+	l.queue <- payload
+}
+
+// IsAlive returns whether this lobby is running or not.
 func (l *backendLobby) IsAlive() bool {
 	l.mtx.Lock()
 	defer l.mtx.Unlock()
 	return l.queue != nil
 }
 
-// Stops execution of this lobby.
+// Kill stops execution of this lobby.
 func (l *backendLobby) Kill() {
 	l.mtx.Lock()
 	defer l.mtx.Unlock()
-	close(l.queue)
-	l.queue = nil
+	if l.queue != nil {
+		close(l.queue)
+		l.queue = nil
+	}
 }

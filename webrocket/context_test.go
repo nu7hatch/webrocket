@@ -15,7 +15,11 @@
 
 package webrocket
 
-import "testing"
+import (
+	"io"
+	"os"
+	"testing"
+	)
 
 func TestNewContext(t *testing.T) {
 	ctx := NewContext()
@@ -53,8 +57,8 @@ func TestContextAddVhostWhenWebsocketEndpointPresent(t *testing.T) {
 	e := ctx.NewWebsocketEndpoint("localhost:3000")
 	w := e.(*WebsocketEndpoint)
 	v, _ := ctx.AddVhost("/foo")
-	h, ok := w.handlers["/foo"]
-	if !ok || h == nil || h.vhost.Path() != v.Path() {
+	h := w.handlers.Match("/foo")
+	if h == nil || h.vhost.Path() != v.Path() {
 		t.Errorf("Expected to register vhost in websocket endpoint")
 	}
 }
@@ -82,8 +86,8 @@ func TestContextDeleteVhostWhenWebsocketEndpointPresent(t *testing.T) {
 	w := e.(*WebsocketEndpoint)
 	ctx.AddVhost("/foo")
 	ctx.DeleteVhost("/foo")
-	_, ok := w.handlers["/foo"]
-	if ok {
+	h := w.handlers.Match("/foo")
+	if h != nil {
 		t.Errorf("Expected to unregister vhost from websocket endpoint")
 	}
 }
@@ -110,10 +114,40 @@ func TestContextVhostsList(t *testing.T) {
 }
 
 func TestContextCookiesGeneration(t *testing.T) {
-	// TODO: ...
+	ctx := NewContext()
+	ctx.SetStorage("/tmp")
+	ctx.GenerateCookie(false)
+	cookieFile := "/tmp/cookie"
+	f, err := os.Open(cookieFile)
+	if err != nil {
+		t.Errorf("Expected to create a cookie file")
+		return
+	}
+	n, err := io.ReadFull(f, make([]byte, 40)[:])
+	if err != nil || n != CookieSize {
+		t.Errorf("Expected to write cookie to the file")
+	}
+	f.Close()
+	os.Remove(cookieFile)
 }
 
-func TestContextClose(t *testing.T) {
+func TestContextNewWebsocketEndpoint(t *testing.T) {
+	ctx := NewContext()
+	ctx.NewWebsocketEndpoint(":9772")
+	if ctx.websocket == nil || ctx.websocket.Addr() != ":9772" {
+		t.Errorf("Expected to register new websocket endpoint")
+	}
+}
+
+func TestContextNewBackendEndpoint(t *testing.T) {
+	ctx := NewContext()
+	ctx.NewBackendEndpoint(":9772")
+	if ctx.backend == nil || ctx.backend.Addr() != ":9772" {
+		t.Errorf("Expected to register new backend endpoint")
+	}
+}
+
+func TestContextKill(t *testing.T) {
 	ctx := NewContext()
 	ctx.NewWebsocketEndpoint(":9772")
 	if ctx.websocket == nil {
@@ -123,7 +157,7 @@ func TestContextClose(t *testing.T) {
 	if ctx.backend == nil {
 		t.Errorf("Expected to set backend endpoint")
 	}
-	ctx.Close()
+	ctx.Kill()
 	if ctx.backend.IsAlive() || ctx.websocket.IsAlive() {
 		t.Errorf("Expected to close and kill all endpoints")
 	}

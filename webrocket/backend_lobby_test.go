@@ -16,13 +16,13 @@
 package webrocket
 
 import (
-	"testing"
 	uuid "../uuid"
+	"testing"
 )
 
-func newTestBackendAgent() *BackendAgent {
+func newTestBackendWorker() *BackendWorker {
 	id, _ := uuid.NewV4()
-	return &BackendAgent{id: []byte(id.String())}
+	return &BackendWorker{id: id.String()}
 }
 
 func TestNewBackendLobby(t *testing.T) {
@@ -32,79 +32,79 @@ func TestNewBackendLobby(t *testing.T) {
 	}
 }
 
-func TestBackendLobbyAddAgent(t *testing.T) {
+func TestBackendLobbyAddWorker(t *testing.T) {
 	bl := newBackendLobby()
-	bl.addAgent(newTestBackendAgent())
-	if len(bl.agents) != 1 {
-		t.Errorf("Expected to add agent")
+	bl.addWorker(newTestBackendWorker())
+	if len(bl.workers) != 1 {
+		t.Errorf("Expected to add worker")
 	}
 	if bl.robin.Len() != 1 {
-		t.Errorf("Expected to register agent in load ballancer")
+		t.Errorf("Expected to register worker in load ballancer")
 	}
 }
 
-func TestBackendLobbyDeleteAgent(t *testing.T) {
+func TestBackendLobbyDeleteWorker(t *testing.T) {
 	bl := newBackendLobby()
-	a := newTestBackendAgent()
-	bl.addAgent(a)
-	bl.deleteAgent(a)
-	if len(bl.agents) != 0 {
-		t.Errorf("Expected to delete agent")
+	a := newTestBackendWorker()
+	bl.addWorker(a)
+	bl.deleteWorker(a)
+	if len(bl.workers) != 0 {
+		t.Errorf("Expected to delete worker")
 	}
 	if bl.robin.Len() != 1 {
-		t.Errorf("Expected keep deleted agent in load ballancer")
+		t.Errorf("Expected keep deleted worker in load ballancer")
 	}
 }
 
-func TestBackendLobbyGetAgentById(t *testing.T) {
+func TestBackendLobbyGetWorkerById(t *testing.T) {
 	bl := newBackendLobby()
-	a := newTestBackendAgent()
-	bl.addAgent(a)
-	al, ok := bl.getAgentById(string(a.id))
+	a := newTestBackendWorker()
+	bl.addWorker(a)
+	al, ok := bl.getWorkerById(string(a.id))
 	if !ok || al == nil || al.Id() != a.Id() {
-		t.Errorf("Expected to get agent by id")
+		t.Errorf("Expected to get worker by id")
 	}
-	al, ok = bl.getAgentById("invalid")
+	al, ok = bl.getWorkerById("invalid")
 	if ok {
-		t.Errorf("Expected to not find agent with invalid id")
+		t.Errorf("Expected to not find worker with invalid id")
 	}
 }
 
-func TestBackendLobbyLoadBallance(t *testing.T) {
+func TestBackendLobbyLoadBallancer(t *testing.T) {
 	bl := newBackendLobby()
-	bl.addAgent(newTestBackendAgent())
-	bl.addAgent(newTestBackendAgent())
-	var lastAgent, currentAgent *BackendAgent
+	bl.addWorker(newTestBackendWorker())
+	bl.addWorker(newTestBackendWorker())
+	var lastWorker, currentWorker *BackendWorker
 	for i := 0; i < 5; i += 1 {
-		currentAgent = bl.loadBallance()
-		if currentAgent == nil {
-			t.Errorf("Expected to pick valid agent")
+		currentWorker = bl.getAvailableWorker()
+		if currentWorker == nil {
+			t.Errorf("Expected to pick valid worker")
 			continue
 		}
-		if lastAgent != nil {
-			if currentAgent.Id() == lastAgent.Id() {
-				t.Errorf("Expected to pick different agent then previous one")
+		if lastWorker != nil {
+			if currentWorker.Id() == lastWorker.Id() {
+				t.Errorf("Expected to pick different worker then previous one")
 			}
 		}
-		lastAgent = currentAgent
+		lastWorker = currentWorker
 	}
-	bl.deleteAgent(lastAgent)
-	lastAgent, currentAgent = nil, nil
+	bl.deleteWorker(lastWorker)
+	lastWorker, currentWorker = nil, nil
 	for i := 0; i < 3; i += 1 {
-		currentAgent = bl.loadBallance()
-		if currentAgent == nil {
-			t.Errorf("Expected to pick valid agent")
+		currentWorker = bl.getAvailableWorker()
+		if currentWorker == nil {
+			t.Errorf("Expected to pick valid worker")
 			continue
 		}
-		if lastAgent != nil {
-			if currentAgent.Id() != lastAgent.Id() {
-				t.Errorf("Expected to pick the same agent while there's only one")
+		if lastWorker != nil {
+			if currentWorker.Id() != lastWorker.Id() {
+				t.Errorf("Expected to pick the same worker while there's only one")
 			}
 		}
-		lastAgent = currentAgent
+		lastWorker = currentWorker
 	}
 	if bl.robin.Len() != 1 {
-		t.Errorf("Expected to remove deleted agent from rign while load ballancing")
+		t.Errorf("Expected to remove deleted worker from rign while load ballancing")
 	}
 }
 

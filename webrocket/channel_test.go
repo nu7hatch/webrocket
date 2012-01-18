@@ -18,55 +18,70 @@ package webrocket
 import "testing"
 
 func TestNewChannel(t *testing.T) {
-	ch, err := newChannel("hello")
+	ch, err := newChannel("hello", ChannelPresence)
 	if err != nil {
 		t.Errorf("Expected to create channel without errors")
 	}
 	if ch.Name() != "hello" {
 		t.Errorf("Expected channel name to be 'hello', given '%s'", ch.Name())
 	}
+	if ch.Type() != ChannelPresence {
+		t.Errorf("Expected channel to be presence one, given '%d'", ch.Type())
+	}
 }
 
 func TestNewChannelWithInvalidName(t *testing.T) {
 	for _, name := range []string{".foo", "", "foo%", "-foo"} {
-		_, err := newChannel(name)
-		if err == nil || err.Error() != "invalid name" {
-			t.Errorf("Expected to throw 'invalid name' error while creating a '%s' channel", name)
+		_, err := newChannel(name, ChannelNormal)
+		if err == nil || err.Error() != "invalid channel name" {
+			t.Errorf("Expected to throw 'invalid channel name' error while creating a '%s' channel", name)
 		}
 	}
 }
 
-func TestChannelAddingAndRemovingSubscribers(t *testing.T) {
-	ch, _ := newChannel("hello")
-	c := newTestWebsocketClient()
-	ch.addSubscriber(c)
-	_, ok := ch.subscribers[c.Id()]
-	if !ok {
-		t.Errorf("Expected to add subscriber to the channel")
+func TestChannelIsPresence(t *testing.T) {
+	ch, _ := newChannel("hello", ChannelPresence)
+	if !ch.IsPresence() {
+		t.Errorf("Expected to have a presence channel")
 	}
-	_, ok = c.subscriptions[ch.Name()]
-	if !ok {
-		t.Errorf("Expected to add subscription to the client")
+	ch, _ = newChannel("hello", ChannelPrivate)
+	if ch.IsPresence() {
+		t.Errorf("Expected to not have a presence channel")
 	}
-	ch.deleteSubscriber(c)
-	_, ok = ch.subscribers[c.Id()]
-	if ok {
-		t.Errorf("Expected to remove subscriber from the channel")
-	}
-	_, ok = c.subscriptions[ch.Name()]
-	if ok {
-		t.Errorf("Expected to remove subscription from the client")
+	ch, _ = newChannel("hello", ChannelNormal)
+	if ch.IsPresence() {
+		t.Errorf("Expected to not have a presence channel")
 	}
 }
 
-func TestChannelSubscribersList(t *testing.T) {
-	ch, _ := newChannel("hello")
-	c := newTestWebsocketClient()
-	ch.addSubscriber(c)
-	if len(ch.Subscribers()) != 1 {
-		t.Errorf("Expected subscribers list to contain one element")
+func TestChannelIsPrivate(t *testing.T) {
+	ch, _ := newChannel("hello", ChannelPrivate)
+	if !ch.IsPrivate() {
+		t.Errorf("Expected to have a private channel")
 	}
-	if ch.Subscribers()[0].Id() != c.Id() {
-		t.Errorf("Expected subscribers list to contain proper client")
+	ch, _ = newChannel("hello", ChannelPresence)
+	if !ch.IsPrivate() {
+		t.Errorf("Expected to have a private channel")
+	}
+	ch, _ = newChannel("hello", ChannelNormal)
+	if ch.IsPrivate() {
+		t.Errorf("Expected to not have a private channel")
+	}
+}
+
+func TestChannelTypeFromName(t *testing.T) {
+	ct := channelTypeFromName("presence-foobar")
+	if ct != ChannelPresence {
+		t.Errorf("Expected to have a presence channel type")
+	}
+	ct = channelTypeFromName("private-foobar")
+	if ct != ChannelPrivate {
+		t.Errorf("Expected to have a private channel type")
+	}
+	for _, name := range []string{"foobar", "presence", "private"} {
+		ct = channelTypeFromName(name)
+		if ct != ChannelNormal {
+			t.Errorf("Expected to have a normal channel type")
+		}
 	}
 }

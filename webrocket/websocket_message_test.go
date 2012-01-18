@@ -17,7 +17,7 @@ package webrocket
 
 import "testing"
 
-func ValidateMessagePayload(msg *Message, t *testing.T) {
+func ValidateWebsocketMessagePayload(msg *WebsocketMessage, t *testing.T) {
 	if msg.Event() != "hello" {
 		t.Errorf("Expected message event to be 'hello', given '%s'", msg.Event())
 	}
@@ -27,32 +27,42 @@ func ValidateMessagePayload(msg *Message, t *testing.T) {
 	}
 }
 
-func TestNewMessageFromJSON(t *testing.T) {
-	_, err := newMessageFromJSON([]byte("invalid{"))
+func TestNewWebsocketMessageFromJSON(t *testing.T) {
+	_, err := newWebsocketMessageFromJSON([]byte("invalid{"))
 	if err == nil {
 		t.Errorf("Expected error while parsing JSON")
 	}
-	msg, err := newMessageFromJSON([]byte("{\"hello\": {\"foo\": \"bar\"}}"))
+	msg, err := newWebsocketMessageFromJSON([]byte("{\"hello\": {\"foo\": \"bar\"}}"))
 	if err != nil {
 		t.Errorf("Expected no error while creating message from JSON")
 		return
 	}
-	ValidateMessagePayload(msg, t)
+	ValidateWebsocketMessagePayload(msg, t)
 }
 
-func TestNewMessage(t *testing.T) {
-	_, err := newMessage(map[string]interface{}{})
-	if err == nil || err.Error() != "Invalid message format" {
+func TestNewWebsocketMessage(t *testing.T) {
+	_, err := newWebsocketMessage(map[string]interface{}{})
+	if err == nil || err.Error() != "invalid message format" {
 		t.Errorf("Expected error 'Invalid message format'")
 	}
-	_, err = newMessage(map[string]interface{}{"foo": "bar"})
-	if err == nil || err.Error() != "Invalid message data type" {
+	_, err = newWebsocketMessage(map[string]interface{}{"foo": "bar"})
+	if err == nil || err.Error() != "invalid message data type" {
 		t.Errorf("Expected error 'Invalid message data type")
 	}
-	msg, err := newMessage(map[string]interface{}{"hello": map[string]interface{}{"foo": "bar"}})
+	msg, err := newWebsocketMessage(map[string]interface{}{"hello": map[string]interface{}{"foo": "bar"}})
 	if err != nil {
 		t.Errorf("Expected message to be created successfully")
 		return
 	}
-	ValidateMessagePayload(msg, t)
+	ValidateWebsocketMessagePayload(msg, t)
+}
+
+func TestWebsocketMessageGet(t *testing.T) {
+	msg, _ := newWebsocketMessage(map[string]interface{}{"hello": map[string]interface{}{"foo": "bar"}})
+	if msg.Get("foo").(string) != "bar" {
+		t.Errorf("Expected to get the value of the specified message's key")
+	}
+	if msg.Get("bar") != nil {
+		t.Errorf("Expected to get nothing from not existing key")
+	}
 }

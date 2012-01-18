@@ -16,31 +16,54 @@
 package webrocket
 
 import (
-	"fmt"
-	"errors"
 	"bytes"
+	"errors"
+	"fmt"
 )
 
+// backendRequest implements a structure which represents a single message
+// incoming from the backend client.
 type backendRequest struct {
-	conn  *backendConnection
-	vhost *Vhost
-	id    []byte
-	cmd   string
-	msg   [][]byte
+	// The request owner's connection.
+	conn *backendConnection
+	// The connection's identity string.
+	Identity string
+	// The command name.
+	Command string
+	// The rest of the message.
+	Message [][]byte
 }
 
-func newBackendRequest(conn *backendConnection, vhost *Vhost, id []byte,
-	cmd string, msg [][]byte) (r *backendRequest) {
-	r = &backendRequest{
-		conn:  conn,
-		vhost: vhost,
-		id:    id,
-		cmd:   cmd,
-		msg:   msg,
+// Internal constructor
+// -----------------------------------------------------------------------------
+
+// newBackendRequest creates a new backend request object and returns it.
+//
+// conn - The request owner's connection.
+// id   - The identity line extracted from the payload.
+// cmd  - The command line extracted from the payload.
+// msg  - The rest of the message.
+//
+func newBackendRequest(conn *backendConnection, id []byte, cmd []byte,
+	msg [][]byte) (r *backendRequest) {
+	return &backendRequest{
+		conn:     conn,
+		Identity: string(id),
+		Command:  string(cmd),
+		Message:  msg,
 	}
-	return r
 }
 
+// Exported
+// -----------------------------------------------------------------------------
+
+// Reply sends a specified response to the request owner's connection.
+// It kills the connection aftrer the message is sent.
+//
+// cmd    - The command to be send.
+// frames - The other parts of the message.
+//
+// Returns an error if something went wrong.
 func (r *backendRequest) Reply(cmd string, frames ...string) (err error) {
 	if r == nil || r.conn == nil {
 		err = errors.New("broken connection")
@@ -51,7 +74,13 @@ func (r *backendRequest) Reply(cmd string, frames ...string) (err error) {
 	return err
 }
 
+// String converts the message to readable format.
 func (r *backendRequest) String() string {
-	s := string(bytes.Join(r.msg, []byte(", ")))
-	return fmt.Sprintf("[%s, %s]", r.cmd, s)
+	s := string(bytes.Join(r.Message, []byte(", ")))
+	return fmt.Sprintf("[%s, %s]", r.Command, s)
+}
+
+// Len returns a number of message's frames.
+func (r *backendRequest) Len() int {
+	return len(r.Message)
 }

@@ -55,7 +55,7 @@ func TestVhostValidateSingleAccessToken(t *testing.T) {
 	v, _ := newTestVhost()
 	token := v.GenerateSingleAccessToken(".*")
 	pv, ok := v.ValidateSingleAccessToken(token)
-	if !ok || pv.Token != token {
+	if !ok || pv.Token() != token {
 		t.Errorf("Expected successfull validation of existing access token")
 	}
 	_, ok = v.ValidateSingleAccessToken(token)
@@ -70,15 +70,15 @@ func TestVhostValidateSingleAccessToken(t *testing.T) {
 
 func TestVhostOpenChannel(t *testing.T) {
 	v, err := newTestVhost()
-	ch, err := v.OpenChannel("hello")
+	ch, err := v.OpenChannel("hello", ChannelPresence)
 	if err != nil || ch == nil {
 		t.Errorf("Expected to create channel without errors")
 	}
 	vch, ok := v.channels["hello"]
-	if !ok || vch == nil || vch.Name() != ch.Name() {
+	if !ok || vch == nil || vch.Name() != ch.Name() || vch.Type() != ChannelPresence {
 		t.Errorf("Expected to add channel to vhost's channels list")
 	}
-	_, err = v.OpenChannel("hello")
+	_, err = v.OpenChannel("hello", ChannelNormal)
 	if err == nil || err.Error() != "channel already exists" {
 		t.Errorf("Expected error while creating duplicated channel")
 	}
@@ -86,7 +86,7 @@ func TestVhostOpenChannel(t *testing.T) {
 
 func TestVhostDeleteChannel(t *testing.T) {
 	v, _ := newTestVhost()
-	v.OpenChannel("hello")
+	v.OpenChannel("hello", ChannelNormal)
 	ok := v.DeleteChannel("hello")
 	if !ok {
 		t.Errorf("Expected to delete channel without errors")
@@ -103,20 +103,20 @@ func TestVhostDeleteChannel(t *testing.T) {
 
 func TestVhostGetChannel(t *testing.T) {
 	v, _ := newTestVhost()
-	ch, _ := v.OpenChannel("hello")
-	vch, ok := v.Channel("hello")
-	if !ok || vch == nil || vch.Name() != ch.Name() {
+	ch, _ := v.OpenChannel("hello", ChannelNormal)
+	vch, err := v.Channel("hello")
+	if err != nil || vch == nil || vch.Name() != ch.Name() {
 		t.Errorf("Expected to get channel without errors")
 	}
-	_, ok = v.Channel("john")
-	if ok {
+	_, err = v.Channel("john")
+	if err == nil {
 		t.Errorf("Expected to throw error while getting not existent channel")
 	}
 }
 
 func TestVhostChannelsList(t *testing.T) {
 	v, _ := newTestVhost()
-	v.OpenChannel("hello")
+	v.OpenChannel("hello", ChannelNormal)
 	if len(v.Channels()) != 1 {
 		t.Errorf("Expected the vhost's channels list to contain registered channel")
 	}

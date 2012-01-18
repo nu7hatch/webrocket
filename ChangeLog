@@ -1,3 +1,8 @@
+2012-01-18  Krzysztof Kowalik  <chris@nu7hatch>
+
+	* webrocket/: huuuge amount of changes to make things work properly
+	* webrocket-admin/main.go: fixes
+
 2012-01-14  Pablo Astigarraga  <pote@tardis.com.uy>
 
 	* CONTRIBUTE: Various language nipticks.

@@ -16,15 +16,15 @@
 package webrocket
 
 import (
-	"net/http"
-	"encoding/json"
-	"fmt"
-	"sync"
-	"net"
-	"crypto/tls"
 	"crypto/rand"
-	"log"
+	"crypto/tls"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"sync"
 )
 
 // Helper for logging admin handler's statuses.
@@ -35,7 +35,7 @@ func adminStatusLog(a *AdminEndpoint, msg string) {
 // Helper for logging protocol errors and and seding it to
 // the client.
 func adminError(a *AdminEndpoint, error string) {
-	adminStatusLog(a, "Error; " + error)
+	adminStatusLog(a, "Error; "+error)
 }
 
 type AdminEndpoint struct {
@@ -95,22 +95,22 @@ func (a *AdminEndpoint) ListenAndServe() error {
 func (a *AdminEndpoint) ListenAndServeTLS(certFile, certKey string) error {
 	addr := a.Server.Addr
 	if addr == "" {
-  		addr = ":https"
-  	}
-  	config := &tls.Config{
+		addr = ":https"
+	}
+	config := &tls.Config{
 		Rand:       rand.Reader,
 		NextProtos: []string{"http/1.1"},
 	}
-  	var err error
-  	config.Certificates = make([]tls.Certificate, 1)
-  	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, certKey)
+	var err error
+	config.Certificates = make([]tls.Certificate, 1)
+	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, certKey)
 	if err != nil {
-  		return err
-  	}
+		return err
+	}
 	conn, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
- 	}
+	}
 	tlsListener := tls.NewListener(conn, config)
 	a.alive = true
 	return a.Server.Serve(tlsListener)
@@ -191,7 +191,7 @@ func (a *AdminEndpoint) addVhost(w http.ResponseWriter, r *http.Request) {
 	path := r.Form.Get("path")
 	vhost, err := a.ctx.AddVhost(path)
 	if err != nil {
-		a.error(w, 418/*UnprocessibleEntity*/, err)
+		a.error(w, 418, /*UnprocessibleEntity*/ err)
 		return
 	}
 	adminStatusLog(a, fmt.Sprintf("Created vhost `%s`", vhost.path))
@@ -220,9 +220,9 @@ func (a *AdminEndpoint) getVhost(w http.ResponseWriter, r *http.Request) {
 	vhostChannelsData := []interface{}{}
 	for _, channel := range vhost.Channels() {
 		vhostChannelsData = append(vhostChannelsData, map[string]interface{}{
-			"self": fmt.Sprintf("/channel?vhost=%s&name=%s", vhost.path, channel.name),
+			"self":  fmt.Sprintf("/channel?vhost=%s&name=%s", vhost.path, channel.name),
 			"vhost": fmt.Sprintf("/vhost?path=%s", vhost.path),
-			"name": channel.name,
+			"name":  channel.name,
 			"subscribers": map[string]interface{}{
 				"self": fmt.Sprintf("/subscribers?vhost=%s&channel=%s", vhost.path, channel.name),
 				"size": int32(len(channel.subscribers)),
@@ -231,10 +231,10 @@ func (a *AdminEndpoint) getVhost(w http.ResponseWriter, r *http.Request) {
 	}
 	vhostData := map[string]interface{}{
 		"vhost": map[string]interface{}{
-			"self": fmt.Sprintf("/vhost?path=%s", vhost.path),
-			"path": vhost.path,
+			"self":        fmt.Sprintf("/vhost?path=%s", vhost.path),
+			"path":        vhost.path,
 			"accessToken": vhost.accessToken,
-			"channels": vhostChannelsData,
+			"channels":    vhostChannelsData,
 		},
 	}
 	data, err := json.Marshal(vhostData)
@@ -250,8 +250,8 @@ func (a *AdminEndpoint) allVhosts(w http.ResponseWriter, r *http.Request) {
 	vhosts := []interface{}{}
 	for _, vhost := range a.ctx.Vhosts() {
 		vhosts = append(vhosts, map[string]interface{}{
-			"self": fmt.Sprintf("/vhost?path=%s", vhost.path),
-			"path": vhost.path,
+			"self":        fmt.Sprintf("/vhost?path=%s", vhost.path),
+			"path":        vhost.path,
 			"accessToken": vhost.accessToken,
 			"channels": map[string]interface{}{
 				"self": fmt.Sprintf("/channels?vhost=%s", vhost.path),
@@ -270,7 +270,7 @@ func (a *AdminEndpoint) allVhosts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *AdminEndpoint) clearVhosts(w http.ResponseWriter, r *http.Request) {
-	for path, _ := range a.ctx.vhosts {
+	for path := range a.ctx.vhosts {
 		a.ctx.DeleteVhost(path)
 	}
 	adminStatusLog(a, "All vhosts deleted")
@@ -298,9 +298,10 @@ func (a *AdminEndpoint) addChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	chanName := r.Form.Get("name")
-	channel, err := vhost.OpenChannel(chanName)
+	chanType := channelTypeFromName(chanName)
+	channel, err := vhost.OpenChannel(chanName, chanType)
 	if err != nil {
-		a.error(w, 418/*UnprocessibleEntity*/, err)
+		a.error(w, 418, /*UnprocessibleEntity*/ err)
 		return
 	}
 	adminStatusLog(a, fmt.Sprintf("Created channel `%s` under vhost `%s`", channel.name, vhost.path))
@@ -333,23 +334,23 @@ func (a *AdminEndpoint) getChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	chanName := r.Form.Get("name")
-	channel, ok := vhost.Channel(chanName)
-	if !ok {
-		a.error(w, http.StatusNotFound, errors.New("channel doesn't exist"))
+	channel, err := vhost.Channel(chanName)
+	if err != nil {
+		a.error(w, http.StatusNotFound, err)
 		return
 	}
 	channelSubscribersData := []interface{}{}
 	for _, subsber := range channel.Subscribers() {
 		channelSubscribersData = append(channelSubscribersData, map[string]interface{}{
 			"self": fmt.Sprintf("/subscriber?vhost=%s&channel=%s&sid=%s", vhost.path, channel.name, subsber.Id()),
-			"sid": subsber.Id(),
+			"sid":  subsber.Id(),
 		})
 	}
 	channelData := map[string]interface{}{
 		"channel": map[string]interface{}{
-			"self": fmt.Sprintf("/channel?vhost=%s&name=%s", vhost.path, channel.name),
-			"vhost": fmt.Sprintf("/vhost?path=%s", vhost.path),
-			"name": channel.name,
+			"self":        fmt.Sprintf("/channel?vhost=%s&name=%s", vhost.path, channel.name),
+			"vhost":       fmt.Sprintf("/vhost?path=%s", vhost.path),
+			"name":        channel.name,
 			"subscribers": channelSubscribersData,
 		},
 	}
@@ -372,9 +373,9 @@ func (a *AdminEndpoint) allChannels(w http.ResponseWriter, r *http.Request) {
 	channels := []interface{}{}
 	for _, channel := range vhost.Channels() {
 		channels = append(channels, map[string]interface{}{
-			"self": fmt.Sprintf("/channel?vhost=%s&name=%s", vhost.path, channel.name),
+			"self":  fmt.Sprintf("/channel?vhost=%s&name=%s", vhost.path, channel.name),
 			"vhost": fmt.Sprintf("/vhost?path=%s", vhost.path),
-			"name": channel.name,
+			"name":  channel.name,
 			"subscribers": map[string]interface{}{
 				"self": fmt.Sprintf("/subscribers?vhost=%s&channel=%s", vhost.path, channel.name),
 				"size": int32(len(channel.subscribers)),
@@ -398,7 +399,7 @@ func (a *AdminEndpoint) clearChannels(w http.ResponseWriter, r *http.Request) {
 		a.error(w, http.StatusNotFound, err)
 		return
 	}
-	for name, _ := range vhost.channels {
+	for name := range vhost.channels {
 		vhost.DeleteChannel(name)
 	}
 	adminStatusLog(a, fmt.Sprintf("All channels deleted from `%s` vhost", vhost.path))
@@ -412,18 +413,18 @@ func (a *AdminEndpoint) allWorkers(w http.ResponseWriter, r *http.Request) {
 		a.error(w, http.StatusNotFound, err)
 		return
 	}
-	lobby, ok := a.ctx.backend.lobbys[vhost.path]
-	if !ok {
+	lobby := a.ctx.backend.lobbys.Match(vhost.path)
+	if lobby == nil {
 		a.error(w, http.StatusInternalServerError, errors.New("something went wrong"))
 		return
 	}
 	workers := []interface{}{}
-	for _, worker := range lobby.agents {
+	for _, worker := range lobby.workers {
 		if worker.IsAlive() {
 			workers = append(workers, map[string]interface{}{
-				"self": fmt.Sprintf("/worker?vhost=%s&id=%s", vhost.path, worker.id),
+				"self":  fmt.Sprintf("/worker?vhost=%s&id=%s", vhost.path, worker.id),
 				"vhost": fmt.Sprintf("/vhost?path=%s", vhost.path),
-				"id": string(worker.id),
+				"id":    string(worker.id),
 			})
 		}
 	}

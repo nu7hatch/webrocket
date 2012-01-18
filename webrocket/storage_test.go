@@ -15,9 +15,7 @@
 
 package webrocket
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestNewStorageWithInvalidDir(t *testing.T) {
 	s, err := newStorage("/dev/invalid/directory")
@@ -90,7 +88,7 @@ func TestStorageAddChannel(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected to add vhost, error: %v", err)
 	}
-	err = s.AddChannel("/test", "hello")
+	err = s.AddChannel("/test", "hello", ChannelPresence)
 	if err != nil {
 		t.Errorf("Expected to add channel, error: %v", err)
 	}
@@ -98,7 +96,7 @@ func TestStorageAddChannel(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected to get list of channels, %v", err)
 	}
-	if len(channels) != 1 || channels[0].Name != "hello" {
+	if len(channels) != 1 || channels[0].Name != "hello" || channels[0].Kind != ChannelPresence {
 		t.Errorf("Expected to add correct channel")
 	}
 }
@@ -110,7 +108,7 @@ func TestStorageDeleteChannel(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected to add vhost, error: %v", err)
 	}
-	err = s.AddChannel("/test", "hello")
+	err = s.AddChannel("/test", "hello", ChannelPresence)
 	if err != nil {
 		t.Errorf("Expected to add channel, error: %v", err)
 	}
@@ -131,8 +129,8 @@ func TestStorageDeleteAllChannelsWhenVhostDeleted(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected to add vhost, error: %v", err)
 	}
-	s.AddChannel("/test", "hello")
-	s.AddChannel("/test", "world")
+	s.AddChannel("/test", "hello", ChannelPresence)
+	s.AddChannel("/test", "world", ChannelPresence)
 	err = s.DeleteVhost("/test")
 	if err != nil {
 		t.Errorf("Expected to delete vhost, error: %v", err)

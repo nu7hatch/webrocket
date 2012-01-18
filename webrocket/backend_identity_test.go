@@ -21,12 +21,12 @@ import (
 
 func TestParseBackendIdentityWithValidIdentity(t *testing.T) {
 	raw := "dlr:/hello/there:1234567890abcdefghij1234567890abcdefghij:12345678-90ab-cdef-ghij-1234567890ab"
-	identity, err := parseBackendIdentity([]byte(raw))
+	identity, err := parseBackendIdentity(raw)
 	if err != nil {
 		t.Errorf("Expected to parse a valid identity")
 		return
 	}
-	if identity.Type != "dlr" {
+	if identity.Type != BackendSocketDealer {
 		t.Errorf("Expected to parse identity type")
 	}
 	if identity.AccessToken != "1234567890abcdefghij1234567890abcdefghij" {
@@ -41,7 +41,7 @@ func TestParseBackendIdentityWithValidIdentity(t *testing.T) {
 }
 
 func TestParseBackendIdentityWhenInvalidIdentity(t *testing.T) {
-	_, err := parseBackendIdentity([]byte("invalid"))
+	_, err := parseBackendIdentity("invalid")
 	if err == nil {
 		t.Errorf("Expected an error while parsing invalid identity")
 	}

@@ -19,11 +19,8 @@ import "testing"
 
 func TestNewBackendEndpoint(t *testing.T) {
 	ctx := NewContext()
-	e := ctx.NewBackendEndpoint("127.0.0.1:9000")
+	e := newBackendEndpoint(ctx, "127.0.0.1:9000")
 	if e.Addr() != "127.0.0.1:9000" {
 		t.Errorf("Expected to bind backends endpoint to 127.0.0.1:9000, given: %s", e.Addr())
-	}
-	if ctx.backend == nil || ctx.backend.Addr() != e.Addr() {
-		t.Errorf("Expected to register backends endpoint in the context")
 	}
 }

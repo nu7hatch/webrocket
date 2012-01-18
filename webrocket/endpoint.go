@@ -15,8 +15,8 @@
 
 package webrocket
 
-// Endpoint is an interface representing all endpoints installed
-// on the context's rack.
+// Endpoint is an interface defining basic access and control function
+// for the server endpoints.
 type Endpoint interface {
 	ListenAndServe() error
 	ListenAndServeTLS(certFile, certKey string) error

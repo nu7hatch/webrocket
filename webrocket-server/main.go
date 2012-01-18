@@ -102,7 +102,7 @@ func SignalTrap() {
 				if ctx != nil {
 					fmt.Printf("\n")
 					s.Start("Cleaning up")
-					if err := ctx.Close(); err != nil {
+					if err := ctx.Kill(); err != nil {
 						s.Fail(err.Error(), true)
 					}
 					s.Ok()

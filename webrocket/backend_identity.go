@@ -18,38 +18,60 @@ package webrocket
 import (
 	"errors"
 	"regexp"
+	"strings"
 )
 
 // A valid identity regexp.
-const identityPattern = "^(dlr|req)\\:(/[\\w\\d\\-\\_]+(/[\\w\\d\\-\\_]+)*)\\:([\\d\\w]{40})\\:([\\d\\w\\-]{36})$"
+var backendIdentityPattern = regexp.MustCompile(
+	"^(dlr|req)\\:(/[\\w\\d\\-\\_]+(/[\\w\\d\\-\\_]+)*)\\:([\\d\\w]{40})\\:([\\d\\w\\-]{36})$")
 
-// backendIdentity represents parsed identity information.
+// backendIdentity represents a parsed identity information.
 type backendIdentity struct {
-	Raw         []byte
-	Type        string
+	// The socket type.
+	Type string
+	// Related vhost.
+	Vhost string
+	// An access token used to authenticate.
 	AccessToken string
-	Id          string
-	Vhost       string
+	// Unique identifier of the client.
+	Id string
 }
 
-// Parses given identity string and returns its representation.
-// The identity string has following format:
+// Internal
+// -----------------------------------------------------------------------------
+
+// parseBackendIdentity unpacks given identity string. The identity string
+// has the following format:
 //
 //     [type]:[vhost]:[access-token]:[client-id]
 //
-func parseBackendIdentity(raw []byte) (idty *backendIdentity, err error) {
-	re, _ := regexp.Compile(identityPattern)
-	parts := re.FindStringSubmatch(string(raw))
+// raw - The raw identity to be unpacked.
+//
+// Returns an unpacked identity or an error when something went wrong.
+func parseBackendIdentity(raw string) (idty *backendIdentity, err error) {
+	parts := backendIdentityPattern.FindStringSubmatch(raw)
 	if len(parts) != 6 {
-		err = errors.New("Invalid identity")
+		err = errors.New("invalid identity")
 		return
 	}
 	idty = &backendIdentity{
-		Raw:         raw,
-		Id:          parts[5],
+		Type:        parts[1],
 		Vhost:       parts[2],
 		AccessToken: parts[4],
-		Type:        parts[1],
+		Id:          parts[5],
 	}
 	return
+}
+
+// Exported
+// -----------------------------------------------------------------------------
+
+// String returns the identity back in the string format.
+func (idty *backendIdentity) String() string {
+	return strings.Join([]string{
+		idty.Type,
+		idty.Vhost,
+		idty.AccessToken,
+		idty.Id,
+	}, ";")
 }

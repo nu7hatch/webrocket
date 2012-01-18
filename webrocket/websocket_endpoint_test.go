@@ -19,39 +19,8 @@ import "testing"
 
 func TestNewWebsocketEndpoint(t *testing.T) {
 	ctx := NewContext()
-	e := ctx.NewWebsocketEndpoint("localhost:9000")
-	if e.Addr() != "localhost:9000" {
-		t.Errorf("Expected to bing websockets endpoint to localhost:9000")
-	}
-	if ctx.websocket == nil || ctx.websocket.Addr() != e.Addr() {
-		t.Errorf("Expected to register websockets endpoint in the context")
-	}
-}
-
-func TestWebsocketEndpointRegisterAndUnregisterVhost(t *testing.T) {
-	ctx := NewContext()
-	e := ctx.NewWebsocketEndpoint("localhost:9000")
-	w := e.(*WebsocketEndpoint)
-	v, _ := newVhost(ctx, "/foo")
-	w.registerVhost(v)
-	h, ok := w.handlers["/foo"]
-	if !ok || h == nil || h.vhost.Path() != v.Path() {
-		t.Errorf("Expected to register vhost in websocket endpoint")
-	}
-	w.unregisterVhost(v)
-	h, ok = w.handlers["/foo"]
-	if ok {
-		t.Errorf("Expected to unregister vhost from websocket endpoint")
-	}
-}
-
-func TestWebsocketRegisterDefinedVhostsOnCreate(t *testing.T) {
-	ctx := NewContext()
-	v, _ := ctx.AddVhost("/foo")
-	e := ctx.NewWebsocketEndpoint("localhost:9000")
-	w := e.(*WebsocketEndpoint)
-	h, ok := w.handlers["/foo"]
-	if !ok || h == nil || h.vhost.Path() != v.Path() {
-		t.Errorf("Expected to register defined vhost when websocket endpoint creates")
+	e := newWebsocketEndpoint(ctx, "127.0.0.1:9000")
+	if e.Addr() != "127.0.0.1:9000" {
+		t.Errorf("Expected to bing websockets endpoint to 127.0.0.1:9000")
 	}
 }

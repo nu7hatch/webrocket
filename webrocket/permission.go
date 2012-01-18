@@ -18,11 +18,69 @@ package webrocket
 import (
 	"crypto/rand"
 	"crypto/sha512"
+	"errors"
 	"fmt"
 	"regexp"
 )
 
-// Generates single access token hash.
+// Permission is represents single access token and permission pattern
+// assigned to it. 
+type Permission struct {
+	// Permission regexp.
+	pattern *regexp.Regexp
+	// Generated unique single access token.
+	token string
+}
+
+// Exported constructor
+// -----------------------------------------------------------------------------
+
+// Creates new permission for specified pattern.
+//
+// pattern - The regexp string to be used to match against the channels.
+//
+// Returns new permission or error if something went wrong.
+func NewPermission(pattern string) (p *Permission, err error) {
+	re, err := regexp.Compile(fmt.Sprintf("^(%s)$", pattern))
+	if err != nil {
+		err = errors.New("invalid permission regexp")
+		return
+	}
+	p = &Permission{re, generateSingleAccessToken()}
+	return
+}
+
+// Exported
+// -----------------------------------------------------------------------------
+
+// IsMatching checks if permission description allows to operate on the
+// specified channel. Speaking shortly just matches permission regexp
+// with the channel name.
+//
+// channel - The channel to be checked for permission.
+//
+// Examples:
+//
+//    p := NewPermission("(foo|bar)")
+//    p.IsMatching("foo")
+//    // => true
+//    p.IsMatching("hello")
+//    // => false
+//
+// Returns whether you have permission to operate on the channel or not.
+func (p *Permission) IsMatching(channel string) bool {
+	return p.pattern.MatchString(channel)
+}
+
+// Token returns single access token generate for this permission.
+func (p *Permission) Token() string {
+	return p.token
+}
+
+// Internal
+// -----------------------------------------------------------------------------
+
+// generateSingleAccessToken generates a single access token hash.
 func generateSingleAccessToken() string {
 	var buf [32]byte
 	_, err := rand.Read(buf[:])
@@ -32,29 +90,4 @@ func generateSingleAccessToken() string {
 	hash := sha512.New()
 	hash.Write(buf[:])
 	return fmt.Sprintf("%x", hash.Sum([]byte{}))
-}
-
-// Permission is represents single access token and permission
-// pattern assigned to it. 
-type Permission struct {
-	Pattern string
-	Token   string
-}
-
-// Creates new permission for specified pattern.
-func NewPermission(pattern string) *Permission {
-	return &Permission{pattern, generateSingleAccessToken()}
-}
-
-// Checks if permission description allows to operate on specified
-// channel. Speaking shortly just matches permission regexp with
-// the channel name.
-func (p *Permission) IsMatching(channel string) (ok bool) {
-	re, err := regexp.Compile(fmt.Sprintf("^(%s)$", p.Pattern))
-	if err != nil {
-		ok = false
-		return
-	}
-	ok = re.MatchString(channel)
-	return
 }
