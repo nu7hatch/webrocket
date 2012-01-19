@@ -93,7 +93,8 @@ func testWebsocketBadRequests(t *testing.T, ws *websocket.Conn) {
 	}
 }
 
-func testWebsocketAuthenticationWithoutToken(t *testing.T, ws *websocket.Conn) {
+func testWebsocketAuthenticationWithoutToken(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"auth": map[string]interface{}{
 			"foo": "bar",
@@ -102,7 +103,8 @@ func testWebsocketAuthenticationWithoutToken(t *testing.T, ws *websocket.Conn) {
 	websocketExpectError(t, ws, "Bad request")
 }
 
-func testWebsocketAuthenticationWithInvalidTokenFormat(t *testing.T, ws *websocket.Conn) {
+func testWebsocketAuthenticationWithInvalidTokenFormat(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"auth": map[string]interface{}{
 			"token": map[string]interface{}{},
@@ -111,7 +113,8 @@ func testWebsocketAuthenticationWithInvalidTokenFormat(t *testing.T, ws *websock
 	websocketExpectError(t, ws, "Bad request")
 }
 
-func testWebsocketAuthenticationWithInvalidToken(t *testing.T, ws *websocket.Conn) {
+func testWebsocketAuthenticationWithInvalidToken(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"auth": map[string]interface{}{
 			"token": "invalid",
@@ -120,7 +123,8 @@ func testWebsocketAuthenticationWithInvalidToken(t *testing.T, ws *websocket.Con
 	websocketExpectError(t, ws, "Unauthorized")
 }
 
-func testWebsocketAuthenticationWithValidToken(t *testing.T, ws *websocket.Conn) {
+func testWebsocketAuthenticationWithValidToken(t *testing.T,
+	ws *websocket.Conn) {
 	v, _ := ctx.Vhost("/test")
 	token := v.GenerateSingleAccessToken(".*")
 	websocketSend(t, ws, map[string]interface{}{
@@ -131,14 +135,16 @@ func testWebsocketAuthenticationWithValidToken(t *testing.T, ws *websocket.Conn)
 	websocketExpectResponse(t, ws, "__authenticated", nil)
 }
 
-func testWebsocketSubscribeWithoutChannelName(t *testing.T, ws *websocket.Conn) {
+func testWebsocketSubscribeWithoutChannelName(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"subscribe": map[string]interface{}{},
 	})
 	websocketExpectError(t, ws, "Bad request")
 }
 
-func testWebsocketSubscribeWithEmptyChannelName(t *testing.T, ws *websocket.Conn) {
+func testWebsocketSubscribeWithEmptyChannelName(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"subscribe": map[string]interface{}{
 			"channel": "",
@@ -147,7 +153,8 @@ func testWebsocketSubscribeWithEmptyChannelName(t *testing.T, ws *websocket.Conn
 	websocketExpectError(t, ws, "Bad request")
 }
 
-func testWebsocketSubscribeWithInvalidChannelName(t *testing.T, ws *websocket.Conn) {
+func testWebsocketSubscribeWithInvalidChannelName(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"subscribe": map[string]interface{}{
 			"channel": "#&*^&^&&",
@@ -156,7 +163,8 @@ func testWebsocketSubscribeWithInvalidChannelName(t *testing.T, ws *websocket.Co
 	websocketExpectError(t, ws, "Channel not found")
 }
 
-func testWebsocketSubscribeToNotExistingChannel(t *testing.T, ws *websocket.Conn) {
+func testWebsocketSubscribeToNotExistingChannel(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"subscribe": map[string]interface{}{
 			"channel": "not-exists",
@@ -165,18 +173,21 @@ func testWebsocketSubscribeToNotExistingChannel(t *testing.T, ws *websocket.Conn
 	websocketExpectError(t, ws, "Channel not found")
 }
 
-func testWebsocketSubscribeToPublicChannel(t *testing.T, ws *websocket.Conn) {
+func testWebsocketSubscribeToPublicChannel(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"subscribe": map[string]interface{}{
 			"channel": "test",
 		},
 	})
-	websocketExpectResponse(t, ws, "__subscribed", map[string]*regexp.Regexp{
-		"channel": regexp.MustCompile("^test$"),
-	})
+	websocketExpectResponse(t, ws, "__subscribed",
+		map[string]*regexp.Regexp{
+			"channel": regexp.MustCompile("^test$"),
+		})
 }
 
-func testWebsocketSubscribeToPrivateChannelWithoutAuthentication(t *testing.T, ws *websocket.Conn) {
+func testWebsocketSubscribeToPrivateChannelWithoutAuthentication(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"subscribe": map[string]interface{}{
 			"channel": "private-test",
@@ -185,7 +196,8 @@ func testWebsocketSubscribeToPrivateChannelWithoutAuthentication(t *testing.T, w
 	websocketExpectError(t, ws, "Forbidden")
 }
 
-func testWebsocketSubscribeToPresenceChannelWithoutAuthentication(t *testing.T, ws *websocket.Conn) {
+func testWebsocketSubscribeToPresenceChannelWithoutAuthentication(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"subscribe": map[string]interface{}{
 			"channel": "presence-test",
@@ -194,7 +206,8 @@ func testWebsocketSubscribeToPresenceChannelWithoutAuthentication(t *testing.T, 
 	websocketExpectError(t, ws, "Forbidden")
 }
 
-func testWebsocketSubscribeToPrivateChannelWithAuthentication(t *testing.T, ws *websocket.Conn) {
+func testWebsocketSubscribeToPrivateChannelWithAuthentication(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"subscribe": map[string]interface{}{
 			"channel": "private-test",
@@ -205,7 +218,8 @@ func testWebsocketSubscribeToPrivateChannelWithAuthentication(t *testing.T, ws *
 	})
 }
 
-func testWebsocketSubscribeToPresenceChannelWithAuthentication(t *testing.T, ws *websocket.Conn) {
+func testWebsocketSubscribeToPresenceChannelWithAuthentication(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"subscribe": map[string]interface{}{
 			"channel": "presence-test",
@@ -217,14 +231,16 @@ func testWebsocketSubscribeToPresenceChannelWithAuthentication(t *testing.T, ws 
 	websocketExpectResponse(t, ws, "__memberJoined", nil)
 }
 
-func testWebsocketUnsubscribeWithoutChannelName(t *testing.T, ws *websocket.Conn) {
+func testWebsocketUnsubscribeWithoutChannelName(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"unsubscribe": map[string]interface{}{},
 	})
 	websocketExpectError(t, ws, "Bad request")
 }
 
-func testWebsocketUnsubscribeWithEmptyChannelName(t *testing.T, ws *websocket.Conn) {
+func testWebsocketUnsubscribeWithEmptyChannelName(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"unsubscribe": map[string]interface{}{
 			"channel": "",
@@ -233,7 +249,8 @@ func testWebsocketUnsubscribeWithEmptyChannelName(t *testing.T, ws *websocket.Co
 	websocketExpectError(t, ws, "Bad request")
 }
 
-func testWebsocketUnsubscribeWithInvalidChannelName(t *testing.T, ws *websocket.Conn) {
+func testWebsocketUnsubscribeWithInvalidChannelName(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"unsubscribe": map[string]interface{}{
 			"channel": "#&*^&^&&",
@@ -242,7 +259,8 @@ func testWebsocketUnsubscribeWithInvalidChannelName(t *testing.T, ws *websocket.
 	websocketExpectError(t, ws, "Channel not found")
 }
 
-func testWebsocketUnsubscribeNotSubscribedChannel(t *testing.T, ws *websocket.Conn) {
+func testWebsocketUnsubscribeNotSubscribedChannel(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"unsubscribe": map[string]interface{}{
 			"channel": "presence-test",
@@ -251,66 +269,72 @@ func testWebsocketUnsubscribeNotSubscribedChannel(t *testing.T, ws *websocket.Co
 	websocketExpectError(t, ws, "Not subscribed")
 }
 
-func testWebsocketUnsubscribeSubscribedChannel(t *testing.T, ws *websocket.Conn) {
+func testWebsocketUnsubscribeSubscribedChannel(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"unsubscribe": map[string]interface{}{
 			"channel": "test",
 		},
 	})
-	websocketExpectResponse(t, ws, "__unsubscribed", map[string]*regexp.Regexp{
-		"channel": regexp.MustCompile("^test$"),
-	})
+	websocketExpectResponse(t, ws, "__unsubscribed",
+		map[string]*regexp.Regexp{
+			"channel": regexp.MustCompile("^test$"),
+		})
 }
 
-func testWebsocketBroadcastWithoutChannelSpecified(t *testing.T, ws *websocket.Conn) {
+func testWebsocketBroadcastWithoutChannelSpecified(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"event": "hello",
-			"data": map[string]interface{}{},
+			"data":  map[string]interface{}{},
 		},
 	})
 	websocketExpectError(t, ws, "Bad request")
 }
 
-func testWebsocketBroadcastWithEmptyChannelSpecified(t *testing.T, ws *websocket.Conn) {
+func testWebsocketBroadcastWithEmptyChannelSpecified(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "",
-			"event": "hello",
-			"data": map[string]interface{}{},
+			"event":   "hello",
+			"data":    map[string]interface{}{},
 		},
 	})
 	websocketExpectError(t, ws, "Bad request")
 }
 
-func testWebsocketBroadcastWithoutEventSpecified(t *testing.T, ws *websocket.Conn) {
+func testWebsocketBroadcastWithoutEventSpecified(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "test",
-			"data": map[string]interface{}{},
+			"data":    map[string]interface{}{},
 		},
 	})
 	websocketExpectError(t, ws, "Bad request")
 }
 
-
-func testWebsocketBroadcastToNotSubscribedChannel(t *testing.T, ws *websocket.Conn) {
+func testWebsocketBroadcastToNotSubscribedChannel(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "presence-test",
-			"event": "hello",
-			"data": map[string]interface{}{},
+			"event":   "hello",
+			"data":    map[string]interface{}{},
 		},
 	})
 	websocketExpectError(t, ws, "Not subscribed")
 }
 
-func testWebsocketBroadcastToNotExistingChannel(t *testing.T, ws *websocket.Conn) {
+func testWebsocketBroadcastToNotExistingChannel(t *testing.T,
+	ws *websocket.Conn) {
 	websocketSend(t, ws, map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "not-exists",
-			"event": "hello",
-			"data": map[string]interface{}{},
+			"event":   "hello",
+			"data":    map[string]interface{}{},
 		},
 	})
 	websocketExpectError(t, ws, "Channel not found")
@@ -320,61 +344,67 @@ func testWebsocketBroadcast(t *testing.T, wss []*websocket.Conn) {
 	websocketSend(t, wss[0], map[string]interface{}{
 		"broadcast": map[string]interface{}{
 			"channel": "test",
-			"event": "hello",
-			"data": map[string]interface{}{"foo": "bar"},
+			"event":   "hello",
+			"data":    map[string]interface{}{"foo": "bar"},
 		},
 	})
 	for _, ws := range wss {
 		websocketExpectResponse(t, ws, "hello", map[string]*regexp.Regexp{
-			"sid": regexp.MustCompile("^.{36}$"),
+			"sid":     regexp.MustCompile("^.{36}$"),
 			"channel": regexp.MustCompile("^test$"),
-			"foo": regexp.MustCompile("^bar$"),
+			"foo":     regexp.MustCompile("^bar$"),
 		})
 	}
 }
 
-func testWebsocketPresenceChannelSubscribeBehaviour(t *testing.T, wss []*websocket.Conn) {
-	for i, _ := range wss {
+func testWebsocketPresenceChannelSubscribeBehaviour(t *testing.T,
+	wss []*websocket.Conn) {
+	for i := range wss {
 		websocketSend(t, wss[i], map[string]interface{}{
 			"subscribe": map[string]interface{}{
 				"channel": "presence-test",
-				"data": map[string]interface{}{"foo": "bar"},
+				"data":    map[string]interface{}{"foo": "bar"},
 			},
 		})
-		msg := websocketExpectResponse(t, wss[i], "__subscribed", map[string]*regexp.Regexp{
-			"channel": regexp.MustCompile("^presence-test$"),
-		})
+		msg := websocketExpectResponse(t, wss[i], "__subscribed",
+			map[string]*regexp.Regexp{
+				"channel": regexp.MustCompile("^presence-test$"),
+			})
 		subscribers, ok := msg.Get("subscribers").([]interface{})
 		if !ok || len(subscribers) != i {
 			t.Errorf("Expected to get valid list of subscribers, got %v", subscribers)
-		} 
-		for j, _ := range wss[:i+1] {
-			websocketExpectResponse(t, wss[j], "__memberJoined", map[string]*regexp.Regexp{
-				"sid": regexp.MustCompile("^.{36}"),
-				"channel": regexp.MustCompile("^presence-test$"),
-				"foo": regexp.MustCompile("^bar$"),
-			})
+		}
+		for j := range wss[:i+1] {
+			websocketExpectResponse(t, wss[j], "__memberJoined",
+				map[string]*regexp.Regexp{
+					"sid":     regexp.MustCompile("^.{36}"),
+					"channel": regexp.MustCompile("^presence-test$"),
+					"foo":     regexp.MustCompile("^bar$"),
+				})
 		}
 	}
 }
 
-func testWebsocketPresenceChannelUnsubscribeBehaviour(t *testing.T, wss []*websocket.Conn) {
-	for i, _ := range wss {
+func testWebsocketPresenceChannelUnsubscribeBehaviour(t *testing.T,
+	wss []*websocket.Conn) {
+	for i := range wss {
 		websocketSend(t, wss[i], map[string]interface{}{
 			"unsubscribe": map[string]interface{}{
 				"channel": "presence-test",
-				"data": map[string]interface{}{"bar": "foo"},
+				"data":    map[string]interface{}{"bar": "foo"},
 			},
 		})
-		websocketExpectResponse(t, wss[i], "__unsubscribed", map[string]*regexp.Regexp{
-			"channel": regexp.MustCompile("^presence-test$"),
-		})
-		for j, _ := range wss[i+1:] {
-			websocketExpectResponse(t, wss[j+i+1], "__memberLeft", map[string]*regexp.Regexp{
-				"sid": regexp.MustCompile("^.{36}"),
+		websocketExpectResponse(t, wss[i], "__unsubscribed",
+			map[string]*regexp.Regexp{
 				"channel": regexp.MustCompile("^presence-test$"),
-				"bar": regexp.MustCompile("^foo$"),
 			})
+		for j := range wss[i+1:] {
+			websocketExpectResponse(t, wss[j+i+1], "__memberLeft",
+				map[string]*regexp.Regexp{
+					"sid":     regexp.MustCompile("^.{36}"),
+					"channel": regexp.MustCompile("^presence-test$"),
+					"bar":     regexp.MustCompile("^foo$"),
+				})
 		}
 	}
 }
@@ -411,18 +441,18 @@ func TestAllTheThings(t *testing.T) {
 	testWebsocketSubscribeToPresenceChannelWithAuthentication(t, ws)
 	ws.Close()
 
-	for i, _ := range wss {
+	for i := range wss {
 		wss[i] = websocketDial(t)
 		testWebsocketConnect(t, wss[i])
 		testWebsocketAuthenticationWithValidToken(t, wss[i])
 	}
 	testWebsocketPresenceChannelSubscribeBehaviour(t, wss[:])
 	testWebsocketPresenceChannelUnsubscribeBehaviour(t, wss[:])
-	for i, _ := range wss {
+	for i := range wss {
 		wss[i].Close()
 		wss[i] = nil
 	}
-	
+
 	ws = websocketDial(t)
 	testWebsocketConnect(t, ws)
 	testWebsocketBroadcastWithoutChannelSpecified(t, ws)
@@ -431,14 +461,14 @@ func TestAllTheThings(t *testing.T) {
 	testWebsocketBroadcastToNotSubscribedChannel(t, ws)
 	testWebsocketBroadcastToNotExistingChannel(t, ws)
 	ws.Close()
-	
-	for i, _ := range wss {
+
+	for i := range wss {
 		wss[i] = websocketDial(t)
 		testWebsocketConnect(t, wss[i])
 		testWebsocketSubscribeToPublicChannel(t, wss[i])
 	}
 	testWebsocketBroadcast(t, wss[:])
-	for i, _ := range wss {
+	for i := range wss {
 		wss[i].Close()
 		wss[i] = nil
 	}
