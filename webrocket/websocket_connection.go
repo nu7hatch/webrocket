@@ -95,7 +95,7 @@ func (c *WebsocketConnection) reauthenticate(p *Permission) {
 // Removes all subscriptions created by this client.
 func (c *WebsocketConnection) clearSubscriptions() {
 	for _, ch := range c.subscriptions {
-		ch.unsubscribe(c, map[string]interface{}{})
+		ch.unsubscribe(c, map[string]interface{}{}, false)
 	}
 }
 
@@ -176,8 +176,8 @@ func (c *WebsocketConnection) IsAlive() bool {
 func (c *WebsocketConnection) Kill() {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
+	c.clearSubscriptions()
 	if c.Conn != nil {
-		c.clearSubscriptions()
 		// TODO: figure out if we actually have an use case for the __closed
 		// event if there is onclose operation supported by the WebSockets
 		// implementation.

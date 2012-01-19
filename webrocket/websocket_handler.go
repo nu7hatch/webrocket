@@ -301,7 +301,7 @@ func (h *websocketHandler) handleUnsubscribe(c *WebsocketConnection,
 		// This guy is not subscribing this channel!
 		return "Not subscribed", 453
 	}
-	channel.unsubscribe(c, data)
+	channel.unsubscribe(c, data, true)
 	return "Unsubscribed", 203
 }
 
@@ -346,17 +346,13 @@ func (h *websocketHandler) handleBroadcast(c *WebsocketConnection,
 		// Nope, channel not found!
 		return "Channel not found", 454
 	}
-	if channel.IsPrivate() && c.IsAllowed(chanName) {
-		// Can't operate on this channel, access denied!
-		return "Forbidden", 403
+	if !channel.HasSubscriber(c) {
+		// Can't broadcast on the channel without subscribing it!
+		return "Not subscribed", 453
 	}
 	if triggerName != "" && !c.IsAuthenticated() { // FIXME: Backend should have permissions too!
 		// Can't trigger, access denied!
 		return "Forbidden", 403
-	}
-	if !channel.HasSubscriber(c) {
-		// Can't broadcast on the channel without subscribing it!
-		return "Not subscribed", 453
 	}
 	// Extending data with sender and channel information before
 	// passing it forward...

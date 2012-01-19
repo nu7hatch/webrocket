@@ -119,7 +119,8 @@ func channelTypeFromName(name string) (t ChannelType) {
 // broadcastLoop runs a broadcaster's event loop.
 func (ch *Channel) broadcastLoop() {
 	for x := range ch.broadcast {
-		for _, s := range ch.subscribers {
+		// FIXME: make it nonblock!
+		for _, s := range ch.Subscribers() {
 			if s.IsHidden() && !x.includeHidden {
 				// Skip hidden subscriber.
 				continue
@@ -131,7 +132,7 @@ func (ch *Channel) broadcastLoop() {
 	}
 	// Delete all subscribers after the channel is killed. 
 	for _, s := range ch.subscribers {
-		ch.unsubscribe(s.Client(), map[string]interface{}{})
+		ch.unsubscribe(s.Client(), map[string]interface{}{}, false)
 	}
 }
 
@@ -153,28 +154,30 @@ func (ch *Channel) subscribe(client *WebsocketConnection, hidden bool, data map[
 			ch.mtx.Unlock()
 			return
 		}
-		ch.subscribers[sid] = newSubscription(client, hidden, data)
-		client.subscriptions[ch.Name()] = ch
-		if ch.IsPresence() && !hidden {
-			// Tell the others that someone joined the channel.
-			ch.broadcast <- &payload{true,
-				map[string]interface{}{
-					"__memberJoined": map[string]interface{}{
-						"sid":     sid,
-						"channel": ch.name,
-						"data":    data,
-					},
-				},
+		data["sid"] = sid
+		data["channel"] = ch.name
+		var subscribers []interface{}
+		if ch.IsPresence() {
+			i := 0
+			subscribers = make([]interface{}, len(ch.subscribers))
+			for _, s := range ch.subscribers {
+				subscribers[i] = s.Data()
+				i += 1
 			}
 		}
-		ch.mtx.Unlock()
 		// Confirm subscription.
-		client.Send(map[string]interface{}{
-			"__subscribed": map[string]interface{}{
-				"channel": ch.name,
-				// TODO: add subscribers list if channel is a presence one...
-			},
-		})
+		sdata := map[string]interface{}{"channel": ch.name}
+		if ch.IsPresence() {
+			sdata["subscribers"] = subscribers
+		}
+		client.Send(map[string]interface{}{"__subscribed": sdata})
+		ch.subscribers[sid] = newSubscription(client, hidden, data)
+		client.subscriptions[ch.Name()] = ch
+		ch.mtx.Unlock()
+		if ch.IsPresence() && !hidden {
+			// Tell everyone that someone joined the channel.
+			ch.broadcast <- &payload{true, map[string]interface{}{"__memberJoined": data}}
+		}
 	}
 }
 
@@ -184,7 +187,7 @@ func (ch *Channel) subscribe(client *WebsocketConnection, hidden bool, data map[
 // client - The websocket client to be subscribed.
 // data   - The user specific data passed to other subscribers.
 //
-func (ch *Channel) unsubscribe(client *WebsocketConnection, data map[string]interface{}) {
+func (ch *Channel) unsubscribe(client *WebsocketConnection, data map[string]interface{}, confirm bool) {
 	if client != nil && ch.IsAlive() {
 		var s *Subscription
 		var ok bool
@@ -194,28 +197,24 @@ func (ch *Channel) unsubscribe(client *WebsocketConnection, data map[string]inte
 			ch.mtx.Unlock()
 			return
 		}
+		// Confirm unsubscription.
+		if confirm {
+			client.Send(map[string]interface{}{
+				"__unsubscribed": map[string]interface{}{
+					"channel": ch.name,
+				},
+			})
+		}
 		delete(ch.subscribers, sid)
 		delete(client.subscriptions, ch.Name())
+		ch.mtx.Unlock()
 		if ch.IsPresence() && !s.IsHidden() {
 			// Tell the others that this guy is not subscribing the
 			// channel anymore.
-			ch.broadcast <- &payload{true,
-				map[string]interface{}{
-					"__memberLeft": map[string]interface{}{
-						"sid":     sid,
-						"channel": ch.name,
-						"data":    data,
-					},
-				},
-			}
+			data["sid"] = sid
+			data["channel"] = ch.name
+			ch.broadcast <- &payload{true, map[string]interface{}{"__memberLeft": data}}
 		}
-		ch.mtx.Unlock()
-		// Confirm unsubscription.
-		client.Send(map[string]interface{}{
-			"__unsubscribed": map[string]interface{}{
-				"channel": ch.name,
-			},
-		})
 	}
 }
 
