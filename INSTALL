@@ -37,24 +37,6 @@ Dependencies
 WebRocket depends on few external libraries which have to be installed
 in your system before you build it.
 
-zeromq (>= 2.1 and < 3.0)
-~~~~~~~~~~~~~~~~~~~~~~~~~
-The ZeroMQ core library. This library should be available in your package
-manager's repository in most operating systems.
-
-.Debian
-	$ apt-get install libzmq-dev
-
-.Arch Linux
-	$ pacman -S zeromq
-
-.On OS X
-	$ brew install zeromq
-
-If the 'zeromq' package is not available in your package manager,
-try to build it manualy following the installation instructions at
-http://www.zeromq.org/intro:get-the-software
-
 kyoto-cabinet (>= 1.2)
 ~~~~~~~~~~~~~~~~~~~~~~
 The Kyoto Cabinet hash table library. This library should be available
