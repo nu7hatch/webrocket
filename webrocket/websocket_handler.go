@@ -105,7 +105,7 @@ func (h *websocketHandler) handle(ws *websocket.Conn) {
 	c := newWebsocketConnection(ws)
 	h.addConn(c)
 	defer h.deleteConn(c)
-	h.logStatus(c, "Connected", 200, "")
+	h.logStatus(c, "Connected", 305, "")
 	for {
 		if !h.IsAlive() {
 			break

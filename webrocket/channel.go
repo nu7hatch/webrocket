@@ -131,7 +131,7 @@ func (ch *Channel) broadcastLoop() {
 		}
 	}
 	// Delete all subscribers after the channel is killed. 
-	for _, s := range ch.subscribers {
+	for _, s := range ch.Subscribers() {
 		ch.unsubscribe(s.Client(), map[string]interface{}{}, false)
 	}
 }

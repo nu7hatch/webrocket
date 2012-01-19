@@ -19,7 +19,6 @@ package webrocket
 //
 // = Success codes
 //
-// * 200: Connected
 // * 201: Authenticated
 // * 202: Subscribed
 // * 203: Unsubscribed
@@ -46,5 +45,6 @@ package webrocket
 //
 // * 300: Ready
 // * 301: Heartbeat
+// * 305: Connected
 // * 408: Expired
 //

@@ -333,7 +333,7 @@ func testWebsocketBroadcast(t *testing.T, wss []*websocket.Conn) {
 	}
 }
 
-func testWebsocketPresenceChannelBehaviour(t *testing.T, wss []*websocket.Conn) {
+func testWebsocketPresenceChannelSubscribeBehaviour(t *testing.T, wss []*websocket.Conn) {
 	for i, _ := range wss {
 		websocketSend(t, wss[i], map[string]interface{}{
 			"subscribe": map[string]interface{}{
@@ -348,11 +348,32 @@ func testWebsocketPresenceChannelBehaviour(t *testing.T, wss []*websocket.Conn) 
 		if !ok || len(subscribers) != i {
 			t.Errorf("Expected to get valid list of subscribers, got %v", subscribers)
 		} 
-		for j, _ := range wss[:i] {
+		for j, _ := range wss[:i+1] {
 			websocketExpectResponse(t, wss[j], "__memberJoined", map[string]*regexp.Regexp{
 				"sid": regexp.MustCompile("^.{36}"),
 				"channel": regexp.MustCompile("^presence-test$"),
 				"foo": regexp.MustCompile("^bar$"),
+			})
+		}
+	}
+}
+
+func testWebsocketPresenceChannelUnsubscribeBehaviour(t *testing.T, wss []*websocket.Conn) {
+	for i, _ := range wss {
+		websocketSend(t, wss[i], map[string]interface{}{
+			"unsubscribe": map[string]interface{}{
+				"channel": "presence-test",
+				"data": map[string]interface{}{"bar": "foo"},
+			},
+		})
+		websocketExpectResponse(t, wss[i], "__unsubscribed", map[string]*regexp.Regexp{
+			"channel": regexp.MustCompile("^presence-test$"),
+		})
+		for j, _ := range wss[i+1:] {
+			websocketExpectResponse(t, wss[j+i+1], "__memberLeft", map[string]*regexp.Regexp{
+				"sid": regexp.MustCompile("^.{36}"),
+				"channel": regexp.MustCompile("^presence-test$"),
+				"bar": regexp.MustCompile("^foo$"),
 			})
 		}
 	}
@@ -395,7 +416,8 @@ func TestAllTheThings(t *testing.T) {
 		testWebsocketConnect(t, wss[i])
 		testWebsocketAuthenticationWithValidToken(t, wss[i])
 	}
-	testWebsocketPresenceChannelBehaviour(t, wss[:])
+	testWebsocketPresenceChannelSubscribeBehaviour(t, wss[:])
+	testWebsocketPresenceChannelUnsubscribeBehaviour(t, wss[:])
 	for i, _ := range wss {
 		wss[i].Close()
 		wss[i] = nil
