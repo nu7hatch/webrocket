@@ -80,14 +80,15 @@ func (mux *WebsocketServeMux) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	// Host-specific pattern takes precedence over generic ones
-	var h http.Handler
-	if h = mux.Match(r.Host + r.URL.Path); h == nil {
+	h := mux.Match(r.Host + r.URL.Path)
+	if h == nil {
 		h = mux.Match(r.URL.Path)
 	}
 	if h == nil {
-		h = http.NotFoundHandler()
+		http.NotFoundHandler().ServeHTTP(w, r)
+	} else {
+		h.ServeHTTP(w, r)
 	}
-	h.ServeHTTP(w, r)
 }
 
 // Match finds a handler on a handler map given a path string.

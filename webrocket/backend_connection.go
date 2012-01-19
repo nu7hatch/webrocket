@@ -10,11 +10,11 @@ import (
 // some concurrency tricks.
 type backendConnection struct {
 	// The underlaying connection.
-	conn     net.Conn
+	conn net.Conn
 	// The parent endpoint.
 	endpoint *BackendEndpoint
 	// Internal semaphore.
-	mtx      sync.Mutex
+	mtx sync.Mutex
 }
 
 // Internal constructor

@@ -24,7 +24,7 @@ func TestNewSubscription(t *testing.T) {
 	}
 	if !s.IsHidden() {
 		t.Errorf("Expected subscription to be hidden")
-	} 
+	}
 	if s.Data()["foo"] != "bar" {
 		t.Errorf("Expected subscription to contain valid data")
 	}

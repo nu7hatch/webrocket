@@ -16,6 +16,7 @@
 package webrocket
 
 import (
+	"io"
 	"net/http"
 	"sync"
 	"websocket"
@@ -109,12 +110,14 @@ func (h *websocketHandler) handle(ws *websocket.Conn) {
 		if !h.IsAlive() {
 			break
 		}
-		if msg := c.Receive(); msg != nil {
+		if msg, err := c.Receive(); err == nil && msg != nil {
 			h.dispatch(c, msg)
-		} else {
-			// msg is nil, which means that connection has been closed
-			// or killed.
+		} else if err == io.EOF {
+			// End of file reached, terminating this connection...
+			c.Kill()
 			break
+		} else {
+			h.logStatus(c, "Bad request", 400, "")
 		}
 	}
 }
@@ -255,7 +258,7 @@ func (h *websocketHandler) handleSubscribe(c *WebsocketConnection,
 		// Nope, channel not found!
 		return "Channel not found", 454
 	}
-	if channel.IsPrivate() && c.IsAllowed(chanName) {
+	if channel.IsPrivate() && !c.IsAllowed(chanName) {
 		// Can't operate on this channel, access denied!
 		return "Forbidden", 403
 	}

@@ -19,7 +19,7 @@ import (
 	"io"
 	"os"
 	"testing"
-	)
+)
 
 func TestNewContext(t *testing.T) {
 	ctx := NewContext()

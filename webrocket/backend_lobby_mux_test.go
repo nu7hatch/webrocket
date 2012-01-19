@@ -27,7 +27,7 @@ func TestBackendLobbyMuxAddLobby(t *testing.T) {
 
 func TestBackendLobbyMuxDeleteLobby(t *testing.T) {
 	mux := NewBackendLobbyMux()
-	l := &backendLobby{queue: make(chan interface{})};
+	l := &backendLobby{queue: make(chan interface{})}
 	mux.AddLobby("/foo", l)
 	if ok := mux.DeleteLobby("/foo"); !ok {
 		t.Errorf("Expected to delete lobby")

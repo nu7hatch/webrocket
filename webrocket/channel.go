@@ -18,8 +18,8 @@ package webrocket
 import (
 	"errors"
 	"regexp"
-	"sync"
 	"strings"
+	"sync"
 )
 
 // Pattern used to validate a channel name.

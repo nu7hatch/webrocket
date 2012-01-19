@@ -17,7 +17,6 @@ package webrocket
 
 import (
 	"../uuid"
-	"encoding/json"
 	"io"
 	"sync"
 	"websocket"
@@ -57,7 +56,7 @@ func newWebsocketConnection(ws *websocket.Conn) (c *WebsocketConnection) {
 	// Send info that connection has been approved. Yeah,
 	// Bruce Lee approves!
 	c.Send(map[string]interface{}{
-		"__connection": map[string]interface{}{
+		"__connected": map[string]interface{}{
 			"sid": c.Id(),
 		},
 	})
@@ -150,34 +149,16 @@ func (c *WebsocketConnection) Send(payload interface{}) {
 // websocket handler's event loop.
 //
 // Returns message received from the connection.
-func (c *WebsocketConnection) Receive() *WebsocketMessage {
+func (c *WebsocketConnection) Receive() (*WebsocketMessage, error) {
 	var recv map[string]interface{}
-again:
 	if !c.IsAlive() {
-		return nil
+		return nil, io.EOF
 	}
 	recv = make(map[string]interface{})
 	if err := websocket.JSON.Receive(c.Conn, &recv); err != nil {
-		if err == io.EOF {
-			// End of file reached, terminating this connection...
-			// TODO: debug information 
-			c.Kill()
-			return nil
-		}
-		// TODO: error log
-		//websocketBadRequestError(c, "")
-		goto again
+		return nil, err
 	}
-	msg, err := newWebsocketMessage(recv)
-	if err != nil {
-		// Couldn't parse the message...
-		msgstr, _ := json.Marshal(recv)
-		// TODO: error log
-		println(msgstr)
-		//websocketBadRequestError(c, string(msgstr))
-		goto again
-	}
-	return msg
+	return newWebsocketMessage(recv)
 }
 
 // IsAlive returns whether the connection is alive or not. Threadsafe, so far
