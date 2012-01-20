@@ -155,8 +155,8 @@ func DisplaySystemSettings() {
 	fmt.Printf("Node               : %s\n", ctx.NodeName())
 	fmt.Printf("Cookie             : %s\n", ctx.Cookie())
 	fmt.Printf("Data store dir     : %s\n", ctx.StorageDir())
-	fmt.Printf("Backend endpoint   : tcp://%s\n", conf.Backend)
 	fmt.Printf("Websocket endpoint : ws://%s\n", conf.Websocket)
+	fmt.Printf("Backend endpoint   : wr://%s\n", conf.Backend)
 	fmt.Printf("Admin endpoint     : http://%s\n", conf.Admin)
 }
 

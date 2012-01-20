@@ -7,33 +7,36 @@ webrocket-server - Start and preconfigure server node instance
 
 SYNOPSIS
 --------
-*webrocket-server* [-websocket-host '<host>'] [-websocket-port '<port>']
-				   [-backend-host '<host>'] [-backend-port '<port>']
-				   [-cert '<path>'] [-key '<path>']
+*webrocket-server* [-websocket-addr '<addr>'] [-backend-addr '<addr>']
+				   [-admin-addr '<addr>'] [-storage-dir '<path>']
+				   [-node-name '<name>'] [-cert '<path>'] [-key '<path>']
 
 DESCRIPTION
 -----------
 The *webrocket-server*(1) tool is used to start and initially configure single
-node instance. To further configure your node, use the *webrocket-ctl*(1) tool.
+node instance. To further configure your node, use the *webrocket-admin*(1) tool.
 
 OPTIONS
 -------
-*-websocket-host*='<host>'::
-	WebSocket endpoint will be bound with the specified interface.
-	By defult endpoint is bound to all interfaces.
+*-websocket-addr*='<addr>'::
+	The WebSocket endpoint will be bound with the specified interface.
+	By default endpoint is bound to 127.0.0.1:8080.
 
-*-websocket-port*='<port>'::
-	WebSocket endpoint will listen on the specified port.
-	Default: 8080.
-	
-*-backend-host*='<host>'::
-	Backend endpoint will be bound with the specified interface.
-	By default endpoitn is bound to all interfaces.
-	
-*-backend-port*='<port>'::
-	Backend endpoint will listen on the specified port.
-	Default: 8081.
-	
+*-backend-addr*='<addr>'::
+	The backend endpoint will be bound with the specified interface.
+	By default endpoint is bound to 127.0.0.1:8081.
+
+*-backend-addr*='<addr>'::
+	The admin endpoint will be bound with the specified interface.
+	By default endpoint is bound to 127.0.0.1:8082.
+
+*-storage-dir*='<path>'::
+	A path to the storage directory. Default: /var/lib/webrocket.
+
+*-node-name*='<name>'::
+	The name of this node. By default a result of the `uname -n`
+	command is used.   
+    
 *-cert*='<path>'::
 	Path to TLS certificate file.
 
@@ -42,23 +45,27 @@ OPTIONS
 
 EXAMPLES
 --------
-Specifying hosts and ports for the endpoints:
+Specifying different addresses of the endpoints:
 
-	$ webrocket-server -backend-port=8772 -backend-host=myhost.com
-	$ webrocket-server -websocket-port=8773
+	$ webrocket-server -backend=:8772 -websocket=myhost.com:80
+	$ webrocket-server -admin=localhost:8082
 
-Starting the server with TLS support enabled:
+Using custom storage directory:
 
-	$ webrocket-server -cert "~/my-cert.pem" -key "~/my-key.pem"
+	$ webrocket-server -storage-dir=~/webrocket
 
+Changing the node name:
+
+	$ webrocket-server -node-name=abyss
+    
 SEE ALSO
 --------
-link:webrocket-ctl.1.html[*webrocket-ctl*(1)],
+link:webrocket-admin.1.html[*webrocket-admin*(1)],
 link:webrocket-monitor.1.html[*webrocket-monitor*(1)]
 
 AUTHOR
 ------
-Chris Kowalik <chris@nu7hat.ch>
+Krzysztof Kowalik <chris@nu7hat.ch>
 
 COPYRIGHT
 ---------

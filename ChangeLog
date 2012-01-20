@@ -1,5 +1,6 @@
 2012-01-19  Krzysztof Kowalik  <chris@nu7hat.ch>
 
+	* docs/webrocket-server.1.txt: updated docs
 	* webrocket/: various fixes
 	* webrocket/webrocket_integration_test.go: added integration tests for websocket proto and backend req
 	* webrocket-admin/: formatting fixes

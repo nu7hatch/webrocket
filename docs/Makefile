@@ -7,10 +7,8 @@ DOCS_MAN1 = \
 DOCS_MAN1_HTML = \
 	webrocket-server.1.html
 
-DOCS_MAN3 = \
-	webrocket.3
-DOCS_MAN3_HTML = \
-	webrocket.3.html
+DOCS_MAN3 =
+DOCS_MAN3_HTML =
 
 all: man
 clean: clean-man
