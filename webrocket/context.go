@@ -210,27 +210,27 @@ func (ctx *Context) Lock() (err error) {
 	var pid int
 
 	lockFile := path.Join(ctx.storageDir, ctx.nodeName+".lock")
-	// Check if locked instance is running (if any locked there).
-	if f, err = os.Open(lockFile); err == nil {
-		if _, err = fmt.Fscanf(f, "%d", &pid); err == nil && pid != 0 {
-			if p, err = os.FindProcess(pid); err == nil && p != nil {
-				if err = p.Signal(os.UnixSignal(0)); err == nil {
-					err = errors.New(
-						fmt.Sprintf("node '%s' is already running",
-						ctx.NodeName()))
-					return
-				}
-			}
+	if f, err = os.Open(lockFile); err != nil {
+		goto lock
+	}
+	if _, err = fmt.Fscanf(f, "%d", &pid); err != nil && pid == 0 {
+		goto lock
+	}
+	if p, err = os.FindProcess(pid); err == nil && p != nil {
+		if err = p.Signal(os.UnixSignal(0)); err == nil {
+			return errors.New(
+				fmt.Sprintf("node '%s' is already running",
+				ctx.NodeName()))
 		}
 	}
-	err = nil
+lock:
 	// Write a lock file.
 	if f, err = os.Create(lockFile); err == nil {
 		pid := os.Getppid()
 		f.Write([]byte(fmt.Sprintf("%d", pid)))
 		f.Close()
 	}
-	return
+	return nil
 }
 
 // SetNodeName changes node name to given one.
