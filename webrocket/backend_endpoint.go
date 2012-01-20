@@ -22,6 +22,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"strconv"
 )
 
 // The backend socket types.
@@ -153,9 +154,10 @@ func (b *BackendEndpoint) handle(conn net.Conn) {
 	var status string
 	var code int
 
-	c := newBackendConnection(b, conn)
+	c := newBackendConnection(conn)
 	if req, err = c.Recv(); err != nil {
 		status, code = "Bad request", 400
+		c.Send("ER", "400")
 		goto log
 	}
 	if vhost, idty, ok = b.authenticate(req.Identity); !ok {
@@ -171,9 +173,9 @@ func (b *BackendEndpoint) handle(conn net.Conn) {
 	default:
 		status, code = "Bad request", 400
 	}
+	
 log:
-	println(status, code)
-	// TODO: log status...
+	b.logStatus(vhost, status, code, req)
 }
 
 // dispatchDealer handles a request received from the dealer socket.
@@ -234,6 +236,31 @@ func (b *BackendEndpoint) dispatchReq(vhost *Vhost, req *backendRequest,
 	return
 }
 
+func (b *BackendEndpoint) logStatus(vhost *Vhost, status string, code int,
+	req *backendRequest) {
+	switch {
+	case code >= 400:
+		if req != nil {
+			req.Reply("ER", strconv.Itoa(code))
+		}
+	case code >= 300 && code < 400:
+		// Log information statuses only when debug mode is enabled.
+		// TODO: log after adding a debug mode...
+		return
+	case code < 300:
+		// Nothing to do, just go to logging...
+	}
+	vhostPath := "???"
+	if vhost != nil {
+		vhostPath = vhost.Path()
+	}
+	reqString := "[]"
+	if req != nil {
+		reqString = req.String()
+	}
+	b.log.Printf("backend[%s]: %d %s; %s", vhostPath, code, status, reqString)
+}
+
 // handleReqBroadcast is a handler for the backend's broadcast (BC) request.
 //
 // vhost - Related vhost.
@@ -259,7 +286,7 @@ func (b *BackendEndpoint) handleReqBroadcast(vhost *Vhost, req *backendRequest) 
 		// No channel or event name specified!
 		return "Bad request", 400
 	}
-	if err = json.Unmarshal(req.Message[3], &data); err != nil {
+	if err = json.Unmarshal(req.Message[2], &data); err != nil {
 		// No data specified, making empty one...
 		data = make(map[string]interface{})
 	}
@@ -296,7 +323,7 @@ func (b *BackendEndpoint) handleReqOpenChannel(vhost *Vhost, req *backendRequest
 		// No channel name or type specified.
 		return "Bad request", 400
 	}
-	if _, err = vhost.Channel(chanName); err != nil {
+	if _, err = vhost.Channel(chanName); err == nil {
 		// Channel with such name already exists, it's ok!
 		req.Reply("OK")
 		return "Channel exists", 251
@@ -323,7 +350,7 @@ func (b *BackendEndpoint) handleReqCloseChannel(vhost *Vhost, req *backendReques
 	var chanName string
 	var ok bool
 
-	if req.Len() < 2 {
+	if req.Len() < 1 {
 		return "Bad request", 400
 	}
 	if chanName = string(req.Message[0]); chanName == "" {
@@ -362,7 +389,7 @@ func (b *BackendEndpoint) handleReqSingleAccessTokenRequest(vhost *Vhost,
 		// Couldn't generate an access token.
 		return "Internal error", 597
 	}
-	req.Reply("OK", token)
+	req.Reply("AT", token)
 	return "Single access token generated", 270
 }
 

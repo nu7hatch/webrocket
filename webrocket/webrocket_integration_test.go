@@ -20,9 +20,18 @@ import (
 	"regexp"
 	"testing"
 	"websocket"
+	"net"
+	"strings"
+	"bufio"
+	"fmt"
+	"time"
+	"../uuid"
 )
 
-var ctx *Context
+var (
+	ctx *Context
+	v *Vhost
+)
 
 func init() {
 	ctx = NewContext()
@@ -30,10 +39,25 @@ func init() {
 	go ctx.websocket.ListenAndServe()
 	ctx.NewBackendEndpoint(":9081")
 	go ctx.backend.ListenAndServe()
-	v, _ := ctx.AddVhost("/test")
+	v, _ = ctx.AddVhost("/test")
 	v.OpenChannel("test", ChannelNormal)
 	v.OpenChannel("private-test", ChannelPrivate)
 	v.OpenChannel("presence-test", ChannelPresence)
+}
+
+func websocketDial(t *testing.T) *websocket.Conn {
+	ws, err := websocket.Dial("ws://127.0.0.1:9080/test", "ws", "http://127.0.0.1/")
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
+	}
+	return ws
+}
+
+func websocketSend(t *testing.T, ws *websocket.Conn, data interface{}) {
+	if err := websocket.JSON.Send(ws, data); err != nil {
+		t.Error(err)
+	}
 }
 
 func websocketExpectResponse(t *testing.T, ws *websocket.Conn, event string,
@@ -65,19 +89,67 @@ func websocketExpectError(t *testing.T, ws *websocket.Conn, status string) {
 	})
 }
 
-func websocketDial(t *testing.T) *websocket.Conn {
-	ws, err := websocket.Dial("ws://127.0.0.1:9080/test", "ws", "http://127.0.0.1/")
+func backendDial(t *testing.T) net.Conn {
+	c, err := net.Dial("tcp", "127.0.0.1:9081")
+	c.SetReadTimeout((5 * time.Second).Nanoseconds())
 	if err != nil {
-		t.Error(err)
+		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
-	return ws
+	return c
 }
 
-func websocketSend(t *testing.T, ws *websocket.Conn, data interface{}) {
-	if err := websocket.JSON.Send(ws, data); err != nil {
+func backendSend(t *testing.T, c net.Conn, frames ...string) {
+	payload := strings.Join(frames, "\n")
+	payload += "\n\r\n\r\n"
+	_, err := c.Write([]byte(payload))
+	if err != nil {
 		t.Error(err)
 	}
+}
+
+func backendExpectResponse(t *testing.T, c net.Conn, cmd string,
+	frames ...string) {
+	var msg = []string{}
+	var buf = bufio.NewReader(c)
+	var possibleEom = false
+	for {
+		chunk, err := buf.ReadSlice('\n')
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if string(chunk) == "\r\n" {
+			if possibleEom {
+				break
+			}
+			possibleEom = true
+			continue
+		} else {
+			possibleEom = false
+		}
+		msg = append(msg[:], string(chunk[:len(chunk)-1]))
+	}
+	if len(msg) < len(frames) + 1 {
+		t.Errorf("Not enough frames to check")
+	}
+	if msg[0] != cmd {
+		t.Errorf("Expected command to be '%s', got '%s'", cmd, msg[0])
+	}
+	for i, frame := range frames {
+		if frame != msg[i+1] {
+			t.Errorf("Expected frame to be '%s', got '%s'", frame, msg[i+1])
+		}
+	}
+}
+
+func backendExpectError(t *testing.T, c net.Conn, err int) {
+	backendExpectResponse(t, c, "ER", fmt.Sprintf("%d", err))
+}
+
+func backendIdty() string {
+	sid, _ := uuid.NewV4()
+	return fmt.Sprintf("req:/test:%s:%s", v.accessToken, sid.String())
 }
 
 func testWebsocketConnect(t *testing.T, ws *websocket.Conn) {
@@ -409,8 +481,133 @@ func testWebsocketPresenceChannelUnsubscribeBehaviour(t *testing.T,
 	}
 }
 
+func testBackendBadRequest(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, "bad request")
+	backendExpectError(t, c, 400)
+}
+
+func testBackendBadIdentity(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, "bad identity", "", "OC", "test")
+	backendExpectError(t, c, 402)
+}
+
+func testBackendOpenChannelWithoutName(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "OC")
+	backendExpectError(t, c, 400)
+}
+
+func testBackendOpenChannelWithInvalidName(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "OC", "%f%df")
+	backendExpectError(t, c, 451)
+}
+
+func testBackendOpenExistingChannel(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "OC", "test")
+	backendExpectResponse(t, c, "OK")
+}
+
+func testBackendOpenNewChannel(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "OC", "new-test")
+	backendExpectResponse(t, c, "OK")
+	ch, err := v.Channel("new-test")
+	if err != nil || ch == nil {
+		t.Errorf("Expected to open new channel")
+	}
+}
+
+func testBackendCloseNotExistingChannel(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "CC", "not-exists")
+	backendExpectError(t, c, 454)
+}
+
+func testBackendCloseChannelWithoutName(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "CC")
+	backendExpectError(t, c, 400)
+}
+
+func testBackendCloseChannelWithInvalidName(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "CC", "%dsdf%")
+	backendExpectError(t, c, 454)
+}
+
+func testBackendRequestSingleAccessTokenWithoutPermission(t *testing.T,
+	c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "AT")
+	backendExpectError(t, c, 400)
+}
+
+func testBackendRequestSingleAccessTokenWithInvalidPermission(t *testing.T,
+	c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "AT", "..*{34}")
+	backendExpectError(t, c, 597)
+}
+
+func testBackendRequestSingleAccessTokenWithValidPermission(t *testing.T,
+	c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "AT", "(foo|bar)")
+	<-time.After(1e6)
+	var token string
+	for t, _ := range v.permissions {
+		token = t
+		break
+	}
+	if token == "" {
+		t.Errorf("Expected to generate single access token")
+	}
+	backendExpectResponse(t, c, "AT", token)
+}
+
+func testBackendBroadcast(t *testing.T, c net.Conn, wss []*websocket.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "BC", "test", "hello", "{\"foo\":\"bar\"}")
+	backendExpectResponse(t, c, "OK")
+	for _, ws := range wss {
+		websocketExpectResponse(t, ws, "hello", map[string]*regexp.Regexp{
+			"channel": regexp.MustCompile("^test$"),
+			"foo":     regexp.MustCompile("^bar$"),
+		})
+	}
+}
+
+func testBackendBroadcastWithEmptyChannelName(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "BC", "", "hello", "{\"foo\":\"bar\"}")
+	backendExpectError(t, c, 400)
+}
+
+func testBackendBroadcastWithEmptyEventName(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "BC", "test", "", "{\"foo\":\"bar\"}")
+	backendExpectError(t, c, 400)
+}
+
+func testBackendBroadcastToNotExistingChannel(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "BC", "not-exists", "hello", "{\"foo\":\"bar\"}")
+	backendExpectError(t, c, 454)
+}
+
+func testBackendBroadcastWithInvalidData(t *testing.T, c net.Conn) {
+	c = backendDial(t)
+	backendSend(t, c, backendIdty(), "", "BC", "test", "hello", "&*&*")
+	backendExpectResponse(t, c, "OK")
+}
+
 func TestAllTheThings(t *testing.T) {
 	var ws *websocket.Conn
+	var req net.Conn
 	var wss [5]*websocket.Conn
 
 	ws = websocketDial(t)
@@ -468,8 +665,26 @@ func TestAllTheThings(t *testing.T) {
 		testWebsocketSubscribeToPublicChannel(t, wss[i])
 	}
 	testWebsocketBroadcast(t, wss[:])
+	testBackendBroadcast(t, req, wss[:])
 	for i := range wss {
 		wss[i].Close()
 		wss[i] = nil
 	}
+
+	testBackendBadRequest(t, req)
+	testBackendBadIdentity(t, req)
+	testBackendOpenChannelWithoutName(t, req)
+	testBackendOpenChannelWithInvalidName(t, req)
+	testBackendOpenExistingChannel(t, req)
+	testBackendOpenNewChannel(t, req)
+	testBackendCloseChannelWithoutName(t, req)
+	testBackendCloseChannelWithInvalidName(t, req)
+	testBackendCloseNotExistingChannel(t, req)
+	testBackendRequestSingleAccessTokenWithoutPermission(t, req)
+	testBackendRequestSingleAccessTokenWithInvalidPermission(t, req)
+	testBackendRequestSingleAccessTokenWithValidPermission(t, req)
+	testBackendBroadcastWithEmptyChannelName(t, req)
+	testBackendBroadcastWithEmptyEventName(t, req)
+	testBackendBroadcastToNotExistingChannel(t, req)
+	testBackendBroadcastWithInvalidData(t, req)
 }

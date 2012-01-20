@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"net"
 	"sync"
+	"strings"
+	"errors"
 )
 
 // backendConnection implements a wrapper for the TCP connection providing
@@ -11,8 +13,6 @@ import (
 type backendConnection struct {
 	// The underlaying connection.
 	conn net.Conn
-	// The parent endpoint.
-	endpoint *BackendEndpoint
 	// Internal semaphore.
 	mtx sync.Mutex
 }
@@ -23,15 +23,11 @@ type backendConnection struct {
 // newBackendConnection wrapps given connection into new backend connection
 // object.
 //
-// endpoint - The parent endpoint.
 // conn     - The connection to be wrapped.
 //
 // Returns new backend connection.
-func newBackendConnection(endpoint *BackendEndpoint, conn net.Conn) *backendConnection {
-	return &backendConnection{
-		conn:     conn,
-		endpoint: endpoint,
-	}
+func newBackendConnection(conn net.Conn) *backendConnection {
+	return &backendConnection{conn: conn}
 }
 
 // Exported
@@ -49,7 +45,7 @@ func (c *backendConnection) Recv() (req *backendRequest, err error) {
 	for {
 		chunk, err := buf.ReadSlice('\n')
 		if err != nil {
-			return nil, err
+			break
 		}
 		if string(chunk) == "\r\n" {
 			// Seems like it's end of the message...
@@ -71,6 +67,7 @@ func (c *backendConnection) Recv() (req *backendRequest, err error) {
 	// ...
 	// >>>
 	if len(msg) < 3 {
+		err = errors.New("bad request")
 		return
 	}
 	// Compose the request object.
@@ -88,12 +85,12 @@ func (c *backendConnection) Recv() (req *backendRequest, err error) {
 func (c *backendConnection) Send(cmd string, frames ...string) (err error) {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	payload := cmd + "\n"
-	for _, frame := range frames {
-		payload += frame + "\n"
+	if c.conn != nil {
+		payload := cmd + "\n"
+		payload += strings.Join(frames, "\n")
+		payload += "\n\r\n\r\n"
+		_, err = c.conn.Write([]byte(payload))
 	}
-	payload += "\r\n\r\n"
-	_, err = c.conn.Write([]byte(payload))
 	return
 }
 
