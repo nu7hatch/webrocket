@@ -36,7 +36,7 @@ func cmdAddChannel(vhostPath, chanName string) {
 	res, err := cli.Do(req)
 	if err != nil {
 		goto error
-	}	
+	}
 	res, err = followRedirects(res)
 	if err != nil {
 		goto error

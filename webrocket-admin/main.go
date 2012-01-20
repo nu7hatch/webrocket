@@ -16,12 +16,12 @@
 package main
 
 import (
+	stepper "../gostepper"
+	"../webrocket"
 	"flag"
 	"fmt"
-	"os"
 	"io"
-	"../webrocket"
-	stepper "../gostepper"
+	"os"
 )
 
 var (
@@ -37,7 +37,7 @@ func init() {
 	flag.StringVar(&Addr, "admin-addr", "127.0.0.1:8082", "Address of the server's admin interface")
 	flag.StringVar(&CookiePath, "cookie", "/var/lib/webrocket/cookie", "Path to the server's cookie file")
 	flag.Parse()
-	
+
 	Cmd = flag.Arg(0)
 	if Cmd == "" {
 		usage()

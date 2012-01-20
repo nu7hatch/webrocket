@@ -16,9 +16,9 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
-	"fmt"
 )
 
 func cmdListChannels(vhostPath string) {
@@ -60,7 +60,7 @@ func cmdListChannels(vhostPath string) {
 				if ok {
 					subscribersCount = int(x)
 				}
-			} 
+			}
 			fmt.Printf("%s (%d subscribers)\n", name, subscribersCount)
 		}
 		return

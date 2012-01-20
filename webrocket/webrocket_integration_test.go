@@ -16,21 +16,21 @@
 package webrocket
 
 import (
-	"os"
-	"regexp"
-	"testing"
-	"websocket"
-	"net"
-	"strings"
+	"../uuid"
 	"bufio"
 	"fmt"
+	"net"
+	"os"
+	"regexp"
+	"strings"
+	"testing"
 	"time"
-	"../uuid"
+	"websocket"
 )
 
 var (
 	ctx *Context
-	v *Vhost
+	v   *Vhost
 )
 
 func init() {
@@ -130,7 +130,7 @@ func backendExpectResponse(t *testing.T, c net.Conn, cmd string,
 		}
 		msg = append(msg[:], string(chunk[:len(chunk)-1]))
 	}
-	if len(msg) < len(frames) + 1 {
+	if len(msg) < len(frames)+1 {
 		t.Errorf("Not enough frames to check")
 	}
 	if msg[0] != cmd {
@@ -559,7 +559,7 @@ func testBackendRequestSingleAccessTokenWithValidPermission(t *testing.T,
 	backendSend(t, c, backendIdty(), "", "AT", "(foo|bar)")
 	<-time.After(1e6)
 	var token string
-	for t, _ := range v.permissions {
+	for t := range v.permissions {
 		token = t
 		break
 	}

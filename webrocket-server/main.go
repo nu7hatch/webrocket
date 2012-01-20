@@ -18,17 +18,17 @@
 package main
 
 import (
-	"../webrocket"
 	stepper "../gostepper"
+	"../webrocket"
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"os/exec"
+	"os/signal"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
-	"strings"
-	"path/filepath"
 )
 
 type Config struct {
@@ -41,9 +41,9 @@ type Config struct {
 }
 
 var (
-	conf  Config
-	ctx   *webrocket.Context
-	s     stepper.Stepper
+	conf Config
+	ctx  *webrocket.Context
+	s    stepper.Stepper
 )
 
 func init() {
@@ -88,16 +88,16 @@ func SetupEndpoint(kind string, e webrocket.Endpoint) {
 		}
 	}()
 	for !e.IsAlive() {
-		<-time.After(500 * time.Nanosecond);
+		<-time.After(500 * time.Nanosecond)
 	}
 	s.Ok()
 }
 
 func SignalTrap() {
 	for sig := range signal.Incoming {
-        if usig, ok := sig.(os.UnixSignal); ok {
-            switch usig {
-            case os.SIGQUIT, os.SIGINT:
+		if usig, ok := sig.(os.UnixSignal); ok {
+			switch usig {
+			case os.SIGQUIT, os.SIGINT:
 				fmt.Printf("\n\033[33mInterrupted\033[0m\n")
 				if ctx != nil {
 					fmt.Printf("\n")
@@ -108,13 +108,13 @@ func SignalTrap() {
 					s.Ok()
 				}
 				os.Exit(0)
-            case os.SIGTSTP:
-                syscall.Kill(syscall.Getpid(), syscall.SIGSTOP)
-            case os.SIGHUP:
+			case os.SIGTSTP:
+				syscall.Kill(syscall.Getpid(), syscall.SIGSTOP)
+			case os.SIGHUP:
 				// TODO: reload configuration
-            }
-        }
-    }
+			}
+		}
+	}
 }
 
 func SetupDaemon() {
@@ -137,7 +137,7 @@ func DisplayAsciiArt() {
 		`            /\                                                                     ` + "\n" +
 		`      ,    /  \      o               .        ___---___                    .       ` + "\n" +
 		`          /    \            .              .--\        --.     .     .         .   ` + "\n" +
-		`         /______\                        ./.;_.\     __/~ \.                       ` + "\n" + 
+		`         /______\                        ./.;_.\     __/~ \.                       ` + "\n" +
 		`   .    |        |                      /;  / '-'  __\    . \                      ` + "\n" +
 		`        |        |    .        .       / ,--'     / .   .;   \        |            ` + "\n" +
 		`        |________|                    | .|       /       __   |      -O-       .   ` + "\n" +
@@ -169,9 +169,9 @@ func DisplaySystemSettings() {
 func main() {
 	DisplayAsciiArt()
 	SetupContext()
-	SetupEndpoint("backend endpoint", ctx.NewBackendEndpoint(conf.Backend));
-	SetupEndpoint("websocket endpoint", ctx.NewWebsocketEndpoint(conf.Websocket));
-	SetupEndpoint("admin endpoint", ctx.NewAdminEndpoint(conf.Admin));
+	SetupEndpoint("backend endpoint", ctx.NewBackendEndpoint(conf.Backend))
+	SetupEndpoint("websocket endpoint", ctx.NewWebsocketEndpoint(conf.Websocket))
+	SetupEndpoint("admin endpoint", ctx.NewAdminEndpoint(conf.Admin))
 	DisplaySystemSettings()
 	SetupDaemon()
 	SignalTrap()

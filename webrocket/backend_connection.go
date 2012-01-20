@@ -2,10 +2,10 @@ package webrocket
 
 import (
 	"bufio"
-	"net"
-	"sync"
-	"strings"
 	"errors"
+	"net"
+	"strings"
+	"sync"
 )
 
 // backendConnection implements a wrapper for the TCP connection providing

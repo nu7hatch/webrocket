@@ -16,9 +16,9 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
-	"fmt"
 )
 
 func cmdRegenerateVhostToken(vhostPath string) {

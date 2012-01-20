@@ -20,9 +20,9 @@ import (
 	"errors"
 	"log"
 	"net"
+	"strconv"
 	"sync"
 	"time"
-	"strconv"
 )
 
 // The backend socket types.
@@ -173,7 +173,7 @@ func (b *BackendEndpoint) handle(conn net.Conn) {
 	default:
 		status, code = "Bad request", 400
 	}
-	
+
 log:
 	b.logStatus(vhost, status, code, req)
 }
