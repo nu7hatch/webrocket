@@ -178,14 +178,6 @@ func (c *WebsocketConnection) Kill() {
 	defer c.mtx.Unlock()
 	c.clearSubscriptions()
 	if c.Conn != nil {
-		// TODO: figure out if we actually have an use case for the __closed
-		// event if there is onclose operation supported by the WebSockets
-		// implementation.
-		c.Send(map[string]interface{}{
-			"__closed": map[string]interface{}{
-				"sid": c.Id(),
-			},
-		})
 		c.Conn.Close()
 		c.Conn = nil
 	}
