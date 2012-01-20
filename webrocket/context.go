@@ -130,6 +130,7 @@ func (ctx *Context) GenerateCookie(force bool) (err error) {
 			n, err := io.ReadFull(cookieFile, buf[:])
 			if n == CookieSize && err == nil {
 				ctx.cookie = string(buf[:])
+				cookieFile.Close()
 				return nil
 			}
 		}
@@ -149,22 +150,30 @@ func (ctx *Context) GenerateCookie(force bool) (err error) {
 	return
 }
 
-// SetStorage sets the storage directory and preloads existing information
-// about the vhosts, channels, etc. Storage is automatically marked as
-// available if everything's find at return. Not threadsafe, storage directory
-// shall be set only once from the main goroutine. It's not possible to
-// change storage dir while executing the
-// program.
+// SetStorage sets the storage directory to specified value. It's not possible
+// to change storage dir while app is running.
 //
 // dir - A path to the storage directory.
 //
-// Returns an error if something went wrong.
-func (ctx *Context) SetStorage(dir string) (err error) {
+func (ctx *Context) SetStorageDir(dir string) {
+	ctx.storageDir = dir
 	ctx.storageOn = false
-	if ctx.storage, err = newStorage(dir, ctx.nodeName); err != nil {
+}
+
+// StorageDir returns path to the configured storage directory.
+func (ctx *Context) StorageDir() string {
+	return ctx.storageDir
+}
+
+// Load reads existing information about the vhosts, channels, etc. Storage will be
+// automatically marked as available if everything's fine at return. Not threadsafe,
+// storage directory shall be set only once from the main goroutine.
+//
+// Returns an error if something went wrong.
+func (ctx *Context) Load()  (err error) {
+	if ctx.storage, err = newStorage(ctx.storageDir, ctx.nodeName); err != nil {
 		return
 	}
-	ctx.storageDir = dir
 	// Loading the list persisted vhosts. 
 	vhosts, err := ctx.storage.Vhosts()
 	if err != nil {
@@ -190,6 +199,37 @@ func (ctx *Context) SetStorage(dir string) (err error) {
 	}
 	// Everything's fine, enabling the access to the storage.
 	ctx.storageOn = true
+	return
+}
+
+// Lock creates a lockfile which prevents to open more than one instance
+// of the same node (on the same machine).
+func (ctx *Context) Lock() (err error) {
+	var f *os.File
+	var p *os.Process
+	var pid int
+
+	lockFile := path.Join(ctx.storageDir, ctx.nodeName+".lock")
+	// Check if locked instance is running (if any locked there).
+	if f, err = os.Open(lockFile); err == nil {
+		if _, err = fmt.Fscanf(f, "%d", &pid); err == nil && pid != 0 {
+			if p, err = os.FindProcess(pid); err == nil && p != nil {
+				if err = p.Signal(os.UnixSignal(0)); err == nil {
+					err = errors.New(
+						fmt.Sprintf("node '%s' is already running",
+						ctx.NodeName()))
+					return
+				}
+			}
+		}
+	}
+	err = nil
+	// Write a lock file.
+	if f, err = os.Create(lockFile); err == nil {
+		pid := os.Getppid()
+		f.Write([]byte(fmt.Sprintf("%d", pid)))
+		f.Close()
+	}
 	return
 }
 
@@ -307,6 +347,8 @@ func (ctx *Context) Kill() (err error) {
 		err = ctx.storage.Save()
 		ctx.storage.Kill()
 	}
+	// Unlock the node.
+	os.Remove(path.Join(ctx.storageDir, ctx.nodeName+".lock"))
 	// Kill all endpoints.
 	if ctx.websocket != nil {
 		ctx.websocket.Kill()

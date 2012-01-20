@@ -57,11 +57,17 @@ func init() {
 }
 
 func SetupContext() {
-	s.Start("Setting up a context")
+	s.Start("Initializing context")
 	ctx = webrocket.NewContext()
+	ctx.SetStorageDir(conf.StorageDir)
+	s.Ok()
+	s.Start("Locking node")
+	if err := ctx.Lock(); err != nil {
+		s.Fail(err.Error(), true)
+	}
 	s.Ok()
 	s.Start("Loading configuration")
-	if err := ctx.SetStorage(conf.StorageDir); err != nil {
+	if err := ctx.Load(); err != nil {
 		s.Fail(err.Error(), true)
 	}
 	s.Ok()
@@ -116,7 +122,7 @@ func SignalTrap() {
 }
 
 func SetupDaemon() {
-	fmt.Printf("\nWebRocket has been launched!\n")
+	fmt.Printf("\n\033[32mWebRocket has been launched!\033[0m\n")
 }
 
 func DisplayAsciiArt() {
@@ -148,7 +154,7 @@ func DisplaySystemSettings() {
 	fmt.Printf("\n")
 	fmt.Printf("Node               : %s\n", ctx.NodeName())
 	fmt.Printf("Cookie             : %s\n", ctx.Cookie())
-	fmt.Printf("Data store dir     : %s\n", conf.StorageDir)
+	fmt.Printf("Data store dir     : %s\n", ctx.StorageDir())
 	fmt.Printf("Backend endpoint   : tcp://%s\n", conf.Backend)
 	fmt.Printf("Websocket endpoint : ws://%s\n", conf.Websocket)
 	fmt.Printf("Admin endpoint     : http://%s\n", conf.Admin)
