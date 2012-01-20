@@ -1,6 +1,9 @@
 WEBROCKET - Real-time Web Broker
 ================================
 
+NOTE: This is not the official repository, it has been moved to the
+http://github.com/webrocket/webrocket organization's repo!
+
 WebRocket is a hybrid of MQ and WebSockets server with great support for
 horizontal scalability. WebRocket is very fast and easy to use from both
 sides: backend (via MQ connection) and frontend (via WebSockets).
