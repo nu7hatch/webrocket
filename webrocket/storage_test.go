@@ -18,21 +18,21 @@ package webrocket
 import "testing"
 
 func TestNewStorageWithInvalidDir(t *testing.T) {
-	s, err := newStorage("/dev/invalid/directory")
+	s, err := newStorage("/dev/invalid/directory", "test")
 	if err == nil || s != nil {
 		t.Errorf("Expected error while creating new storage")
 	}
 }
 
 func TestNewStorage(t *testing.T) {
-	s, err := newStorage("/tmp")
+	s, err := newStorage("/tmp", "test")
 	if err != nil || s == nil {
 		t.Errorf("Expected to create a storage without problems, error: %v", err)
 	}
 }
 
 func TestStorageAddVhost(t *testing.T) {
-	s, _ := newStorage("/tmp/")
+	s, _ := newStorage("/tmp/", "test")
 	s.Clear()
 	err := s.AddVhost("/test", "foo")
 	if err != nil {
@@ -48,7 +48,7 @@ func TestStorageAddVhost(t *testing.T) {
 }
 
 func TestStorageDeleteVhost(t *testing.T) {
-	s, _ := newStorage("/tmp/")
+	s, _ := newStorage("/tmp/", "test")
 	s.Clear()
 	err := s.AddVhost("/test", "foo")
 	if err != nil {
@@ -68,7 +68,7 @@ func TestStorageDeleteVhost(t *testing.T) {
 }
 
 func TestStorageChangeVhostAccessToken(t *testing.T) {
-	s, _ := newStorage("/tmp/")
+	s, _ := newStorage("/tmp/", "test")
 	s.Clear()
 	err := s.AddVhost("/test", "foo")
 	if err != nil {
@@ -82,7 +82,7 @@ func TestStorageChangeVhostAccessToken(t *testing.T) {
 }
 
 func TestStorageAddChannel(t *testing.T) {
-	s, _ := newStorage("/tmp/")
+	s, _ := newStorage("/tmp/", "test")
 	s.Clear()
 	err := s.AddVhost("/test", "foo")
 	if err != nil {
@@ -102,7 +102,7 @@ func TestStorageAddChannel(t *testing.T) {
 }
 
 func TestStorageDeleteChannel(t *testing.T) {
-	s, _ := newStorage("/tmp/")
+	s, _ := newStorage("/tmp/", "test")
 	s.Clear()
 	err := s.AddVhost("/test", "foo")
 	if err != nil {
@@ -123,7 +123,7 @@ func TestStorageDeleteChannel(t *testing.T) {
 }
 
 func TestStorageDeleteAllChannelsWhenVhostDeleted(t *testing.T) {
-	s, _ := newStorage("/tmp/")
+	s, _ := newStorage("/tmp/", "test")
 	s.Clear()
 	err := s.AddVhost("/test", "foo")
 	if err != nil {

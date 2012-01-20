@@ -15,7 +15,11 @@
 
 package webrocket
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+	"os/exec"
+)
 
 // The version information.
 const (
@@ -27,4 +31,16 @@ const (
 // Version returns current version of the package.
 func Version() string {
 	return fmt.Sprintf("%d.%d.%d", VerMajor, VerMinor, VerPatch)
+}
+
+// DefaultNodeName discovers name of the node from the host name configured
+// in the operating system. Basically the result of the 'uname -n' command
+// will be returned.
+func DefaultNodeName() string {
+	x := exec.Command("uname", "-n")
+	node, err := x.Output()
+	if err != nil {
+		panic("can't get node name: " + err.Error())
+	}
+	return strings.TrimSpace(string(node))
 }

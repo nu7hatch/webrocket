@@ -43,6 +43,8 @@ type Context struct {
 	admin *AdminEndpoint
 	// List of registered vhosts.
 	vhosts map[string]*Vhost
+	// The name of this node.
+	nodeName string
 	// The persistent storage.
 	storage *storage
 	// Storage status.
@@ -65,8 +67,9 @@ type Context struct {
 // Returns a new context.
 func NewContext() *Context {
 	return &Context{
-		log:    log.New(os.Stderr, "", log.LstdFlags),
-		vhosts: make(map[string]*Vhost),
+		log:      log.New(os.Stderr, "", log.LstdFlags),
+		vhosts:   make(map[string]*Vhost),
+		nodeName: DefaultNodeName(),
 	}
 }
 
@@ -120,7 +123,7 @@ func (ctx *Context) GenerateCookie(force bool) (err error) {
 	}
 	var buf = make([]byte, CookieSize)
 	var cookieFile *os.File
-	cookiePath := path.Join(ctx.storageDir, "cookie")
+	cookiePath := path.Join(ctx.storageDir, ctx.nodeName+".cookie")
 	if !force {
 		cookieFile, err = os.Open(cookiePath)
 		if err == nil {
@@ -158,7 +161,7 @@ func (ctx *Context) GenerateCookie(force bool) (err error) {
 // Returns an error if something went wrong.
 func (ctx *Context) SetStorage(dir string) (err error) {
 	ctx.storageOn = false
-	if ctx.storage, err = newStorage(dir); err != nil {
+	if ctx.storage, err = newStorage(dir, ctx.nodeName); err != nil {
 		return
 	}
 	ctx.storageDir = dir
@@ -188,6 +191,19 @@ func (ctx *Context) SetStorage(dir string) (err error) {
 	// Everything's fine, enabling the access to the storage.
 	ctx.storageOn = true
 	return
+}
+
+// SetNodeName changes node name to given one.
+//
+// newName - The new node name to be set.
+//
+func (ctx *Context) SetNodeName(newName string) {
+	ctx.nodeName = newName
+}
+
+// NodeName returns a configured node name.
+func (ctx *Context) NodeName() string {
+	return ctx.nodeName
 }
 
 // AddVhost registers new vhost under the specified path. Threadsafe,

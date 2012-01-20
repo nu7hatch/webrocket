@@ -23,10 +23,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -121,16 +119,6 @@ func SetupDaemon() {
 	fmt.Printf("\nWebRocket has been launched!\n")
 }
 
-// TODO: move it to webrocket...
-func GetNodeName() string {
-	x := exec.Command("uname", "-n")
-	node, err := x.Output()
-	if err != nil {
-		panic("can't get node name: " + err.Error())
-	}
-	return strings.TrimSpace(string(node))
-}
-
 func DisplayAsciiArt() {
 	fmt.Printf("\n")
 	fmt.Printf(
@@ -158,7 +146,7 @@ func DisplayAsciiArt() {
 
 func DisplaySystemSettings() {
 	fmt.Printf("\n")
-	fmt.Printf("Node               : %s\n", GetNodeName())
+	fmt.Printf("Node               : %s\n", ctx.NodeName())
 	fmt.Printf("Cookie             : %s\n", ctx.Cookie())
 	fmt.Printf("Data store dir     : %s\n", conf.StorageDir)
 	fmt.Printf("Backend endpoint   : tcp://%s\n", conf.Backend)

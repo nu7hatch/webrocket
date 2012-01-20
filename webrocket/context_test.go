@@ -117,7 +117,7 @@ func TestContextCookiesGeneration(t *testing.T) {
 	ctx := NewContext()
 	ctx.SetStorage("/tmp")
 	ctx.GenerateCookie(false)
-	cookieFile := "/tmp/cookie"
+	cookieFile := "/tmp/"+DefaultNodeName()+".cookie"
 	f, err := os.Open(cookieFile)
 	if err != nil {
 		t.Errorf("Expected to create a cookie file")

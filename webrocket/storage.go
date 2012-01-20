@@ -70,11 +70,11 @@ type storage struct {
 // dir - A path to the storage location.
 //
 // Returns configured storage or error if something went wrong
-func newStorage(dir string) (s *storage, err error) {
+func newStorage(dir string, name string) (s *storage, err error) {
 	if err = os.MkdirAll(dir, 0744); err != nil {
 		return
 	}
-	dbfile := path.Join(dir, "/webrocket.kch")
+	dbfile := path.Join(dir, "/"+name+".kch")
 	db := kc.New()
 	err = db.Open(dbfile, kc.KCOREADER|kc.KCOWRITER|kc.KCOCREATE)
 	if err != nil {
