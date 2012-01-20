@@ -118,7 +118,7 @@ func SignalTrap() {
 }
 
 func SetupDaemon() {
-	fmt.Printf("\nWebRocket is running!\n")
+	fmt.Printf("\nWebRocket has been launched!\n")
 }
 
 // TODO: move it to webrocket...

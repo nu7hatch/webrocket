@@ -13,7 +13,7 @@ endif
 
 ASCIIDOC = asciidoc
 
-all: gouuid gocabinet gostepper server admin
+all: clean gouuid gocabinet gostepper server admin
 	@rm -rf _build
 	@$(ECHO) "\033[35mgathering things together\033[0m"
 	mkdir -p $(BUILD_DIR)/bin $(BUILD_DIR)/share
@@ -89,5 +89,3 @@ papers:
 	-$(ASCIIDOC) -d article -o NEWS.html NEWS
 	-$(ASCIIDOC) -d article -o CONTRIBUTE.html CONTRIBUTE
 	-$(ASCIIDOC) -d article -o README.html README
-
-.PHONY: lib server admin man
