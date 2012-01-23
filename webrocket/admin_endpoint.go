@@ -32,7 +32,7 @@ func adminStatusLog(a *AdminEndpoint, msg string) {
 	a.log.Printf("admin: %s", msg)
 }
 
-// Helper for logging protocol errors and and seding it to
+// Helper for logging protocol errors and sending them to
 // the client.
 func adminError(a *AdminEndpoint, error string) {
 	adminStatusLog(a, "Error; "+error)
@@ -77,7 +77,7 @@ func (a *AdminEndpoint) Kill() {
 	a.alive = false
 }
 
-// Extendended http.Server.ListenAndServe funcion.
+// Extendended http.Server.ListenAndServe function.
 func (a *AdminEndpoint) ListenAndServe() error {
 	addr := a.Server.Addr
 	if addr == "" {
@@ -91,7 +91,7 @@ func (a *AdminEndpoint) ListenAndServe() error {
 	return a.Server.Serve(l)
 }
 
-// Extendended http.Server.ListenAndServeTLS funcion.
+// Extendended http.Server.ListenAndServeTLS function.
 func (a *AdminEndpoint) ListenAndServeTLS(certFile, certKey string) error {
 	addr := a.Server.Addr
 	if addr == "" {

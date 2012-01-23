@@ -73,7 +73,7 @@ func newBackendEndpoint(ctx *Context, addr string) *BackendEndpoint {
 // -----------------------------------------------------------------------------
 
 // registerVhost registers a new handler for the specified vhost. Not
-// threadsafe, called only from the context's addVhost function. 
+// threadsafe, called only from the context's addVhost function.
 //
 // vhost - The vhost to be registered.
 //
@@ -115,13 +115,13 @@ func (b *BackendEndpoint) serve() (err error) {
 	return
 }
 
-// authenticate Checks if the worker's identity is valid to access to the
+// authenticate checks if the worker's identity has access to the
 // specified vhost.
 //
 // rawIdentity - The identity line to be parsed and authorized.
 //
 // If identity is approved, then returns in order: vhost to which worker is
-// connected, its identity representation and boolean status. 
+// connected, its identity representation and boolean status.
 func (b *BackendEndpoint) authenticate(rawIdentity string) (vhost *Vhost,
 	idty *backendIdentity, ok bool) {
 	var err error
@@ -180,11 +180,11 @@ log:
 
 // dispatchDealer handles a request received from the dealer socket.
 //
-// vhost - The vhost to which message has been sent.
+// vhost - The vhost to which the message has been sent.
 // req   - The request to be handled.
 // idty  - The sender's identity.
 //
-// Returns a status message and code. 
+// Returns a status message and code.
 func (b *BackendEndpoint) dispatchDealer(vhost *Vhost, req *backendRequest,
 	idty *backendIdentity) (string, int) {
 	var worker *BackendWorker
@@ -421,7 +421,7 @@ func (b *BackendEndpoint) Trigger(vhost *Vhost, payload interface{}) error {
 	return nil
 }
 
-// ListenAndServe setups endpoint's TCP listener for handling incomig
+// ListenAndServe setups endpoint's TCP listener for handling incoming
 // backend worker's and client's connections.
 func (b *BackendEndpoint) ListenAndServe() (err error) {
 	addr, err := net.ResolveTCPAddr("tcp", b.addr)

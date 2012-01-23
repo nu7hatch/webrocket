@@ -20,12 +20,12 @@ type backendConnection struct {
 // Internal constructor
 // -----------------------------------------------------------------------------
 
-// newBackendConnection wrapps given connection into new backend connection
+// newBackendConnection wrapps the given connection into a new backend connection
 // object.
 //
 // conn     - The connection to be wrapped.
 //
-// Returns new backend connection.
+// Returns a new backend connection.
 func newBackendConnection(conn net.Conn) *backendConnection {
 	return &backendConnection{conn: conn}
 }
@@ -33,9 +33,9 @@ func newBackendConnection(conn net.Conn) *backendConnection {
 // Exported
 // -----------------------------------------------------------------------------
 
-// Recv receives the data from the underlaying connection and maps it to
-// the backend request structure. If there's no data to read it shall block
-// until new data will appear.
+// Recv receives data from the underlaying connection and maps it to
+// the backend request structure. If there's no data to read it will block
+// until new data appears.
 //
 // Returns read request or an error if something went wrong.
 func (c *backendConnection) Recv() (req *backendRequest, err error) {
@@ -78,8 +78,8 @@ func (c *backendConnection) Recv() (req *backendRequest, err error) {
 
 // Send packs the command and frames together and sends it to the client.
 //
-// cmd    - The command to be send.
-// frames - The frames to be send.
+// cmd    - The command to be sent.
+// frames - The frames to be sent.
 //
 // Returns an error if something went wrong.
 func (c *backendConnection) Send(cmd string, frames ...string) (err error) {
@@ -94,7 +94,7 @@ func (c *backendConnection) Send(cmd string, frames ...string) (err error) {
 	return
 }
 
-// SetTimeout sets a receiver's timeout of the underlaying connection. 
+// SetTimeout sets a receiver's timeout of the underlaying connection.
 func (c *backendConnection) SetTimeout(nsec int64) {
 	c.conn.SetReadTimeout(nsec)
 }

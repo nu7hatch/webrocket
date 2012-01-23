@@ -1,7 +1,7 @@
 The `webrocket-server` tool
 ===========================
 
-This tool is used to start and initially configure single node instance.
+This tool is used to start and initially configure a single node instance.
 To further configure your node, use the *rocket-ctl* tool.
 
 Check manual pages for the *webrocket-server*(1) to get more information.
