@@ -1,5 +1,6 @@
 2012-01-23 Pablo Astigarraga <pote@tardis.com.uy>
 
+	* webrocket/backend_endpoint.go: Minor language changes, some trailing characters, etc.
 	* webrocket/backend_connection.go: Minor nipticks and a trailing character.
 	* webrocket/admin_endpoint.go: Several typos.
 	* webrocket/README: Minor change in grammar.
