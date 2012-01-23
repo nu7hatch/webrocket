@@ -1,5 +1,6 @@
 2012-01-23 Pablo Astigarraga <pote@tardis.com.uy>
 
+	* webrocket/admin_endpoint.go: Several typos.
 	* webrocket/README: Minor change in grammar.
 	* webrocket-server/README: minor grammar change.
 
