@@ -1,6 +1,0 @@
-[submodule "deps/gouuid"]
-	path = deps/gouuid
-	url = https://github.com/nu7hatch/gouuid.git
-[submodule "deps/gostepper"]
-	path = deps/gostepper
-	url = http://github.com/nu7hatch/gostepper.git
